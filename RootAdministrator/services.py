@@ -7,6 +7,16 @@ from fastapi import Depends
 import bcrypt
 from app.common.constants import ROOT_CSA_DB
 from bson import ObjectId
+from abc import ABC, abstractmethod
+
+class IRootAdministratorServices(ABC):
+    @abstractmethod
+    async def create_system_root(self, root: RootSchema):
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def create_system_admin(self, admin: AdminSchema):
+        raise NotImplementedError
 
 class RootAdministratorServices:
     def __init__(self, repo: IRootAdministratorRepository = Depends(RootAdministratorRepository)):

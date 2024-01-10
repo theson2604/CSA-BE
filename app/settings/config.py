@@ -27,5 +27,7 @@ class MongoConfiguration(BaseModel):
 try:
     ServerConfig = ServerConfiguration(**config)
     MongoConfig = MongoConfiguration(**config)
+    SECRET_SALT = config.get("SECRET_SALT")
+    JWT_ALGORITHM = config.get("JWT_ALGORITHM")
 except ValidationError as e:
     print(e)

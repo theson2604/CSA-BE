@@ -24,5 +24,5 @@ def generate_db_company(name: str = "") -> str:
     """
     rand_num = random.randint(0, 999)
     rand_3_digits = f"{rand_num:03}"
-    # return "db_" + convert_company_str(name) + f"_{rand_3_digits}"
-    return "db_" + convert_company_str(name) + f"_888"
+    return "db_" + convert_company_str(name) + f"_{rand_3_digits}"
+    # return "db_" + convert_company_str(name) + f"_888"

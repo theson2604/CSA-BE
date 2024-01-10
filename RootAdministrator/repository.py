@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+
+from pydantic import EmailStr
 from RootAdministrator.models import AdministratorModel, RootModel
 from app.common.db_connector import client, RootCollections
 from app.common.constants import ROOT_CSA_DB
@@ -9,11 +11,19 @@ class IRootAdministratorRepository(ABC):
         Interface RootAdministratorRepository
     """
     @abstractmethod
-    async def insert_root(self):
+    async def insert_root(self, root: RootModel):
         raise NotImplementedError
     
     @abstractmethod
-    async def insert_admin(self):
+    async def insert_admin(self, admin: AdministratorModel):
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def find_one_by_email(self, email: EmailStr) -> Union[RootModel, AdministratorModel, None]:
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def find_one_by_id(self, id: str) -> Union[RootModel, AdministratorModel]:
         raise NotImplementedError
 
 class RootAdministratorRepository(IRootAdministratorRepository):
@@ -33,5 +43,16 @@ class RootAdministratorRepository(IRootAdministratorRepository):
     async def insert_admin(self, admin: AdministratorModel):
         try:
             await self.users_coll.insert_one(admin)
+        except Exception as e:
+            print(e)
+    
+    async def find_one_by_email(self, email: EmailStr) -> Union[RootModel, AdministratorModel, None]:
+        user = await self.users_coll.find_one({"email": email})
+        return user
+    
+    async def find_one_by_id(self, id: str) -> Union[RootModel, AdministratorModel]:
+        try:
+            user = await self.users_coll.find_one({"_id": id})
+            return user
         except Exception as e:
             print(e)
