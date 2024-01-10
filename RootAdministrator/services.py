@@ -1,3 +1,4 @@
+from typing import Union
 from RootAdministrator.models import RootModel, AdministratorModel
 from RootAdministrator.schemas import RootSchema, AdminSchema
 from app.common.enums import SystemUserRole
@@ -17,6 +18,11 @@ class IRootAdministratorServices(ABC):
     @abstractmethod
     async def create_system_admin(self, admin: AdminSchema):
         raise NotImplementedError
+    
+    @abstractmethod
+    async def find_system_user_by_id(self, id: str) -> Union[RootModel, AdministratorModel, None]:
+        raise NotImplementedError
+    
 
 class RootAdministratorServices:
     def __init__(self, repo: IRootAdministratorRepository = Depends(RootAdministratorRepository)):
@@ -64,5 +70,11 @@ class RootAdministratorServices:
             )
             await self.repo.insert_admin(record.model_dump(by_alias=True))
             
+        except Exception as e:
+            print(e)
+            
+    async def find_system_user_by_id(self, id: str) -> Union[RootModel, AdministratorModel, None]:
+        try:
+            return await self.repo.find_one_by_id(id)
         except Exception as e:
             print(e)

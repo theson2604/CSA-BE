@@ -23,7 +23,7 @@ class IRootAdministratorRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def find_one_by_id(self, id: str) -> Union[RootModel, AdministratorModel]:
+    async def find_one_by_id(self, id: str) -> Union[RootModel, AdministratorModel, None]:
         raise NotImplementedError
 
 class RootAdministratorRepository(IRootAdministratorRepository):
@@ -47,10 +47,13 @@ class RootAdministratorRepository(IRootAdministratorRepository):
             print(e)
     
     async def find_one_by_email(self, email: EmailStr) -> Union[RootModel, AdministratorModel, None]:
-        user = await self.users_coll.find_one({"email": email})
-        return user
+        try:
+            user = await self.users_coll.find_one({"email": email})
+            return user
+        except Exception as e:
+            print(e)
     
-    async def find_one_by_id(self, id: str) -> Union[RootModel, AdministratorModel]:
+    async def find_one_by_id(self, id: str) -> Union[RootModel, AdministratorModel, None]:
         try:
             user = await self.users_coll.find_one({"_id": id})
             return user
