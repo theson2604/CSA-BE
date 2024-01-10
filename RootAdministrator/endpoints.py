@@ -8,7 +8,7 @@ from app.dependencies.authentication import protected_route
 
 router = APIRouter()
 
-@router.post("/create_admin")
+@router.post("/create-admin")
 @protected_route(SystemUserRole.ROOT)
 async def create_admin(admin: AdminSchema,
                        credentials: AuthCredentialDepend,
