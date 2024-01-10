@@ -10,11 +10,25 @@ router = APIRouter()
 
 @router.post("/create-admin")
 @protected_route(SystemUserRole.ROOT)
-async def create_admin(admin: AdminSchema,
-                       credentials: AuthCredentialDepend,
-                       authen_service: AuthServiceDepend,
-                       root_service: RootAdminService, 
-                       current_user = None):
+async def create_admin(
+    admin: AdminSchema,
+    credentials: AuthCredentialDepend,
+    authen_service: AuthServiceDepend,
+    root_service: RootAdminService, 
+    current_user = None
+):
     
     await root_service.create_system_admin(admin)
     return "Admin has been created"
+
+@router.get("/get-all-admins")
+@protected_route(SystemUserRole.ROOT)
+async def get_all_admins(
+    page: int,
+    page_size: int,
+    credentials: AuthCredentialDepend,
+    authen_service: AuthServiceDepend,
+    root_service: RootAdminService,
+    current_user = None):
+    
+    return await root_service.find_all_system_admins(page, page_size)

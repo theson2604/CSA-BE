@@ -1,4 +1,4 @@
-from typing import Union
+from typing import List, Union
 from RootAdministrator.models import RootModel, AdministratorModel
 from RootAdministrator.schemas import RootSchema, AdminSchema
 from app.common.enums import SystemUserRole
@@ -21,6 +21,10 @@ class IRootAdministratorServices(ABC):
     
     @abstractmethod
     async def find_system_user_by_id(self, id: str) -> Union[RootModel, AdministratorModel, None]:
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def find_all_system_admins(self, page: int = 0, page_size: int = 0) -> List[Union[RootModel, AdministratorModel]]:
         raise NotImplementedError
     
 
@@ -76,5 +80,13 @@ class RootAdministratorServices:
     async def find_system_user_by_id(self, id: str) -> Union[RootModel, AdministratorModel, None]:
         try:
             return await self.repo.find_one_by_id(id)
+        except Exception as e:
+            print(e)
+            
+    async def find_all_system_admins(self, page: int = 0, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
+        try:
+            skip = (page - 1)*page_size
+            projection = {"pwd": 0, "system_role": 0}
+            return await self.repo.find_all({"system_role": SystemUserRole.ADMINISTRATOR.value}, projection, skip, page_size)
         except Exception as e:
             print(e)
