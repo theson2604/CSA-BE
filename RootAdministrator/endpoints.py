@@ -27,7 +27,7 @@ async def get_all_admins(
     credentials: AuthCredentialDepend,
     authen_service: AuthServiceDepend,
     root_service: RootAdminService,
-    page: int = 0,
+    page: int = 1,
     page_size: int = 100,
     current_user = None):
     

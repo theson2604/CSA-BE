@@ -68,7 +68,7 @@ class RootAdministratorRepository(IRootAdministratorRepository):
         except Exception as e:
             print(e)
             
-    async def find_all(self, query: dict, projection: dict = None, skip: int = 0, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
+    async def find_all(self, query: dict, projection: dict = None, skip: int = 1, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
         try:
             return await self.users_coll.find(query, projection).skip(skip).limit(page_size).to_list(length=None)
         

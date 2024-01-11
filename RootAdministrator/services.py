@@ -87,9 +87,9 @@ class RootAdministratorServices:
         except Exception as e:
             print(e)
             
-    async def find_all_system_admins(self, page: int = 0, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
+    async def find_all_system_admins(self, page: int = 1, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
         try:
-            skip = page * page_size
+            skip = (page - 1) * page_size
             projection = {"pwd": 0, "system_role": 0}
             
             return await self.repo.find_all({"system_role": SystemUserRole.ADMINISTRATOR.value}, projection, skip, page_size)
