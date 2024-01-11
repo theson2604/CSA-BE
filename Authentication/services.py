@@ -25,7 +25,7 @@ class IAuthenticationServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def get_user_by_token(self, access_token: str):
+    async def get_user_by_token(self, access_token: str) -> dict:
         raise NotImplementedError
 
 class AuthenticationServices:
@@ -43,17 +43,15 @@ class AuthenticationServices:
         return bcrypt.checkpw(encoded_raw_pwd, encoded_hashed_pwd)
     
     async def validate_user(self, email: EmailStr, pwd: str) -> Union[str, None]:
-        user = await self.repo.find_one_by_email(email)
+        user = await self.repo.find_one_by_email(email, {"modified_at": 0, "created_at": 0})
         if self.is_valid_password(pwd, user.get("pwd")):
             user.pop("pwd")
-            user.pop("created_at")
-            user.pop("modified_at")
             return self.encode_jwt(user)
             
         return None
         
-    async def get_user_by_token(self, access_token: str):
+    async def get_user_by_token(self, access_token: str, projection: dict) -> dict:
         payload = self.decode_jwt(access_token)
         user_id = payload.get("_id")
-        user = await self.repo.find_one_by_id(user_id)
+        user = await self.repo.find_one_by_id(user_id, projection)
         return user

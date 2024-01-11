@@ -2,7 +2,7 @@ from typing_extensions import Annotated
 from fastapi import APIRouter, Depends
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from RootAdministrator.dependencies import RootAdminService
-from RootAdministrator.schemas import AdminSchema
+from RootAdministrator.schemas import AdminSchema, UpdateAdminSchema
 from app.common.enums import SystemUserRole
 from app.dependencies.authentication import protected_route
 
@@ -32,3 +32,14 @@ async def get_all_admins(
     current_user = None):
     
     return await root_service.find_all_system_admins(page, page_size)
+
+@router.post("/update-admin")
+@protected_route(SystemUserRole.ROOT)
+async def update_admin(
+    admin: UpdateAdminSchema,
+    credentials: AuthCredentialDepend,
+    authen_service: AuthServiceDepend,
+    root_service: RootAdminService,
+    current_user = None):
+    
+    return await root_service.update_admin(admin)

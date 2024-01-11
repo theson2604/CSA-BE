@@ -29,6 +29,10 @@ class IRootAdministratorRepository(ABC):
     @abstractmethod
     async def find_all(self, query: dict, skip: int = 0, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def update_one(self, query: dict, record: dict) -> bool:
+        raise NotImplementedError
 
 class RootAdministratorRepository(IRootAdministratorRepository):
     def __init__(self, db: Union[str, None] = ROOT_CSA_DB, coll: Union[str, None] = RootCollections.USERS.value):
@@ -50,23 +54,31 @@ class RootAdministratorRepository(IRootAdministratorRepository):
         except Exception as e:
             print(e)
     
-    async def find_one_by_email(self, email: EmailStr) -> Union[RootModel, AdministratorModel, None]:
+    async def find_one_by_email(self, email: EmailStr, projection: dict = None) -> Union[RootModel, AdministratorModel, None]:
         try:
-            user = await self.users_coll.find_one({"email": email})
-            return user
+            return await self.users_coll.find_one({"email": email}, projection)
+
         except Exception as e:
             print(e)
     
-    async def find_one_by_id(self, id: str) -> Union[RootModel, AdministratorModel, None]:
+    async def find_one_by_id(self, id: str, projection: dict = None) -> Union[RootModel, AdministratorModel, None]:
         try:
-            user = await self.users_coll.find_one({"_id": id})
-            return user
+            return await self.users_coll.find_one({"_id": id}, projection)
+
         except Exception as e:
             print(e)
             
-    async def find_all(self, query: dict, projection: dict, skip: int = 0, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
+    async def find_all(self, query: dict, projection: dict = None, skip: int = 0, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
         try:
-            user = await self.users_coll.find(query, projection).skip(skip).limit(page_size).to_list(length=None)
-            return user
+            return await self.users_coll.find(query, projection).skip(skip).limit(page_size).to_list(length=None)
+        
+        except Exception as e:
+            print(e)
+            
+    async def update_one(self, query: dict, record: dict) -> bool:
+        try:
+            result = await self.users_coll.update_one(query, {"$set": record})
+            return result.modified_count > 0
+        
         except Exception as e:
             print(e)

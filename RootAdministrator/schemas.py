@@ -11,3 +11,11 @@ class AdminSchema(BaseModel):
     company: str
     domain: str
     
+class UpdateAdminSchema(BaseModel):
+    id: str 
+    full_name: str
+    email: EmailStr
+    pwd: str = None
+    company: str
+    domain: str
+    

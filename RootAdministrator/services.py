@@ -1,8 +1,8 @@
 from typing import List, Union
 from RootAdministrator.models import RootModel, AdministratorModel
-from RootAdministrator.schemas import RootSchema, AdminSchema
+from RootAdministrator.schemas import RootSchema, AdminSchema, UpdateAdminSchema
 from app.common.enums import SystemUserRole
-from app.common.utils import generate_db_company
+from app.common.utils import generate_db_company, get_current_hcm_datetime
 from .repository import IRootAdministratorRepository, RootAdministratorRepository
 from fastapi import Depends
 import bcrypt
@@ -25,6 +25,10 @@ class IRootAdministratorServices(ABC):
     
     @abstractmethod
     async def find_all_system_admins(self, page: int = 0, page_size: int = 0) -> List[Union[RootModel, AdministratorModel]]:
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def update_admin(self, record: dict) -> bool:
         raise NotImplementedError
     
 
@@ -87,6 +91,14 @@ class RootAdministratorServices:
         try:
             skip = (page - 1)*page_size
             projection = {"pwd": 0, "system_role": 0}
+            
             return await self.repo.find_all({"system_role": SystemUserRole.ADMINISTRATOR.value}, projection, skip, page_size)
         except Exception as e:
             print(e)
+            
+    async def update_admin(self, record: UpdateAdminSchema) -> bool:
+        record = record.model_dump()
+        record.update({"modified_at": get_current_hcm_datetime()})
+        if record.get("pwd", None) is None:
+            record.pop("pwd")
+        return await self.repo.update_one({"_id": record.pop("id")}, record)

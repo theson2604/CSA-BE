@@ -8,9 +8,7 @@ def protected_route(role: SystemUserRole):
         async def wrapper(**kwargs):
             token = kwargs.get("credentials").credentials
             authen_service = kwargs.get("authen_service")
-            current_user = await authen_service.get_user_by_token(token)
-            current_user.pop("pwd")
-            current_user.pop("created_at")
+            current_user = await authen_service.get_user_by_token(token, {"pwd": 0, "created_at": 0})
             kwargs["current_user"] = current_user
             if current_user.get("system_role") != role:
                 raise HTTPException(
