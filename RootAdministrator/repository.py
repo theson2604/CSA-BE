@@ -33,6 +33,10 @@ class IRootAdministratorRepository(ABC):
     @abstractmethod
     async def update_one(self, query: dict, record: dict) -> bool:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def count_all(self, query: dict = {}) -> int:
+        raise NotImplementedError
 
 class RootAdministratorRepository(IRootAdministratorRepository):
     def __init__(self, db: Union[str, None] = ROOT_CSA_DB, coll: Union[str, None] = RootCollections.USERS.value):
@@ -79,6 +83,13 @@ class RootAdministratorRepository(IRootAdministratorRepository):
         try:
             result = await self.users_coll.update_one(query, {"$set": record})
             return result.modified_count > 0
+        
+        except Exception as e:
+            print(e)
+            
+    async def count_all(self, query: dict = {}) -> int:
+        try:
+            return await self.users_coll.count_documents(query)
         
         except Exception as e:
             print(e)

@@ -30,8 +30,11 @@ async def get_all_admins(
     page: int = 1,
     page_size: int = 100,
     current_user = None):
-    
-    return await root_service.find_all_system_admins(page, page_size)
+    res = {
+        "count": await root_service.count_all_admin(),
+        "data": await root_service.find_all_system_admins(page, page_size)
+    }
+    return res
 
 @router.post("/update-admin")
 @protected_route(SystemUserRole.ROOT)

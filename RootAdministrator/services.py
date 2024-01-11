@@ -31,6 +31,10 @@ class IRootAdministratorServices(ABC):
     async def update_admin(self, record: dict) -> bool:
         raise NotImplementedError
     
+    @abstractmethod
+    async def count_all_admin(self) -> int:
+        raise NotImplementedError
+    
 
 class RootAdministratorServices:
     def __init__(self, repo: IRootAdministratorRepository = Depends(RootAdministratorRepository)):
@@ -102,3 +106,6 @@ class RootAdministratorServices:
         if record.get("pwd", None) is None:
             record.pop("pwd")
         return await self.repo.update_one({"_id": record.pop("id")}, record)
+    
+    async def count_all_admin(self) -> int:
+        return await self.repo.count_all({"system_role": SystemUserRole.ADMINISTRATOR})
