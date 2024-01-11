@@ -24,11 +24,11 @@ async def create_admin(
 @router.get("/get-all-admins")
 @protected_route(SystemUserRole.ROOT)
 async def get_all_admins(
-    page: int,
-    page_size: int,
     credentials: AuthCredentialDepend,
     authen_service: AuthServiceDepend,
     root_service: RootAdminService,
+    page: int = 0,
+    page_size: int = 100,
     current_user = None):
     
     return await root_service.find_all_system_admins(page, page_size)
