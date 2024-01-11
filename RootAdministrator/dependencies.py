@@ -7,4 +7,4 @@ from fastapi import Depends
 from RootAdministrator.services import IRootAdministratorServices, RootAdministratorServices
 
 
-RootAdminService = Annotated[IRootAdministratorServices, Depends(RootAdministratorServices)]
+RootAdminServiceDepend = Annotated[IRootAdministratorServices, Depends(RootAdministratorServices)]

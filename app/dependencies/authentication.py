@@ -6,10 +6,10 @@ def protected_route(role: SystemUserRole):
     def auth_required(func):
         @wraps(func)
         async def wrapper(**kwargs):
-            token = kwargs.get("credentials").credentials
-            authen_service = kwargs.get("authen_service")
+            token = kwargs.get("CREDENTIALS").credentials
+            authen_service = kwargs.get("AUTHEN_SERVICE")
             current_user = await authen_service.get_user_by_token(token, {"pwd": 0, "created_at": 0})
-            kwargs["current_user"] = current_user
+            kwargs["CURRENT_USER"] = current_user
             if current_user.get("system_role") != role:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,

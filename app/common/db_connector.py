@@ -9,9 +9,10 @@ client = motor.motor_asyncio.AsyncIOMotorClient(MongoConfig.MONGO_URI)
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
 # DB Collections
-class Collections(str, Enum):
-    pass
+class DBCollections(str, Enum):
+    GROUP_OBJECTS = "GroupObjects"
 
 # Root Collections
 class RootCollections(str, Enum):
     USERS = "SystemUsers"
+    

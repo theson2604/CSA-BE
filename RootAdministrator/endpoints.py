@@ -1,7 +1,7 @@
 from typing_extensions import Annotated
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
-from RootAdministrator.dependencies import RootAdminService
+from RootAdministrator.dependencies import RootAdminServiceDepend
 from RootAdministrator.schemas import AdminSchema, UpdateAdminSchema
 from app.common.enums import SystemUserRole
 from app.dependencies.authentication import protected_route
@@ -12,24 +12,22 @@ router = APIRouter()
 @protected_route(SystemUserRole.ROOT)
 async def create_admin(
     admin: AdminSchema,
-    credentials: AuthCredentialDepend,
-    authen_service: AuthServiceDepend,
-    root_service: RootAdminService, 
-    current_user = None
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERIVCE: AuthServiceDepend,
+    root_service: RootAdminServiceDepend, 
+    CURRENT_USER = None
 ):
-    
-    await root_service.create_system_admin(admin)
-    return "Admin has been created"
+    return "Admin has been created" if await root_service.create_system_admin(admin) else HTTPException(status_code=400, detail="Fail to create Admin")
 
 @router.get("/get-all-admins")
 @protected_route(SystemUserRole.ROOT)
 async def get_all_admins(
-    credentials: AuthCredentialDepend,
-    authen_service: AuthServiceDepend,
-    root_service: RootAdminService,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERIVCE: AuthServiceDepend,
+    root_service: RootAdminServiceDepend,
     page: int = 1,
     page_size: int = 100,
-    current_user = None):
+    CURRENT_USER = None):
     res = {
         "count": await root_service.count_all_admin(),
         "data": await root_service.find_all_system_admins(page, page_size)
@@ -40,9 +38,9 @@ async def get_all_admins(
 @protected_route(SystemUserRole.ROOT)
 async def update_admin(
     admin: UpdateAdminSchema,
-    credentials: AuthCredentialDepend,
-    authen_service: AuthServiceDepend,
-    root_service: RootAdminService,
-    current_user = None):
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERIVCE: AuthServiceDepend,
+    root_service: RootAdminServiceDepend,
+    CURRENT_USER = None):
     
-    return await root_service.update_admin(admin)
+    return "Admin has been updated" if await root_service.update_admin(admin) else HTTPException(status_code=400, detail="Fail to update Admin")

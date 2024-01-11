@@ -1,6 +1,7 @@
 from typing import List, Union
 from RootAdministrator.models import RootModel, AdministratorModel
 from RootAdministrator.schemas import RootSchema, AdminSchema, UpdateAdminSchema
+from app.common.db_connector import RootCollections
 from app.common.enums import SystemUserRole
 from app.common.utils import generate_db_company, get_current_hcm_datetime
 from .repository import IRootAdministratorRepository, RootAdministratorRepository
@@ -16,7 +17,7 @@ class IRootAdministratorServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def create_system_admin(self, admin: AdminSchema):
+    async def create_system_admin(self, admin: AdminSchema) -> bool:
         raise NotImplementedError
     
     @abstractmethod
@@ -37,7 +38,7 @@ class IRootAdministratorServices(ABC):
     
 
 class RootAdministratorServices:
-    def __init__(self, repo: IRootAdministratorRepository = Depends(RootAdministratorRepository)):
+    def __init__(self, repo: IRootAdministratorRepository = Depends(lambda: RootAdministratorRepository(ROOT_CSA_DB, RootCollections.USERS.value))):
         self.repo = repo
     
     # Run Only Once
@@ -61,7 +62,7 @@ class RootAdministratorServices:
         except Exception as e:
             print(e)
             
-    async def create_system_admin(self, admin: AdminSchema):
+    async def create_system_admin(self, admin: AdminSchema) -> bool:
         try:
             admin_obj = admin.model_dump()
             raw_pwd = admin_obj.get("pwd", "")
@@ -80,16 +81,20 @@ class RootAdministratorServices:
                 company = admin_obj.get("company"),
                 domain = admin_obj.get("domain")
             )
-            await self.repo.insert_admin(record.model_dump(by_alias=True))
             
+            await self.repo.insert_admin(record.model_dump(by_alias=True))
+            return True
+        
         except Exception as e:
             print(e)
+            return False
             
     async def find_system_user_by_id(self, id: str) -> Union[RootModel, AdministratorModel, None]:
         try:
             return await self.repo.find_one_by_id(id)
         except Exception as e:
             print(e)
+            return None
             
     async def find_all_system_admins(self, page: int = 1, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
         try:
@@ -99,13 +104,23 @@ class RootAdministratorServices:
             return await self.repo.find_all({"system_role": SystemUserRole.ADMINISTRATOR.value}, projection, skip, page_size)
         except Exception as e:
             print(e)
+            return []
             
     async def update_admin(self, record: UpdateAdminSchema) -> bool:
-        record = record.model_dump()
-        record.update({"modified_at": get_current_hcm_datetime()})
-        if record.get("pwd", None) is None:
-            record.pop("pwd")
-        return await self.repo.update_one({"_id": record.pop("id")}, record)
+        try:
+            record = record.model_dump()
+            record.update({"modified_at": get_current_hcm_datetime()})
+            if record.get("pwd", None) is None:
+                record.pop("pwd")
+            return await self.repo.update_one({"_id": record.pop("id")}, record)
+
+        except Exception as e:
+            print(e)
+            return False
     
     async def count_all_admin(self) -> int:
-        return await self.repo.count_all({"system_role": SystemUserRole.ADMINISTRATOR})
+        try:
+            return await self.repo.count_all({"system_role": SystemUserRole.ADMINISTRATOR})
+        except Exception as e:
+            print(e)
+            return -1

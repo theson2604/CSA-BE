@@ -4,7 +4,7 @@ from starlette.responses import RedirectResponse
 from app.settings.config import ServerConfig
 import RootAdministrator.endpoints
 import Authentication.endpoints
-
+import GroupObjects.endpoints
 
 app = FastAPI()
 
@@ -27,4 +27,5 @@ def redirect_to_docs():
 
 # Include Routers
 app.include_router(Authentication.endpoints.router, prefix="/api/authen", tags=["Authentication"])
-app.include_router(RootAdministrator.endpoints.router, prefix="/api/root", tags=["Root Administrator"]) 
+app.include_router(RootAdministrator.endpoints.router, prefix="/api/root", tags=["Root Administrator"])
+app.include_router(GroupObjects.endpoints.router, prefix="/api/group-objects", tags=["Group Objects"]) 

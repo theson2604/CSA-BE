@@ -5,6 +5,7 @@ from pydantic import EmailStr
 from RootAdministrator.repository import IRootAdministratorRepository, RootAdministratorRepository
 from abc import ABC, abstractmethod
 import jwt
+from app.common.constants import ROOT_CSA_DB
 from app.settings.config import SECRET_SALT, JWT_ALGORITHM
 
 class IAuthenticationServices(ABC):
@@ -29,7 +30,7 @@ class IAuthenticationServices(ABC):
         raise NotImplementedError
 
 class AuthenticationServices:
-    def __init__(self, repo: IRootAdministratorRepository = Depends(RootAdministratorRepository)):
+    def __init__(self, repo: IRootAdministratorRepository = Depends(lambda: RootAdministratorRepository(ROOT_CSA_DB))):
         self.repo = repo
     
     def encode_jwt(self, obj: dict) -> str:
