@@ -112,7 +112,7 @@ class RootAdministratorServices:
             record.update({"modified_at": get_current_hcm_datetime()})
             if record.get("pwd", None) is None:
                 record.pop("pwd")
-            return await self.repo.update_one({"_id": record.pop("id")}, record)
+            return await self.repo.update_one_by_id(record.pop("id"), record)
 
         except Exception as e:
             print(e)

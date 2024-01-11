@@ -22,9 +22,9 @@ RootModel = create_model(
 )
 
 class AdministratorModel(RootBase):
-    full_name: str = Field(..., alias="full_name" , max_length=30)
-    company: str = Field(..., alias="company" ,max_length=80)
-    domain: str = Field(..., alias="domain" ,max_length=30)
+    full_name: str = Field(..., alias="full_name", max_length=30)
+    company: str = Field(..., alias="company", max_length=80)
+    domain: str = Field(..., alias="domain", max_length=30)
     
     created_at: str = Field(..., alias="created_at", default_factory=get_current_hcm_datetime)
     modified_at: str = Field(..., alias="modified_at", default_factory=get_current_hcm_datetime)

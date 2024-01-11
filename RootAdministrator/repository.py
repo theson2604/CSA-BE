@@ -31,7 +31,7 @@ class IRootAdministratorRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def update_one(self, query: dict, record: dict) -> bool:
+    async def update_one_by_id(self, id: str, record: dict) -> bool:
         raise NotImplementedError
     
     @abstractmethod
@@ -64,8 +64,8 @@ class RootAdministratorRepository(IRootAdministratorRepository):
     async def find_all(self, query: dict, projection: dict = None, skip: int = 1, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
         return await self.users_coll.find(query, projection).skip(skip).limit(page_size).to_list(length=None)
             
-    async def update_one(self, query: dict, record: dict) -> bool:
-        result = await self.users_coll.update_one(query, {"$set": record})
+    async def update_one_by_id(self, id: str, record: dict) -> bool:
+        result = await self.users_coll.update_one({"_id": id}, {"$set": record})
         return result.modified_count > 0
 
     async def count_all(self, query: dict = {}) -> int:
