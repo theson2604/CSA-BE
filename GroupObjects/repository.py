@@ -6,11 +6,11 @@ from app.common.db_connector import DBCollections
 
 class IGroupObjectRepository(ABC):
     @abstractmethod
-    async def insert_one(self, group: GroupObjectModel):
+    async def insert_one(self, group: GroupObjectModel) -> str:
         raise NotImplementedError
     
     @abstractmethod
-    async def update_one_by_id(self, id: str, group: GroupObjectModel) -> bool:
+    async def update_one_by_id(self, id: str, group: dict) -> bool:
         raise NotImplementedError
     
     @abstractmethod
@@ -28,11 +28,12 @@ class GroupObjectRepository(IGroupObjectRepository):
         self.db = client.get_database(db_str)
         self.group_obj_coll = self.db.get_collection(coll)
         
-    async def insert_one(self, group: GroupObjectModel):
-        await self.group_obj_coll.insert_one(group)
+    async def insert_one(self, group: GroupObjectModel) -> str:
+        result = await self.group_obj_coll.insert_one(group)
+        return result.inserted_id
         
-    async def update_one_by_id(self, id: str, record: dict) -> bool:
-        result = await self.group_obj_coll.update_one({"_id": id}, {"$set": record})
+    async def update_one_by_id(self, id: str, group: dict) -> bool:
+        result = await self.group_obj_coll.update_one({"_id": id}, {"$set": group})
         return result.modified_count > 0
     
     async def find_one_by_id(self, id: str, projection: dict = None) -> GroupObjectModel:

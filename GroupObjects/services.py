@@ -9,7 +9,7 @@ from app.common.utils import get_current_hcm_datetime
 
 class IGroupObjectServices(ABC):
     @abstractmethod
-    async def create_group(self, group: GroupObjectSchema) -> bool:
+    async def create_group(self, group: GroupObjectSchema) -> str:
         raise NotImplementedError
     
     @abstractmethod
@@ -29,7 +29,7 @@ class GroupObjectServices(IGroupObjectServices):
     def __init__(self, db_str: str):
         self.repo = GroupObjectRepository(db_str)
     
-    async def create_group(self, group: GroupObjectSchema) -> bool:
+    async def create_group(self, group: GroupObjectSchema) -> str:
         try:
             group = group.model_dump()
             group_model = GroupObjectModel(
@@ -38,11 +38,10 @@ class GroupObjectServices(IGroupObjectServices):
                 manager_id = group.get("manager_id"),
                 sorting_id = group.get("sorting_id")
             )
-            await self.repo.insert_one(group_model.model_dump(by_alias=True))
-            return True
+            return await self.repo.insert_one(group_model.model_dump(by_alias=True))
         except Exception as e:
             print(e)
-            return False
+            return None
         
     async def update_group(self, group: UpdateGroupObjectSchema) -> bool:
         try:
