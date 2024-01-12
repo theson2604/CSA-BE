@@ -7,13 +7,6 @@ from app.common.constants import ROOT_CSA_DB
 from typing import List, Union
 
 class IRootAdministratorRepository(ABC):
-    """
-        Interface RootAdministratorRepository
-    """
-    @abstractmethod
-    async def insert_root(self, root: RootModel):
-        raise NotImplementedError
-    
     @abstractmethod
     async def insert_admin(self, admin: AdministratorModel):
         raise NotImplementedError
@@ -48,16 +41,13 @@ class RootAdministratorRepository(IRootAdministratorRepository):
         self.db_str = db_str
         self.db =  client.get_database(db_str)
         self.users_coll = self.db.get_collection(coll)
-    
-    # Run Only Once
-    async def insert_root(self, root: RootModel):
-        try:
-            await self.users_coll.insert_one(root)
-        except Exception as e:
-            print(e)
             
     async def insert_admin(self, admin: AdministratorModel):
         await self.users_coll.insert_one(admin)
+        
+    async def insert_user(self, user: UserModel):
+        result = await self.users_coll.insert_one(user)
+        return result.inserted_id
             
     async def find_one_by_email(self, email: EmailStr, projection: dict = None) -> Union[RootModel, AdministratorModel, None]:
         return await self.users_coll.find_one({"email": email}, projection)
@@ -75,5 +65,3 @@ class RootAdministratorRepository(IRootAdministratorRepository):
     async def count_all(self, query: dict = {}) -> int:
         return await self.users_coll.count_documents(query)
     
-    async def insert_user(self, user: UserModel):
-        await self.users_coll.insert_one(user)

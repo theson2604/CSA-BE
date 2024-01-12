@@ -55,7 +55,8 @@ async def create_user(
     CURRENT_USER = None
 ):
     db = CURRENT_USER.get("db")
-    return "User has been created" if await root_service.create_system_user(user, db) else HTTPException(status_code=400, detail="Fail to create User")
+    res = await root_service.create_system_user(user, db)
+    return res if res  else HTTPException(status_code=400, detail="Fail to create User")
 
 @router.post("/get-all-users")
 @protected_route(SystemUserRole.ADMINISTRATOR)

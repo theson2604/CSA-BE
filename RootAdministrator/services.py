@@ -37,7 +37,7 @@ class IRootAdministratorServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def create_system_user(self, user: UserSchema):
+    async def create_system_user(self, user: UserSchema) -> str:
         raise NotImplementedError
     
     @abstractmethod
@@ -55,27 +55,6 @@ class IRootAdministratorServices(ABC):
 class RootAdministratorServices:
     def __init__(self, repo: IRootAdministratorRepository = Depends(lambda: RootAdministratorRepository(ROOT_CSA_DB, RootCollections.USERS.value))):
         self.repo = repo
-    
-    # Run Only Once
-    async def create_system_root(self, root: RootSchema):
-        try:
-            root_obj = root.model_dump()
-            raw_pwd = root_obj.get("pwd", "")
-            # Hashing pwd
-            salt = bcrypt.gensalt()
-            hashed_pwd = bcrypt.hashpw(raw_pwd.encode('utf-8'), salt).decode("utf-8")
- 
-            record = RootModel(
-                _id = str(ObjectId()),
-                email = root_obj.get("email"),
-                db = ROOT_CSA_DB,
-                system_role = SystemUserRole.ROOT,
-                pwd = hashed_pwd
-            )
-            await self.repo.insert_root(record.model_dump(by_alias=True))
-            
-        except Exception as e:
-            print(e)
             
     async def create_system_admin(self, admin: AdminSchema) -> bool:
         try:
@@ -146,7 +125,7 @@ class RootAdministratorServices:
             print(e)
             return -1
 
-    async def create_system_user(self, user: UserSchema, db: str = ""):
+    async def create_system_user(self, user: UserSchema, db: str = "") -> str:
         try:
             user_obj = user.model_dump()
             raw_pwd = user_obj.get("pwd", "")
@@ -163,12 +142,11 @@ class RootAdministratorServices:
                 pwd = hashed_pwd,
                 is_manager = user_obj.get("is_manager")
             )
-            await self.repo.insert_root(record.model_dump(by_alias=True))
-            return True
+            return await self.repo.insert_user(record.model_dump(by_alias=True))
             
         except Exception as e:
             print(e)
-            return False
+            return None
 
     async def find_all_company_users(self, db: str = "", page: int = 0, page_size: int = 0) -> List[Union[RootModel, UserModel]]:
         try:
