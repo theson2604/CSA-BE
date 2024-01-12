@@ -49,9 +49,11 @@ class RootAdministratorRepository(IRootAdministratorRepository):
         result = await self.users_coll.insert_one(user)
         return result.inserted_id
             
-    async def find_one_by_email(self, email: EmailStr, db_str: str, projection: dict = None) -> Union[RootModel, AdministratorModel, None]:
-        return await self.users_coll.find_one({"email": email, "db": db_str}, projection)
+    async def find_one_by_email(self, email: EmailStr, db_str: str = "", projection: dict = None) -> Union[RootModel, AdministratorModel, None]:
+        if db_str:
+            return await self.users_coll.find_one({"email": email, "db": db_str}, projection)
         
+        return await self.users_coll.find_one({"email": email}, projection)
     
     async def find_one_by_id(self, id: str, db_str: str, projection: dict = None) -> Union[RootModel, AdministratorModel, None]:
         return await self.users_coll.find_one({"_id": id, "db": db_str}, projection)
