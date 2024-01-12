@@ -12,7 +12,7 @@ class IRootAdministratorRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def find_one_by_email(self, email: EmailStr, db_str: str = "") -> Union[RootModel, AdministratorModel, UserModel, None]:
+    async def find_one_by_email(self, email: EmailStr, db_str: str = "", projection: dict = None) -> Union[RootModel, AdministratorModel, UserModel, None]:
         raise NotImplementedError
     
     @abstractmethod
