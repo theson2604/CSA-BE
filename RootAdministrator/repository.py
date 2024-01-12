@@ -76,7 +76,4 @@ class RootAdministratorRepository(IRootAdministratorRepository):
         return await self.users_coll.count_documents(query)
     
     async def insert_user(self, user: UserModel):
-        try:
-            await self.users_coll.insert_one(user)
-        except Exception as e:
-            print(e)
+        await self.users_coll.insert_one(user)

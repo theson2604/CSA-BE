@@ -162,9 +162,11 @@ class RootAdministratorServices:
                 is_manager = user_obj.get("is_manager")
             )
             await self.repo.insert_root(record.model_dump(by_alias=True))
+            return True
             
         except Exception as e:
             print(e)
+            return False
 
     async def find_all_company_users(self, db: str = "", page: int = 0, page_size: int = 0) -> List[Union[RootModel, UserModel]]:
         try:
