@@ -54,5 +54,6 @@ class AuthenticationServices:
     async def get_user_by_token(self, access_token: str, projection: dict) -> dict:
         payload = self.decode_jwt(access_token)
         user_id = payload.get("_id")
-        user = await self.repo.find_one_by_id(user_id, projection)
+        user_db = payload.get("db")
+        user = await self.repo.find_one_by_id(user_id, user_db, projection)
         return user

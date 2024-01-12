@@ -12,15 +12,15 @@ class IRootAdministratorRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def find_one_by_email(self, email: EmailStr) -> Union[RootModel, AdministratorModel, None]:
+    async def find_one_by_email(self, email: EmailStr, db_str: str) -> Union[RootModel, AdministratorModel, UserModel, None]:
         raise NotImplementedError
     
     @abstractmethod
-    async def find_one_by_id(self, id: str) -> Union[RootModel, AdministratorModel, None]:
+    async def find_one_by_id(self, id: str, db_str: str) -> Union[RootModel, AdministratorModel, UserModel, None]:
         raise NotImplementedError
     
     @abstractmethod
-    async def find_all(self, query: dict, skip: int = 0, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
+    async def find_all(self, query: dict, skip: int = 0, page_size: int = 100) -> List[Union[RootModel, AdministratorModel, UserModel]]:
         raise NotImplementedError
     
     @abstractmethod
@@ -32,7 +32,7 @@ class IRootAdministratorRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def insert_user(self, user: UserModel):
+    async def insert_user(self, user: UserModel) -> str:
         raise NotImplementedError
 
 class RootAdministratorRepository(IRootAdministratorRepository):
@@ -45,15 +45,16 @@ class RootAdministratorRepository(IRootAdministratorRepository):
     async def insert_admin(self, admin: AdministratorModel):
         await self.users_coll.insert_one(admin)
         
-    async def insert_user(self, user: UserModel):
+    async def insert_user(self, user: UserModel) -> str:
         result = await self.users_coll.insert_one(user)
         return result.inserted_id
             
-    async def find_one_by_email(self, email: EmailStr, projection: dict = None) -> Union[RootModel, AdministratorModel, None]:
-        return await self.users_coll.find_one({"email": email}, projection)
+    async def find_one_by_email(self, email: EmailStr, db_str: str, projection: dict = None) -> Union[RootModel, AdministratorModel, None]:
+        return await self.users_coll.find_one({"email": email, "db": db_str}, projection)
+        
     
-    async def find_one_by_id(self, id: str, projection: dict = None) -> Union[RootModel, AdministratorModel, None]:
-        return await self.users_coll.find_one({"_id": id}, projection)
+    async def find_one_by_id(self, id: str, db_str: str, projection: dict = None) -> Union[RootModel, AdministratorModel, None]:
+        return await self.users_coll.find_one({"_id": id, "db": db_str}, projection)
             
     async def find_all(self, query: dict, projection: dict = None, skip: int = 1, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
         return await self.users_coll.find(query, projection).skip(skip).limit(page_size).to_list(length=None)

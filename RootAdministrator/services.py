@@ -21,10 +21,6 @@ class IRootAdministratorServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def find_system_user_by_id(self, id: str) -> Union[RootModel, AdministratorModel, None]:
-        raise NotImplementedError
-    
-    @abstractmethod
     async def find_all_system_admins(self, page: int = 0, page_size: int = 0) -> List[Union[RootModel, AdministratorModel]]:
         raise NotImplementedError
     
@@ -37,11 +33,11 @@ class IRootAdministratorServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def create_system_user(self, user: UserSchema) -> str:
+    async def create_system_user(self, user: UserSchema, db: str) -> str:
         raise NotImplementedError
     
     @abstractmethod
-    async def find_all_company_users(self, db: str, page: int, page_size: int) -> List[Union[RootModel, UserModel]]:
+    async def find_all_company_users(self, db: str, page: int = 0, page_size: int = 0) -> List[Union[RootModel, UserModel]]:
         raise NotImplementedError
     
     @abstractmethod
@@ -49,7 +45,7 @@ class IRootAdministratorServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def count_all_company_user(self, db) -> int:
+    async def count_all_company_user(self, db: str) -> int:
         raise NotImplementedError
 
 class RootAdministratorServices:
@@ -82,13 +78,6 @@ class RootAdministratorServices:
         except Exception as e:
             print(e)
             return False
-            
-    async def find_system_user_by_id(self, id: str) -> Union[RootModel, AdministratorModel, None]:
-        try:
-            return await self.repo.find_one_by_id(id)
-        except Exception as e:
-            print(e)
-            return None
             
     async def find_all_system_admins(self, page: int = 1, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
         try:
@@ -125,7 +114,7 @@ class RootAdministratorServices:
             print(e)
             return -1
 
-    async def create_system_user(self, user: UserSchema, db: str = "") -> str:
+    async def create_system_user(self, user: UserSchema, db: str) -> str:
         try:
             user_obj = user.model_dump()
             raw_pwd = user_obj.get("pwd", "")
@@ -140,7 +129,7 @@ class RootAdministratorServices:
                 db = db,
                 system_role = SystemUserRole.USER,
                 pwd = hashed_pwd,
-                is_manager = user_obj.get("is_manager")
+                is_manager = False
             )
             return await self.repo.insert_user(record.model_dump(by_alias=True))
             
@@ -148,7 +137,7 @@ class RootAdministratorServices:
             print(e)
             return None
 
-    async def find_all_company_users(self, db: str = "", page: int = 0, page_size: int = 0) -> List[Union[RootModel, UserModel]]:
+    async def find_all_company_users(self, db: str, page: int = 0, page_size: int = 0) -> List[Union[RootModel, UserModel]]:
         try:
             skip = (page - 1) * page_size
             projection = {"pwd": 0, "system_role": 0}
@@ -175,7 +164,7 @@ class RootAdministratorServices:
             print(e)
             return False
         
-    async def count_all_company_user(self, db: str = "") -> int:
+    async def count_all_company_user(self, db: str) -> int:
         try:
             return await self.repo.count_all({"db": db, "system_role": SystemUserRole.USER})
         except Exception as e:

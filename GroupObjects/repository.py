@@ -21,6 +21,10 @@ class IGroupObjectRepository(ABC):
     async def find_all(self, query: dict, projection: dict = None) -> List[GroupObjectModel]:
         raise NotImplementedError
     
+    @abstractmethod
+    async def count_all(self, query: dict = {}) -> int:
+        raise NotImplementedError
+    
 class GroupObjectRepository(IGroupObjectRepository):
     def __init__(self, db_str: str, coll: str = DBCollections.GROUP_OBJECTS.value):
         global client
@@ -41,4 +45,7 @@ class GroupObjectRepository(IGroupObjectRepository):
     
     async def find_all(self, query: dict = {}, projection: dict = None) -> List[GroupObjectModel]:
         return await self.group_obj_coll.find(query, projection).to_list(length=None)
+    
+    async def count_all(self, query: dict = {}) -> int:
+        return await self.users_coll.count_documents(query)
         
