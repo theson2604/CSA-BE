@@ -7,6 +7,8 @@ from app.common.db_connector import client, RootCollections
 from app.common.constants import ROOT_CSA_DB
 from typing import List, Union
 
+from app.common.enums import SystemUserRole
+
 class IRootAdministratorRepository(ABC):
     @abstractmethod
     async def insert_admin(self, admin: AdministratorModel):
@@ -25,11 +27,11 @@ class IRootAdministratorRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def find_all_by_email_fullname(self, query: str, db_str: str = "", projection: dict = HIDDEN_SYSTEM_USER_INFO) -> List[dict]:
+    async def find_all_by_email_fullname(self, query: str, system_role: SystemUserRole, db_str: str = "", projection: dict = HIDDEN_SYSTEM_USER_INFO) -> List[dict]:
         raise NotImplementedError
     
     @abstractmethod
-    async def update_one_by_id(self, id: str, record: dict) -> bool:
+    async def update_one_by_id(self, id: str, record: dict):
         raise NotImplementedError
     
     @abstractmethod
@@ -66,19 +68,18 @@ class RootAdministratorRepository(IRootAdministratorRepository):
     async def find_all(self, query: dict, projection: dict = None, skip: int = 1, page_size: int = 100) -> List[Union[UserModel, AdministratorModel]]:
         return await self.users_coll.find(query, projection).skip(skip).limit(page_size).to_list(length=None)
     
-    async def find_all_by_email_fullname(self, query: str, db_str: str = "", projection: dict = HIDDEN_SYSTEM_USER_INFO) -> List[dict]:
-        query = {
+    async def find_all_by_email_fullname(self, query: str, system_role: SystemUserRole, db_str: str = "", projection: dict = HIDDEN_SYSTEM_USER_INFO) -> List[dict]:
+        q = {
             "$and": [
                 {"$or": [{"email": {"$regex": query}}, {"full_name": {"$regex": query}}]},
-                {"db": db_str}
+                {"db": db_str, "system_role": system_role},
             ]
         } if db_str else {"$or": [{"email": {"$regex": query}}, {"full_name": {"$regex": query}}]}
         
-        return await self.users_coll.find(query, projection).to_list(length=None)
+        return await self.users_coll.find(q, projection).to_list(length=None)
         
-    async def update_one_by_id(self, id: str, record: dict) -> bool:
-        result = await self.users_coll.update_one({"_id": id}, {"$set": record})
-        return result.modified_count > 0
+    async def update_one_by_id(self, id: str, record: dict):
+        await self.users_coll.update_one({"_id": id}, {"$set": record})
 
     async def count_all(self, query: dict = {}) -> int:
         return await self.users_coll.count_documents(query)

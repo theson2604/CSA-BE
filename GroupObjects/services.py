@@ -20,6 +20,10 @@ class IGroupObjectServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
+    async def update_one_group(self, group: UpdateGroupObjectSchema):
+        raise NotImplementedError
+    
+    @abstractmethod
     async def get_detail_group_by_id(self, id: str) -> GroupObjectModel:
         raise NotImplementedError
     
@@ -29,9 +33,9 @@ class IGroupObjectServices(ABC):
     
 
 class GroupObjectServices(IGroupObjectServices):
-    def __init__(self, db_str: str, users_repo: IRootAdministratorRepository = Depends(RootAdministratorRepository)):
+    def __init__(self, db_str: str):
         self.repo = GroupObjectRepository(db_str)
-        self.users_repo = users_repo
+        self.users_repo = RootAdministratorRepository()
         self.db_str = db_str
     
     async def create_group(self, group: GroupObjectSchema) -> str:
@@ -40,19 +44,16 @@ class GroupObjectServices(IGroupObjectServices):
             manager_id = group.get("manager_id")
             system_user = await self.users_repo.find_one_by_id(manager_id, self.db_str)
             if system_user:
-                system_user = system_user.model_dump()
                 new_index = await self.repo.count_all()
                 group_model = GroupObjectModel(
                     id = str(ObjectId()),
-                    name = group.get("group_name"),
+                    name = group.get("name"),
                     manager_id = system_user.get("_id"),
                     sorting_id = new_index
                 )
-                update_success = await self.users_repo.update_one_by_id(system_user.get("_id"), {"is_manager": True})
-                if update_success:
-                    return await self.repo.insert_one(group_model.model_dump(by_alias=True))
-
-                raise Exception("Fail to update is_manager")
+                await self.users_repo.update_one_by_id(system_user.get("_id"), {"is_manager": True})
+                
+                return await self.repo.insert_one(group_model.model_dump(by_alias=True))
             
             raise Exception("Not found system user")
         
@@ -62,13 +63,33 @@ class GroupObjectServices(IGroupObjectServices):
         
     async def update_many_groups(self, groups: List[UpdateGroupObjectSchema]) -> bool:
         try:
-            groups = groups.model_dump()
-            # group.update({"modified_at": get_current_hcm_datetime()})
-            # return await self.repo.update_one_by_id(group.pop("id"), group)
-            return True
+            list_groups = []
+            for index, group in enumerate(groups):
+                group = group.model_dump()
+                updated_group = {
+                    "id":  group.get("id"),
+                    "name": group.get("name"),
+                    "manager_id": group.get("manager_id"),
+                    "sorting_id": index,
+                    "modified_at": get_current_hcm_datetime()
+                }
+                list_groups.append(updated_group)
+                
+            return await self.repo.update_many(list_groups)
+        
         except Exception as e:
             print(e)
             return False
+    
+    async def update_one_group(self, group: UpdateGroupObjectSchema):
+        try:
+            group = group.model_dump()
+            group.update({"modified_at": get_current_hcm_datetime()})
+            await self.repo.update_one_by_id(group.pop("id"), group)
+            
+        except Exception as e:
+            print(e)
+            return None
     
     async def get_detail_group_by_id(self, id: str) -> GroupObjectModel:
         try:

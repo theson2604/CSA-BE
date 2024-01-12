@@ -87,7 +87,7 @@ async def update_user(
     
     return "User has been updated" if await root_service.update_user(user) else HTTPException(status_code=400, detail="Fail to update User")
 
-@router.get("/search-user")
+@router.get("/search-company-users")
 @protected_route(SystemUserRole.ADMINISTRATOR)
 async def search_user_by_email_fullname(
     query: str,

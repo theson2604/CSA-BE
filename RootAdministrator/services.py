@@ -177,7 +177,7 @@ class RootAdministratorServices:
         
     async def search_company_users_by_email_fullname(self, db: str, query: str) -> List[dict]:
         try:
-            return await self.repo.find_all_by_email_fullname(query, db)
+            return await self.repo.find_all_by_email_fullname(query, SystemUserRole.USER, db)
         except Exception as e:
             print(e)
             return []

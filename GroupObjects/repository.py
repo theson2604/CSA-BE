@@ -10,7 +10,11 @@ class IGroupObjectRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def update_one_by_id(self, id: str, group: dict) -> bool:
+    async def update_one_by_id(self, id: str, group: dict):
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def update_many(self, groups: List[dict]) -> bool:
         raise NotImplementedError
     
     @abstractmethod
@@ -36,9 +40,15 @@ class GroupObjectRepository(IGroupObjectRepository):
         result = await self.group_obj_coll.insert_one(group)
         return result.inserted_id
         
-    async def update_one_by_id(self, id: str, group: dict) -> bool:
-        result = await self.group_obj_coll.update_one({"_id": id}, {"$set": group})
-        return result.modified_count > 0
+    async def update_one_by_id(self, id: str, group: dict):
+        await self.group_obj_coll.update_one({"_id": id}, {"$set": group})
+    
+    async def update_many(self, groups: List[dict]) -> bool:
+        for group in groups:
+            result = await self.update_one_by_id(group.pop("id"), group)
+            if not result: return False
+            
+        return True
     
     async def find_one_by_id(self, id: str, projection: dict = None) -> GroupObjectModel:
         return await self.group_obj_coll.find_one({"_id": id}, projection)
@@ -47,5 +57,5 @@ class GroupObjectRepository(IGroupObjectRepository):
         return await self.group_obj_coll.find(query, projection).to_list(length=None)
     
     async def count_all(self, query: dict = {}) -> int:
-        return await self.users_coll.count_documents(query)
+        return await self.group_obj_coll.count_documents(query)
         

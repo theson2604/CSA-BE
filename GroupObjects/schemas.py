@@ -1,10 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class GroupObjectSchema(BaseModel):
-    group_name: str
+    name: str
     manager_id: str
     
 class UpdateGroupObjectSchema(BaseModel):
-    id: str
-    group_name: str
+    id: str = Field(..., alias="_id")
+    name: str
     manager_id: str

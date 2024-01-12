@@ -1,3 +1,4 @@
+from typing import List
 from typing_extensions import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
@@ -20,16 +21,28 @@ async def create_group(
     inserted_id = await group_object_service.create_group(group)
     return inserted_id if inserted_id else HTTPException(status_code=400, detail="Fail to create Group Object")
 
-@router.post("/update")
+@router.post("/update-many")
 @protected_route(SystemUserRole.ADMINISTRATOR)
-async def update_group(
+async def update_many_groups(
+    groups: List[UpdateGroupObjectSchema],
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    group_object_service = GroupObjectServices(CURRENT_USER.get("db"))
+    return await group_object_service.update_many_groups(groups)
+
+@router.post("/update-one")
+@protected_route(SystemUserRole.ADMINISTRATOR)
+async def update_one_group(
     group: UpdateGroupObjectSchema,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
     CURRENT_USER = None
 ):
     group_object_service = GroupObjectServices(CURRENT_USER.get("db"))
-    return "Group Object has been updated" if await group_object_service.update_group(group) else HTTPException(status_code=400, detail="Fail to update Group Object")
+    await group_object_service.update_one_group(group)
+    return "Ok"
 
 @router.get("/get-detail-group")
 @protected_route(SystemUserRole.ADMINISTRATOR)
