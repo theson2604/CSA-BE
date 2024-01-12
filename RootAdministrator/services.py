@@ -36,7 +36,6 @@ class IRootAdministratorServices(ABC):
     async def count_all_admin(self) -> int:
         raise NotImplementedError
     
-
 class RootAdministratorServices:
     def __init__(self, repo: IRootAdministratorRepository = Depends(lambda: RootAdministratorRepository(ROOT_CSA_DB, RootCollections.USERS.value))):
         self.repo = repo
