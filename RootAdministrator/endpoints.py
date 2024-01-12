@@ -13,7 +13,7 @@ router = APIRouter()
 async def create_admin(
     admin: AdminSchema,
     CREDENTIALS: AuthCredentialDepend,
-    AUTHEN_SERIVCE: AuthServiceDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
     root_service: RootAdminServiceDepend, 
     CURRENT_USER = None
 ):
@@ -23,7 +23,7 @@ async def create_admin(
 @protected_route(SystemUserRole.ROOT)
 async def get_all_admins(
     CREDENTIALS: AuthCredentialDepend,
-    AUTHEN_SERIVCE: AuthServiceDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
     root_service: RootAdminServiceDepend,
     page: int = 1,
     page_size: int = 100,
@@ -39,7 +39,7 @@ async def get_all_admins(
 async def update_admin(
     admin: UpdateAdminSchema,
     CREDENTIALS: AuthCredentialDepend,
-    AUTHEN_SERIVCE: AuthServiceDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
     root_service: RootAdminServiceDepend,
     CURRENT_USER = None):
     
