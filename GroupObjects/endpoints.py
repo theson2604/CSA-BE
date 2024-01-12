@@ -17,7 +17,8 @@ async def create_group(
     CURRENT_USER = None
 ):
     group_object_service = GroupObjectServices(CURRENT_USER.get("db"))
-    return "Group Object has been created" if await group_object_service.create_group(group) else HTTPException(status_code=400, detail="Fail to create Group Object")
+    inserted_id = await group_object_service.create_group(group)
+    return inserted_id if inserted_id else HTTPException(status_code=400, detail="Fail to create Group Object")
 
 @router.post("/update")
 @protected_route(SystemUserRole.ADMINISTRATOR)

@@ -41,10 +41,6 @@ class IRootAdministratorServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def create_system_user(self, user: UserSchema):
-        raise NotImplementedError
-    
-    @abstractmethod
     async def find_all_company_users(self, db: str, page: int, page_size: int) -> List[Union[RootModel, UserModel]]:
         raise NotImplementedError
     
@@ -129,8 +125,14 @@ class RootAdministratorServices:
         try:
             record = record.model_dump()
             record.update({"modified_at": get_current_hcm_datetime()})
-            if record.get("pwd", None) is None:
+            raw_pwd = record.get("pwd", None)
+            if raw_pwd is None:
                 record.pop("pwd")
+            else:
+                salt = bcrypt.gensalt()
+                hashed_pwd = bcrypt.hashpw(raw_pwd.encode('utf-8'), salt).decode("utf-8")
+                record.update({"pwd": hashed_pwd})
+                
             return await self.repo.update_one_by_id(record.pop("id"), record)
 
         except Exception as e:
