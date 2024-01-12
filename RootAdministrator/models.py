@@ -36,7 +36,7 @@ class AdministratorModel(RootBase):
     
 class UserModel(RootBase):
     full_name: str = Field(..., alias="full_name", max_length=30)
-    is_manager: bool = Field(..., alias="is_manager", default=False)
+    is_manager: bool = Field(..., alias="is_manager")
 
     created_at: str = Field(..., alias="created_at", default_factory=get_current_hcm_datetime)
     modified_at: str = Field(..., alias="modified_at", default_factory=get_current_hcm_datetime)

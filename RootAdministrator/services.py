@@ -4,7 +4,7 @@ from RootAdministrator.schemas import RootSchema, AdminSchema, UpdateAdminSchema
 from app.common.db_connector import RootCollections
 from app.common.enums import SystemUserRole
 from app.common.utils import generate_db_company, get_current_hcm_datetime
-from .repository import IRootAdministratorRepository, RootAdministratorRepository, IUserRepository, UserRepository
+from .repository import IRootAdministratorRepository, RootAdministratorRepository
 from fastapi import Depends
 import bcrypt
 from app.common.constants import ROOT_CSA_DB
