@@ -58,7 +58,7 @@ async def create_user(
     res = await root_service.create_system_user(user, db)
     return res if res  else HTTPException(status_code=400, detail="Fail to create User")
 
-@router.post("/get-all-users")
+@router.get("/get-all-users")
 @protected_route(SystemUserRole.ADMINISTRATOR)
 async def get_all_users(
     CREDENTIALS: AuthCredentialDepend,

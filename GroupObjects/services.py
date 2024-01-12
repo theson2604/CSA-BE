@@ -1,7 +1,7 @@
 from typing import List
 from GroupObjects.models import GroupObjectModel
 from GroupObjects.schemas import GroupObjectSchema, UpdateGroupObjectSchema
-from GroupObjects.repository import GroupObjectRepository
+from GroupObjects.repository import GroupObjectRepository, IGroupObjectRepository
 from bson import ObjectId
 from abc import ABC, abstractmethod
 

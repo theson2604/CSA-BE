@@ -1,14 +1,14 @@
 from typing import List, Union
 from abc import ABC, abstractmethod
 
-from FieldObject.models import FieldEmail, FieldPhoneNumber, FieldSelect, FieldText
+from FieldObject.models import FieldEmail, FieldPhoneNumber, FieldReferenceObject, FieldSelect, FieldText
 
 from app.common.db_connector import client, DBCollections
 
 
 class IFieldObjectRepository(ABC):
     @abstractmethod
-    async def insert_many(self, fields: List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber]]) -> List[str]:
+    async def insert_many(self, fields: List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]]) -> List[str]:
         raise NotImplementedError
     
     @abstractmethod
@@ -20,7 +20,7 @@ class IFieldObjectRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def find_all(self) -> List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber]]:
+    async def find_all(self) -> List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]]:
         raise NotImplementedError
     
 class FieldObjectRepository(IFieldObjectRepository):
@@ -30,9 +30,10 @@ class FieldObjectRepository(IFieldObjectRepository):
         self.db = client.get_database(db_str)
         self.field_object_coll = self.db.get_collection(coll)
         
-    async def insert_many(self, fields: List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber]]) -> List[str]:
+    async def insert_many(self, fields: List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]]) -> List[str]:
         result = await self.field_object_coll.insert_many(fields)
-        return result.inserted_ids
+        ids = result.inserted_ids
+        return ids if ids else []
     
     async def update_one_by_id(self, id: str, field: dict) -> bool:
         result = await self.field_object_coll.update_one({"_id": id}, {"$set": field})
@@ -45,6 +46,6 @@ class FieldObjectRepository(IFieldObjectRepository):
             
         return True
     
-    async def find_all(self) -> List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber]]:
+    async def find_all(self) -> List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]]:
         raise NotImplementedError
         

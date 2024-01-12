@@ -10,3 +10,4 @@ class FieldObjectType(str, Enum):
     EMAIL = 'email'
     SELECT = 'select'
     PHONE_NUMBER = 'phonenumber'
+    REFERENCE_OBJECT = 'refobject'

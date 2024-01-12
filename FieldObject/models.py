@@ -8,6 +8,7 @@ class FieldObjectBase(BaseModel):
     field_type: FieldObjectType = Field(..., alias="field_type")
     field_name: str = Field(..., max_length=100, alias="name")
     field_id: str = Field(..., alias="field_id")
+    object_id: str = Field(..., alias="object_id")
     sorting_id: int = Field(..., ge=0)
     
     model_config = ConfigDict(
