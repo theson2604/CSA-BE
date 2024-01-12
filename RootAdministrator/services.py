@@ -110,8 +110,14 @@ class RootAdministratorServices:
         try:
             record = record.model_dump()
             record.update({"modified_at": get_current_hcm_datetime()})
-            if record.get("pwd", None) is None:
+            raw_pwd = record.get("pwd", None)
+            if raw_pwd is None:
                 record.pop("pwd")
+            else:
+                salt = bcrypt.gensalt()
+                hashed_pwd = bcrypt.hashpw(raw_pwd.encode('utf-8'), salt).decode("utf-8")
+                record.update({"pwd": hashed_pwd})
+                
             return await self.repo.update_one_by_id(record.pop("id"), record)
 
         except Exception as e:
