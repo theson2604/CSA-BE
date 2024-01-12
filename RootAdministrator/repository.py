@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from pydantic import EmailStr
-from RootAdministrator.models import AdministratorModel, RootModel
+from RootAdministrator.models import AdministratorModel, RootModel, UserModel
 from app.common.db_connector import client, RootCollections
 from app.common.constants import ROOT_CSA_DB
 from typing import List, Union
@@ -37,6 +37,10 @@ class IRootAdministratorRepository(ABC):
     @abstractmethod
     async def count_all(self, query: dict = {}) -> int:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def insert_user(self, user: UserModel):
+        raise NotImplementedError
 
 class RootAdministratorRepository(IRootAdministratorRepository):
     def __init__(self, db_str: str = ROOT_CSA_DB, coll: str = RootCollections.USERS.value):
@@ -70,3 +74,6 @@ class RootAdministratorRepository(IRootAdministratorRepository):
 
     async def count_all(self, query: dict = {}) -> int:
         return await self.users_coll.count_documents(query)
+    
+    async def insert_user(self, user: UserModel):
+        await self.users_coll.insert_one(user)

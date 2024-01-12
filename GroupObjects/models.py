@@ -1,4 +1,4 @@
-from RootAdministrator.models import AdministratorModel, User
+from RootAdministrator.models import AdministratorModel, UserModel
 from pydantic import ConfigDict, EmailStr, Field, BaseModel, create_model
 
 from app.common.utils import get_current_hcm_datetime
