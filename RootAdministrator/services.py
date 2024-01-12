@@ -47,6 +47,10 @@ class IRootAdministratorServices(ABC):
     @abstractmethod
     async def count_all_company_user(self, db: str) -> int:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def search_company_users_by_email_fullname(self, db: str, query: str) -> List[dict]:
+        raise NotImplementedError
 
 class RootAdministratorServices:
     def __init__(self, repo: IRootAdministratorRepository = Depends(lambda: RootAdministratorRepository(ROOT_CSA_DB, RootCollections.USERS.value))):
@@ -170,3 +174,10 @@ class RootAdministratorServices:
         except Exception as e:
             print(e)
             return -1
+        
+    async def search_company_users_by_email_fullname(self, db: str, query: str) -> List[dict]:
+        try:
+            return await self.repo.find_all_by_email_fullname(query, db)
+        except Exception as e:
+            print(e)
+            return []
