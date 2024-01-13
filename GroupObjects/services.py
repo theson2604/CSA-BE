@@ -84,7 +84,6 @@ class GroupObjectServices(IGroupObjectServices):
         group.update({"modified_at": get_current_hcm_datetime()})
         await self.repo.update_one_by_id(group.pop("id"), group)
 
-    
     async def get_detail_group_by_id(self, id: str) -> dict:
         group = await self.repo.find_one_by_id(id)
         manager_id = group.pop("manager_id")
@@ -94,7 +93,6 @@ class GroupObjectServices(IGroupObjectServices):
         
         return group
  
-    
     async def get_all_groups(self, query: dict = {}) -> List[GroupObjectModel]:
         return await self.repo.find_all(query)
         
