@@ -12,11 +12,15 @@ class IFieldObjectRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def update_one_by_id(self, id: str, field: dict) -> bool:
+    async def update_one_by_id(self, id: str, field: dict):
         raise NotImplementedError
     
     @abstractmethod
-    async def update_many(self, fields: List[dict]) -> bool:
+    async def update_many(self, fields: List[dict]):
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def find_one_by_id(self, id: str) -> Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]:
         raise NotImplementedError
     
     @abstractmethod
@@ -32,20 +36,19 @@ class FieldObjectRepository(IFieldObjectRepository):
         
     async def insert_many(self, fields: List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject, None]]) -> List[str]:
         result = await self.field_object_coll.insert_many(fields)
-        ids = result.inserted_ids
-        return ids if ids else []
+        return result.inserted_ids
     
-    async def update_one_by_id(self, id: str, field: dict) -> bool:
-        result = await self.field_object_coll.update_one({"_id": id}, {"$set": field})
-        return result.modified_count > 0
+    async def update_one_by_id(self, id: str, field: dict):
+        await self.field_object_coll.update_one({"_id": id}, {"$set": field})
+
     
-    async def update_many(self, fields: List[dict]) -> bool:
+    async def update_many(self, fields: List[dict]):
         for field in fields:
-            result = await self.update_one_by_id(field.pop("id"), field) # Have to check more
-            if not result: return False
+            await self.update_one_by_id(field.pop("id"), field) # Have to check more
             
-        return True
-    
-    async def find_all(self) -> List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]]:
-        raise NotImplementedError
+    async def find_one_by_id(self, id: str) -> Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]:
+        return await self.field_object_coll.find_one({"_id": id})
+
+    async def find_all(self, query: dict = {}) -> List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]]:
+        return await self.field_object_coll.find(query).to_list(length=None)
         

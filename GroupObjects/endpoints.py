@@ -35,8 +35,15 @@ async def update_many_groups(
     AUTHEN_SERVICE: AuthServiceDepend,
     CURRENT_USER = None
 ):
-    group_object_service = GroupObjectServices(CURRENT_USER.get("db"))
-    return await group_object_service.update_many_groups(groups)
+    try:
+        group_object_service = GroupObjectServices(CURRENT_USER.get("db"))
+        await group_object_service.update_many_groups(groups)
+        return "Ok"
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
 
 @router.post("/update-one")
 @protected_route([SystemUserRole.ADMINISTRATOR])

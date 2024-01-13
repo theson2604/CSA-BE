@@ -15,7 +15,7 @@ class IGroupObjectServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def update_many_groups(self, groups: List[UpdateGroupObjectSchema]) -> bool:
+    async def update_many_groups(self, groups: List[UpdateGroupObjectSchema]):
         raise NotImplementedError
     
     @abstractmethod
@@ -59,23 +59,23 @@ class GroupObjectServices(IGroupObjectServices):
         
         return await self.repo.insert_one(group_model.model_dump(by_alias=True))
         
-    async def update_many_groups(self, groups: List[UpdateGroupObjectSchema]) -> bool:
+    async def update_many_groups(self, groups: List[UpdateGroupObjectSchema]):
         list_groups = []
         for index, group in enumerate(groups):
             group = group.model_dump()
             manager_id = group.get("manager_id")
             system_user = await self.users_repo.find_one_by_id(manager_id, self.db_str)
-            if system_user:
-                updated_group = {
-                    "id":  group.get("id"),
-                    "name": group.get("name"),
-                    "manager_id": group.get("manager_id"),
-                    "sorting_id": index,
-                    "modified_at": get_current_hcm_datetime()
-                }
-                list_groups.append(updated_group)
-                
-            raise HTTPBadRequest("Cannot found system user by manager_id")
+            if not system_user:
+                raise HTTPBadRequest("Cannot found system user by manager_id")
+            
+            updated_group = {
+                "id":  group.get("id"),
+                "name": group.get("name"),
+                "manager_id": group.get("manager_id"),
+                "sorting_id": index,
+                "modified_at": get_current_hcm_datetime()
+            }
+            list_groups.append(updated_group)
         
         await self.repo.update_many(list_groups)
     
