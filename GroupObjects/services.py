@@ -1,13 +1,12 @@
 from typing import List
-
-from fastapi import Depends
 from GroupObjects.models import GroupObjectModel
 from GroupObjects.schemas import GroupObjectSchema, UpdateGroupObjectSchema
 from GroupObjects.repository import GroupObjectRepository, IGroupObjectRepository
 from bson import ObjectId
 from abc import ABC, abstractmethod
-from RootAdministrator.repository import IRootAdministratorRepository, RootAdministratorRepository
-
+from RootAdministrator.constants import HIDDEN_SYSTEM_USER_INFO
+from RootAdministrator.repository import RootAdministratorRepository
+from app.common.errors import HTTPBadRequest
 from app.common.utils import get_current_hcm_datetime
 
 class IGroupObjectServices(ABC):
@@ -24,11 +23,15 @@ class IGroupObjectServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def get_detail_group_by_id(self, id: str) -> GroupObjectModel:
+    async def get_detail_group_by_id(self, id: str) -> dict:
         raise NotImplementedError
     
     @abstractmethod
-    async def get_all_groups(self) -> List[GroupObjectModel]:
+    async def get_all_groups(self, query: dict = {}) -> List[GroupObjectModel]:
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def get_all_user_groups(self, user_id: str) -> List[GroupObjectModel]:
         raise NotImplementedError
     
 
@@ -39,33 +42,30 @@ class GroupObjectServices(IGroupObjectServices):
         self.db_str = db_str
     
     async def create_group(self, group: GroupObjectSchema) -> str:
-        try:
+        group = group.model_dump()
+        manager_id = group.get("manager_id")
+        system_user = await self.users_repo.find_one_by_id(manager_id, self.db_str)
+        if not system_user:
+            raise HTTPBadRequest("Cannot found system user by manager_id")
+        
+        new_index = await self.repo.count_all()
+        group_model = GroupObjectModel(
+            id = str(ObjectId()),
+            name = group.get("name"),
+            manager_id = system_user.get("_id"),
+            sorting_id = new_index
+        )
+        await self.users_repo.update_one_by_id(system_user.get("_id"), {"is_manager": True})
+        
+        return await self.repo.insert_one(group_model.model_dump(by_alias=True))
+        
+    async def update_many_groups(self, groups: List[UpdateGroupObjectSchema]) -> bool:
+        list_groups = []
+        for index, group in enumerate(groups):
             group = group.model_dump()
             manager_id = group.get("manager_id")
             system_user = await self.users_repo.find_one_by_id(manager_id, self.db_str)
             if system_user:
-                new_index = await self.repo.count_all()
-                group_model = GroupObjectModel(
-                    id = str(ObjectId()),
-                    name = group.get("name"),
-                    manager_id = system_user.get("_id"),
-                    sorting_id = new_index
-                )
-                await self.users_repo.update_one_by_id(system_user.get("_id"), {"is_manager": True})
-                
-                return await self.repo.insert_one(group_model.model_dump(by_alias=True))
-            
-            raise Exception("Not found system user")
-        
-        except Exception as e:
-            print(e)
-            return None
-        
-    async def update_many_groups(self, groups: List[UpdateGroupObjectSchema]) -> bool:
-        try:
-            list_groups = []
-            for index, group in enumerate(groups):
-                group = group.model_dump()
                 updated_group = {
                     "id":  group.get("id"),
                     "name": group.get("name"),
@@ -75,32 +75,28 @@ class GroupObjectServices(IGroupObjectServices):
                 }
                 list_groups.append(updated_group)
                 
-            return await self.repo.update_many(list_groups)
+            raise HTTPBadRequest("Cannot found system user by manager_id")
         
-        except Exception as e:
-            print(e)
-            return False
+        await self.repo.update_many(list_groups)
     
     async def update_one_group(self, group: UpdateGroupObjectSchema):
-        try:
-            group = group.model_dump()
-            group.update({"modified_at": get_current_hcm_datetime()})
-            await self.repo.update_one_by_id(group.pop("id"), group)
-            
-        except Exception as e:
-            print(e)
-            return None
+        group = group.model_dump()
+        group.update({"modified_at": get_current_hcm_datetime()})
+        await self.repo.update_one_by_id(group.pop("id"), group)
+
     
-    async def get_detail_group_by_id(self, id: str) -> GroupObjectModel:
-        try:
-            return await self.repo.find_one_by_id(id)
-        except Exception as e:
-            print(e)
-            return None
+    async def get_detail_group_by_id(self, id: str) -> dict:
+        group = await self.repo.find_one_by_id(id)
+        manager_id = group.pop("manager_id")
+        if manager_id:
+            manager = await self.users_repo.find_one_by_id(manager_id, self.db_str, HIDDEN_SYSTEM_USER_INFO)
+            group.update({"manager": manager})
+        
+        return group
+ 
     
-    async def get_all_groups(self) -> List[GroupObjectModel]:
-        try:
-            return await self.repo.find_all()
-        except Exception as e:
-            print(e)
-            return []
+    async def get_all_groups(self, query: dict = {}) -> List[GroupObjectModel]:
+        return await self.repo.find_all(query)
+        
+    async def get_all_user_groups(self, user_id: str) -> List[GroupObjectModel]:
+        return await self.get_all_groups({"manager_id": user_id})

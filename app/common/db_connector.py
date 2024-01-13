@@ -12,6 +12,7 @@ PyObjectId = Annotated[str, BeforeValidator(str)]
 class DBCollections(str, Enum):
     GROUP_OBJECTS = "GroupObjects"
     FIELD_OBJECT = "FieldObject"
+    OBJECT = "Object"
 
 # Root Collections
 class RootCollections(str, Enum):

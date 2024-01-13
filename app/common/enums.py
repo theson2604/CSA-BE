@@ -11,3 +11,6 @@ class FieldObjectType(str, Enum):
     SELECT = 'select'
     PHONE_NUMBER = 'phonenumber'
     REFERENCE_OBJECT = 'refobject'
+    
+class StatusCodeException(int, Enum):
+    BAD_REQUEST = 400

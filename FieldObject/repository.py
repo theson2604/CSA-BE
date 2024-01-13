@@ -8,7 +8,7 @@ from app.common.db_connector import client, DBCollections
 
 class IFieldObjectRepository(ABC):
     @abstractmethod
-    async def insert_many(self, fields: List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]]) -> List[str]:
+    async def insert_many(self, fields: List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject, None]]) -> List[str]:
         raise NotImplementedError
     
     @abstractmethod
@@ -30,7 +30,7 @@ class FieldObjectRepository(IFieldObjectRepository):
         self.db = client.get_database(db_str)
         self.field_object_coll = self.db.get_collection(coll)
         
-    async def insert_many(self, fields: List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]]) -> List[str]:
+    async def insert_many(self, fields: List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject, None]]) -> List[str]:
         result = await self.field_object_coll.insert_many(fields)
         ids = result.inserted_ids
         return ids if ids else []

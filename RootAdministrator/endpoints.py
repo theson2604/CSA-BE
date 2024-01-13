@@ -9,7 +9,7 @@ from app.dependencies.authentication import protected_route
 router = APIRouter()
 
 @router.post("/create-admin")
-@protected_route(SystemUserRole.ROOT)
+@protected_route([SystemUserRole.ROOT])
 async def create_admin(
     admin: AdminSchema,
     CREDENTIALS: AuthCredentialDepend,
@@ -20,7 +20,7 @@ async def create_admin(
     return "Admin has been created" if await root_service.create_system_admin(admin) else HTTPException(status_code=400, detail="Fail to create Admin")
 
 @router.get("/get-all-admins")
-@protected_route(SystemUserRole.ROOT)
+@protected_route([SystemUserRole.ROOT])
 async def get_all_admins(
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
@@ -35,7 +35,7 @@ async def get_all_admins(
     return res
 
 @router.post("/update-admin")
-@protected_route(SystemUserRole.ROOT)
+@protected_route([SystemUserRole.ROOT])
 async def update_admin(
     admin: UpdateAdminSchema,
     CREDENTIALS: AuthCredentialDepend,
@@ -46,7 +46,7 @@ async def update_admin(
     return "Admin has been updated" if await root_service.update_admin(admin) else HTTPException(status_code=400, detail="Fail to update Admin")
 
 @router.post("/create-user")
-@protected_route(SystemUserRole.ADMINISTRATOR)
+@protected_route([SystemUserRole.ADMINISTRATOR])
 async def create_user(
     user: UserSchema,
     CREDENTIALS: AuthCredentialDepend,
@@ -55,11 +55,11 @@ async def create_user(
     CURRENT_USER = None
 ):
     db = CURRENT_USER.get("db")
-    res = await root_service.create_system_user(user, db)
-    return res if res  else HTTPException(status_code=400, detail="Fail to create User")
+    return await root_service.create_system_user(user, db)
+
 
 @router.get("/get-all-users")
-@protected_route(SystemUserRole.ADMINISTRATOR)
+@protected_route([SystemUserRole.ADMINISTRATOR])
 async def get_all_users(
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
@@ -77,7 +77,7 @@ async def get_all_users(
     return res
 
 @router.post("/update-user")
-@protected_route(SystemUserRole.ADMINISTRATOR)
+@protected_route([SystemUserRole.ADMINISTRATOR])
 async def update_user(
     user: UpdateUserSchema,
     CREDENTIALS: AuthCredentialDepend,
@@ -88,7 +88,7 @@ async def update_user(
     return "User has been updated" if await root_service.update_user(user) else HTTPException(status_code=400, detail="Fail to update User")
 
 @router.get("/search-company-users")
-@protected_route(SystemUserRole.ADMINISTRATOR)
+@protected_route([SystemUserRole.ADMINISTRATOR])
 async def search_user_by_email_fullname(
     query: str,
     CREDENTIALS: AuthCredentialDepend,

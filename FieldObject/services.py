@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Union
 from bson import ObjectId
 from FieldObject.models import FieldEmail, FieldPhoneNumber, FieldReferenceObject, FieldSelect, FieldText
 
@@ -13,10 +13,14 @@ class IFieldObjectService(ABC):
     async def create_many_field_object(self, object_id: str, fields: List[FieldObjectSchema]) -> List[str]:
         raise NotImplementedError
     
+    @abstractmethod
+    async def get_all_fields_by_obj(self, object_id: str) -> List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]]:
+        raise NotImplementedError
+    
 class FieldObjectService(IFieldObjectService):
     def __init__(self, db_str: str):
         self.repo = FieldObjectRepository(db_str)
-    
+        
     async def create_many_field_object(self, object_id: str, fields: List[FieldObjectSchema]) -> List[str]:
         list_fields = []
         for index, field in enumerate(fields):

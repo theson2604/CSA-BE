@@ -19,7 +19,7 @@ class IRootAdministratorRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def find_one_by_id(self, id: str, db_str: str) -> Union[AdministratorModel, UserModel]:
+    async def find_one_by_id(self, id: str, db_str: str = "") -> Union[AdministratorModel, UserModel]:
         raise NotImplementedError
     
     @abstractmethod
@@ -62,7 +62,10 @@ class RootAdministratorRepository(IRootAdministratorRepository):
         
         return await self.users_coll.find_one({"email": email}, projection)
     
-    async def find_one_by_id(self, id: str, db_str: str, projection: dict = None) -> Union[AdministratorModel, UserModel]:
+    async def find_one_by_id(self, id: str, db_str: str = "", projection: dict = None) -> Union[AdministratorModel, UserModel]:
+        if not db_str:
+            return await self.users_coll.find_one({"_id": id}, projection)
+        
         return await self.users_coll.find_one({"_id": id, "db": db_str}, projection)
             
     async def find_all(self, query: dict, projection: dict = None, skip: int = 1, page_size: int = 100) -> List[Union[UserModel, AdministratorModel]]:

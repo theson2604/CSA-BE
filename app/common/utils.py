@@ -33,3 +33,11 @@ def generate_field_id(name: str = "") -> str:
     rand_num = random.randint(0, 999)
     rand_3_digits = f"{rand_num:03}"
     return "fd_" + convert_str(name) + f"_{rand_3_digits}"
+
+def generate_object_id(name: str = "") -> str:
+    """
+        Generate unique Object's Field with format "obj_customercare_123"
+    """
+    rand_num = random.randint(0, 999)
+    rand_3_digits = f"{rand_num:03}"
+    return "obj_" + convert_str(name) + f"_{rand_3_digits}"
