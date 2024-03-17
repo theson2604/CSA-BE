@@ -16,8 +16,8 @@ class FieldObjectSchema(BaseModel):
     country_code: Optional[str] = None
     number: Optional[str] = None
     
-    # Reference Object
-    source: Optional[str] = None
+    # Reference Object / Field Object
+    src: Optional[str] = None
 
 class UpdateFieldObjectSchema(BaseModel):
     id: str = Field(..., alias="_id")

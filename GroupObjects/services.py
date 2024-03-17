@@ -81,6 +81,11 @@ class GroupObjectServices(IGroupObjectServices):
     
     async def update_one_group(self, group: UpdateGroupObjectSchema):
         group = group.model_dump()
+        manager_id = group.get("manager_id")
+        system_user = await self.users_repo.find_one_by_id(manager_id, self.db_str)
+        if not system_user:
+            raise HTTPBadRequest("Cannot found system user by manager_id")
+        
         group.update({"modified_at": get_current_hcm_datetime()})
         await self.repo.update_one_by_id(group.pop("id"), group)
 

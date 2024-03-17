@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from FieldObject.schemas import FieldObjectSchema
 
 class ObjectSchema(BaseModel):
-    obj_name: str = Field(..., max_length=100)
+    obj_name: str = Field(..., max_length=100, min_length=1)
     group_obj_id: str
     
 class ObjectWithFieldSchema(ObjectSchema):

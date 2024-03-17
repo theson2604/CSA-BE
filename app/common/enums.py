@@ -10,7 +10,8 @@ class FieldObjectType(str, Enum):
     EMAIL = 'email'
     SELECT = 'select'
     PHONE_NUMBER = 'phonenumber'
-    REFERENCE_OBJECT = 'refobject'
+    REFERENCE_OBJECT = 'ref_obj'
+    REFERENCE_FIELD_OBJECT = 'ref_field_obj'
     
 class StatusCodeException(int, Enum):
     BAD_REQUEST = 400

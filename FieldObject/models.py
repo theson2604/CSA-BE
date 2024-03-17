@@ -29,4 +29,8 @@ class FieldPhoneNumber(FieldObjectBase):
     number: str = Field(..., alias="phone_number")
     
 class FieldReferenceObject(FieldObjectBase):
-    source: str = Field(..., alias="source")
+    ref_obj: str = Field(..., alias="ref_obj")
+    
+class FieldReferenceFieldObject(FieldObjectBase):
+    ref_obj: str = Field(..., alias="ref_obj")
+    ref_field_obj: str = Field(..., alias="ref_field_obj")

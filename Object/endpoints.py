@@ -29,7 +29,7 @@ async def create_object(
         
 @router.post("/create-object-with-fields")
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
-async def create_object(
+async def create_object_with_fields(
     obj_with_fields: ObjectWithFieldSchema,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
