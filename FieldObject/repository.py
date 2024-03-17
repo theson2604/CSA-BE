@@ -20,15 +20,15 @@ class IFieldObjectRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def find_one_by_id(self, id: str) -> Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject, FieldReferenceFieldObject]:
+    async def find_one_by_id(self, id: str) -> Union[FieldObjectBase]:
         raise NotImplementedError
     
-    @abstractmethod
-    async def find_one_by_field_id(self, obj_id: str, fld_id: str) -> Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject, FieldReferenceFieldObject]:
-        raise NotImplementedError
+    # @abstractmethod
+    # async def find_one_by_field_id(self, obj_id: str, fld_id: str) -> Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject, FieldReferenceFieldObject]:
+    #     raise NotImplementedError
     
     @abstractmethod
-    async def find_all(self) -> List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject, FieldReferenceFieldObject]]:
+    async def find_all(self) -> List[Union[FieldObjectBase]]:
         raise NotImplementedError
     
 class FieldObjectRepository(IFieldObjectRepository):
