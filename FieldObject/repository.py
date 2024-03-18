@@ -23,9 +23,9 @@ class IFieldObjectRepository(ABC):
     async def find_one_by_id(self, id: str) -> Union[FieldObjectBase]:
         raise NotImplementedError
     
-    # @abstractmethod
-    # async def find_one_by_field_id(self, obj_id: str, fld_id: str) -> Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject, FieldReferenceFieldObject]:
-    #     raise NotImplementedError
+    @abstractmethod
+    async def find_one_by_field_id(self, obj_id: str, fld_id: str) -> Union[FieldObjectBase]:
+        raise NotImplementedError
     
     @abstractmethod
     async def find_all(self) -> List[Union[FieldObjectBase]]:
@@ -51,6 +51,13 @@ class FieldObjectRepository(IFieldObjectRepository):
             
     async def find_one_by_id(self, id: str) -> Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]:
         return await self.field_object_coll.find_one({"_id": id})
+    
+    async def find_one_by_field_id(self, obj_id: str, fld_id: str) -> Union[FieldObjectBase]:
+        """
+            obj_id: _id
+            fld_id: fd_<name>_<id>
+        """
+        return await self.field_object_coll.find_one({"object_id": obj_id, "field_id": fld_id})
 
     async def find_all(self, query: dict = {}) -> List[Union[FieldText, FieldEmail, FieldSelect, FieldPhoneNumber, FieldReferenceObject]]:
         return await self.field_object_coll.find(query).to_list(length=None)

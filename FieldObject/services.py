@@ -91,12 +91,14 @@ class FieldObjectService(IFieldObjectService):
                 split_source_id = source_id.split(".")
                 obj_id, fld_id = split_source_id[0], split_source_id[1]
                 ref_obj = await self.object_repo.find_one_by_object_id(obj_id)
+                ref_obj_id = ref_obj.get("_id")
+                ref_field = await self.repo.find_one_by_field_id(ref_obj_id, fld_id)
                 if not ref_obj:
                     raise HTTPBadRequest(f"Not found ref_obj {obj_id}")
 
                 field_base.update({
-                    "ref_obj": ref_obj.get("_id"),
-                    "ref_field_obj": fld_id.get("_id")
+                    "ref_obj": ref_obj_id,
+                    "ref_field_obj": ref_field.get("_id")
                 })
                 list_fields.append(FieldReferenceFieldObject.model_validate(field_base).model_dump(by_alias=True))
                 
