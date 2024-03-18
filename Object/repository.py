@@ -28,7 +28,7 @@ class IObjectRepository(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def delete_one(self, id: str):
+    async def delete_one_by_id(self, id: str) -> bool:
         raise NotImplementedError
     
 class ObjectRepository(IObjectRepository):
@@ -54,6 +54,6 @@ class ObjectRepository(IObjectRepository):
     async def count_all(self, query: dict = {}) -> int:
         return await self.obj_coll.count_documents(query)
     
-    async def delete_one(self, id: str):
+    async def delete_one_by_id(self, id: str) -> bool:
         return await self.obj_coll.delete_one({"_id": id})
     

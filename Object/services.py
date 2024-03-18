@@ -88,7 +88,7 @@ class ObjectService(IObjectService):
             return new_obj_id
         except FieldObjectServiceException as e:
             if new_obj_id:
-                await self.repo.delete_one(new_obj_id)
+                await self.repo.delete_one_by_id(new_obj_id)
             return HTTPBadRequest(str(e))
             
     
