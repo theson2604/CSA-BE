@@ -83,6 +83,26 @@ class FieldObjectService(IFieldObjectService):
                         "ref_obj": ref_obj.get("_id"),
                     })
                     list_fields.append(FieldReferenceFieldObject.model_validate(field_base).model_dump(by_alias=True))
+                
+                elif field.get("field_type") is FieldObjectType.REFERENCE_OBJECT:
+                    # obj_contact_431.fd_email_286
+                    source_id = field.get("src")
+                    regex_str = "^obj_\w+_\d{3}$"
+                    match = re.search(regex_str, source_id)
+                    if not match:
+                        raise HTTPBadRequest(f"Invalid src {FieldObjectType.REFERENCE_OBJECT}. It must match {regex_str}")
+                    
+                    ref_obj = await self.object_repo.find_one_by_object_id(source_id)
+                    ref_obj_id = ref_obj.get("_id")
+                    display_value = ref_obj.get("obj_name")
+                    
+                    field_base.update({
+                        "field_value": source_id,
+                        "display_value": display_value,
+                        "ref_obj_id": ref_obj_id,
+                    })
+                    
+                    list_fields.append(FieldReferenceObject.model_validate(field_base).model_dump(by_alias=True))
                     
                 elif field.get("field_type") is FieldObjectType.REFERENCE_FIELD_OBJECT:
                     # obj_contact_431.fd_email_286
@@ -104,8 +124,8 @@ class FieldObjectService(IFieldObjectService):
                     field_base.update({
                         "field_value": source_id,
                         "display_value": display_value,
-                        "ref_obj": ref_obj_id,
-                        "ref_field_obj": ref_field.get("_id")
+                        "ref_obj_id": ref_obj_id,
+                        "ref_field_obj_id": ref_field.get("_id")
                     })
                     
                     list_fields.append(FieldReferenceFieldObject.model_validate(field_base).model_dump(by_alias=True))
