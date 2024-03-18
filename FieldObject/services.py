@@ -102,7 +102,7 @@ class FieldObjectService(IFieldObjectService):
 
                     field_base.update({
                         "ref_obj": ref_obj_id,
-                        "ref_field_obj": fld_id.get("_id")
+                        "ref_field_obj": ref_field.get("_id")
                     })
                     list_fields.append(FieldReferenceFieldObject.model_validate(field_base).model_dump(by_alias=True))
                     
