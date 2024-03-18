@@ -100,10 +100,14 @@ class FieldObjectService(IFieldObjectService):
                     if not ref_obj:
                         raise HTTPBadRequest(f"Not found ref_obj {obj_id}")
 
+                    display_value = f'{ref_obj.get("obj_name")}.{ref_field.get("field_name")}'
                     field_base.update({
+                        "field_value": source_id,
+                        "display_value": display_value,
                         "ref_obj": ref_obj_id,
                         "ref_field_obj": ref_field.get("_id")
                     })
+                    
                     list_fields.append(FieldReferenceFieldObject.model_validate(field_base).model_dump(by_alias=True))
                     
             return await self.repo.insert_many(list_fields)
