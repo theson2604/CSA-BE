@@ -4,7 +4,7 @@ from bson import ObjectId
 
 from fastapi import HTTPException
 from FieldObject.repository import FieldObjectRepository
-from FieldObject.services import FieldObjectService
+from FieldObject.services import FieldObjectServiceException, FieldObjectService
 from GroupObjects.repository import GroupObjectRepository
 from Object.models import ObjectModel
 
@@ -77,14 +77,20 @@ class ObjectService(IObjectService):
         return ret_objects
     
     async def create_object_with_fields(self, obj_with_fields: ObjectWithFieldSchema, current_user_id: str) -> str:
-        # Create Object first
-        obj_with_fields_schema = obj_with_fields
-        obj_with_fields = obj_with_fields.model_dump()
-        obj_only = {"obj_name": obj_with_fields.get("obj_name"), "group_obj_id": obj_with_fields.get("group_obj_id")}
-        new_obj_id = await self.create_object_only(ObjectSchema(**obj_only), current_user_id)
-        # Create Field Object
-        await self.field_obj_service.create_many_field_object(new_obj_id, obj_with_fields_schema.fields)
-        return new_obj_id
+        try:
+            # Create Object first
+            obj_with_fields_schema = obj_with_fields
+            obj_with_fields = obj_with_fields.model_dump()
+            obj_only = {"obj_name": obj_with_fields.get("obj_name"), "group_obj_id": obj_with_fields.get("group_obj_id")}
+            new_obj_id = await self.create_object_only(ObjectSchema(**obj_only), current_user_id)
+            # Create Field Object
+            await self.field_obj_service.create_many_field_object(new_obj_id, obj_with_fields_schema.fields)
+            return new_obj_id
+        except FieldObjectServiceException as e:
+            if new_obj_id:
+                await self.repo.delete_one(new_obj_id)
+            return HTTPBadRequest(str(e))
+            
     
     async def get_object_detail_by_id(self, id: str) -> dict:
         object = await self.repo.find_one_by_id(id)
