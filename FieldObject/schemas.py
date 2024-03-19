@@ -36,7 +36,7 @@ class FieldObjectSchema(BaseModel):
             if not country_code:
                 raise ValueError(f"missing required key 'country_code' for field_type {FieldObjectType.PHONE_NUMBER}.")
             
-            regex_str = "^(\+?\d{1,3}|\d{1,4})$"
+            regex_str = "^(\+?\d{1,2}|\d{1,3})$"
             match = re.search(regex_str, country_code)
             if not match:
                 raise ValueError(f"invalid 'country_code' {country_code}. It must be {regex_str}.")

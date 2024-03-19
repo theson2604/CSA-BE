@@ -27,3 +27,4 @@ class RecordObjectService(IRecordObjectService):
         obj_id = record.pop("object_id")
         obj_details = await self.obj_repo.get_object_with_all_fields(obj_id)
         fields_obj = obj_details.get("fields")
+        
