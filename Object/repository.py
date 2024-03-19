@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 from Object.models import ObjectModel
 from RootAdministrator.constants import HIDDEN_METADATA_INFO
@@ -63,19 +63,17 @@ class ObjectRepository(IObjectRepository):
     ) -> ObjectModel:
         return await self.obj_coll.find_one({"obj_id": obj_id}, projection)
 
-    async def get_object_with_all_fields(self, obj_id: str) -> dict:
+    async def get_object_with_all_fields(self, obj_id: str) -> Optional[dict]:
         pipeline = [
+            {"$match": {"_id": obj_id}},
             {
-                "$match": {
-                    "_id": obj_id
-                },
                 "$lookup": {
                     "from": DBCollections.FIELD_OBJECT.value,
                     "localField": "_id",
                     "foreignField": "object_id",
                     "as": "fields",
                 }
-            }
+            },
         ]
         async for doc in self.obj_coll.aggregate(pipeline):
             return doc
