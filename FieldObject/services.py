@@ -66,33 +66,14 @@ class FieldObjectService(IFieldObjectService):
                         "number": field.get("number")
                     })
                     list_fields.append(FieldPhoneNumber.model_validate(field_base).model_dump(by_alias=True))
-                    
-                elif field.get("field_type") is FieldObjectType.REFERENCE_OBJECT:
-                    # obj_contact_431
-                    obj_id = field.get("src")
-                    regex_str = "^obj_\w+_\d{3}"
-                    match = re.search(regex_str, source_id)
-                    if not match:
-                        raise HTTPBadRequest(f"Invalid src {FieldObjectType.REFERENCE_OBJECT}. It must match {regex_str}")
-                    
-                    ref_obj = await self.object_repo.find_one_by_object_id(obj_id)
-                    if not ref_obj:
-                        raise HTTPBadRequest(f"Not found ref_obj {obj_id}")
-
-                    field_base.update({
-                        "ref_obj": ref_obj.get("_id"),
-                    })
-                    list_fields.append(FieldReferenceFieldObject.model_validate(field_base).model_dump(by_alias=True))
                 
                 elif field.get("field_type") is FieldObjectType.REFERENCE_OBJECT:
-                    # obj_contact_431.fd_email_286
+                    # obj_contact_431
                     source_id = field.get("src")
-                    regex_str = "^obj_\w+_\d{3}$"
-                    match = re.search(regex_str, source_id)
-                    if not match:
-                        raise HTTPBadRequest(f"Invalid src {FieldObjectType.REFERENCE_OBJECT}. It must match {regex_str}")
-                    
                     ref_obj = await self.object_repo.find_one_by_object_id(source_id)
+                    if not ref_obj:
+                        raise HTTPBadRequest(f"Not found ref_obj {source_id}.")
+                    
                     ref_obj_id = ref_obj.get("_id")
                     display_value = ref_obj.get("obj_name")
                     
@@ -107,18 +88,16 @@ class FieldObjectService(IFieldObjectService):
                 elif field.get("field_type") is FieldObjectType.REFERENCE_FIELD_OBJECT:
                     # obj_contact_431.fd_email_286
                     source_id = field.get("src")
-                    regex_str = "^obj_\w+_\d{3}.fd_\w+_\d{3}$"
-                    match = re.search(regex_str, source_id)
-                    if not match:
-                        raise HTTPBadRequest(f"Invalid src {FieldObjectType.REFERENCE_FIELD_OBJECT}. It must match {regex_str}")
-                    
                     split_source_id = source_id.split(".")
                     obj_id, fld_id = split_source_id[0], split_source_id[1]
                     ref_obj = await self.object_repo.find_one_by_object_id(obj_id)
+                    if not ref_obj:
+                        raise HTTPBadRequest(f"Not found ref_obj {obj_id}.")
+                    
                     ref_obj_id = ref_obj.get("_id")
                     ref_field = await self.repo.find_one_by_field_id(ref_obj_id, fld_id)
-                    if not ref_obj:
-                        raise HTTPBadRequest(f"Not found ref_obj {obj_id}")
+                    if not ref_field:
+                        raise HTTPBadRequest(f"Not found ref_field {fld_id} in ref_obj {obj_id}.")
 
                     display_value = f'{ref_obj.get("obj_name")}.{ref_field.get("field_name")}'
                     field_base.update({
