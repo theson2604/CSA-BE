@@ -26,7 +26,6 @@ class FieldSelect(FieldObjectBase):
     
 class FieldPhoneNumber(FieldObjectBase):
     country_code: str = Field(..., alias="country_code")
-    number: str = Field(..., alias="phone_number")
     
 class FieldReferenceObject(FieldObjectBase):
     field_value: str = Field(..., alias="field_value")
