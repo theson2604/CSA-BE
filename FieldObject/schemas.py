@@ -43,7 +43,7 @@ class FieldObjectSchema(BaseModel):
         
         elif field_type == FieldObjectType.REFERENCE_OBJECT:
             src = schema.get("src")
-            if not country_code:
+            if not src:
                 raise ValueError(f"missing required key 'src' for 'field_type' {FieldObjectType.REFERENCE_OBJECT}.")
             
             regex_str = "^obj_\w+_\d{3}$"
@@ -53,7 +53,7 @@ class FieldObjectSchema(BaseModel):
         
         elif field_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
             src = schema.get("src")
-            if not country_code:
+            if not src:
                 raise ValueError(f"missing required key 'src' for 'field_type' {FieldObjectType.REFERENCE_FIELD_OBJECT}.")
             
             regex_str = "^obj_\w+_\d{3}.fd_\w+_\d{3}$"
