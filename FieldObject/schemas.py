@@ -39,27 +39,27 @@ class FieldObjectSchema(BaseModel):
             regex_str = "^(\+?\d{1,3}|\d{1,4})$"
             match = re.search(regex_str, country_code)
             if not match:
-                raise ValueError(f'invalid country_code {country_code}. It must be {regex_str}.')
+                raise ValueError(f"invalid 'country_code' {country_code}. It must be {regex_str}.")
         
         elif field_type == FieldObjectType.REFERENCE_OBJECT:
             src = schema.get("src")
             if not country_code:
-                raise ValueError(f"missing required key 'src' for field_type {FieldObjectType.REFERENCE_OBJECT}.")
+                raise ValueError(f"missing required key 'src' for 'field_type' {FieldObjectType.REFERENCE_OBJECT}.")
             
             regex_str = "^obj_\w+_\d{3}$"
             match = re.search(regex_str, src)
             if not match:
-                raise ValueError(f'invalid src {src}. It must be {regex_str}.')
+                raise ValueError(f"invalid 'src' {src}. It must be {regex_str}.")
         
         elif field_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
             src = schema.get("src")
             if not country_code:
-                raise ValueError(f"missing required key 'src' for field_type {FieldObjectType.REFERENCE_FIELD_OBJECT}.")
+                raise ValueError(f"missing required key 'src' for 'field_type' {FieldObjectType.REFERENCE_FIELD_OBJECT}.")
             
             regex_str = "^obj_\w+_\d{3}.fd_\w+_\d{3}$"
             match = re.search(regex_str, src)
             if not match:
-                raise ValueError(f'invalid src {src}. It must be {regex_str}.')
+                raise ValueError(f"invalid 'src' {src}. It must be {regex_str}.")
             
         return self
 

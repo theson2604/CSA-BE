@@ -45,7 +45,7 @@ class ObjectService(IObjectService):
         group_obj_id = obj.get("group_obj_id")
         group = await self.group_obj_repo.find_one_by_id(group_obj_id)
         if not group:
-            raise HTTPBadRequest("Cannot found Group Object by group_obj_id")
+            raise HTTPBadRequest(f"Cannot found Group Object by {group_obj_id}")
         
         obj_name = obj.get("obj_name")
         group_obj_id = group.get("_id") if group.get("_id") else group.get("id")
@@ -93,9 +93,4 @@ class ObjectService(IObjectService):
             
     
     async def get_object_detail_by_id(self, id: str) -> dict:
-        object = await self.repo.find_one_by_id(id)
-        related_field_object = await self.field_obj_service.get_all_fields_by_obj_id(id)
-        return {
-            "object": object,
-            "field_object": related_field_object
-        }
+        return await self.repo.get_object_with_all_fields(id)

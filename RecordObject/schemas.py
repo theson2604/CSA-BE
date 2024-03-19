@@ -11,7 +11,7 @@ class RecordObjectSchema(BaseModel, extra='allow'):
             regex_str = "^fd_\w+_\d{3}$"
             match = re.search(regex_str, field_id)
             if not match:
-                raise ValueError(f'invalid field_id @{field_id}. It must be {regex_str}')
+                raise ValueError(f"invalid 'field_id' {field_id}. It must be {regex_str}")
             
         return self
 

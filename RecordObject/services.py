@@ -17,7 +17,7 @@ class RecordObjectService(IRecordObjectService):
         self.obj_repo = ObjectRepository(db_str)
         obj = self.obj_repo.find_one_by_id(obj_id)
         if not obj:
-            raise HTTPBadRequest(f"Not found object_id {obj_id}")
+            raise HTTPBadRequest(f"Not found object _id {obj_id}")
         
         self.repo = RecordObjectRepository(db_str, coll=obj.get("obj_id"))
         self.field_obj_repo = FieldObjectRepository(db_str)
