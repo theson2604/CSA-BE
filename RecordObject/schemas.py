@@ -14,5 +14,3 @@ class RecordObjectSchema(BaseModel, extra='allow'):
                 raise ValueError(f"invalid 'field_id' {field_id}. It must be {regex_str}")
             
         return self
-
-    

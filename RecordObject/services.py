@@ -1,30 +1,164 @@
 from abc import ABC, abstractmethod
+from typing import List
+import asyncio
+import re
+
+from bson import ObjectId
 
 from FieldObject.repository import FieldObjectRepository
 from Object.repository import ObjectRepository
+from RecordObject.models import RecordObjectModel
 from RecordObject.repository import RecordObjectRepository
 from RecordObject.schemas import RecordObjectSchema
+from app.common.enums import FieldObjectType
 from app.common.errors import HTTPBadRequest
+from app.common.utils import get_current_hcm_datetime
+
+
+class RecordException(Exception):
+    pass
 
 
 class IRecordObjectService(ABC):
     @abstractmethod
-    async def create_record(self, record: RecordObjectSchema) -> str:
+    async def create_record(
+        self, record: RecordObjectSchema, current_user_id: str
+    ) -> str:
         raise NotImplementedError
-    
+
+    @abstractmethod
+    async def get_all_records_with_detail(
+        self, object_id: str, page: int = 1, page_size: int = 100
+    ) -> List[RecordObjectModel]:
+        raise NotImplementedError
+
+
 class RecordObjectService(IRecordObjectService):
     def __init__(self, db_str: str, obj_id: str):
-        self.obj_repo = ObjectRepository(db_str)
-        obj = self.obj_repo.find_one_by_id(obj_id)
-        if not obj:
-            raise HTTPBadRequest(f"Not found object _id {obj_id}")
-        
-        self.repo = RecordObjectRepository(db_str, coll=obj.get("obj_id"))
+        """
+        :Parameters:
+        obj_id: obj_<name>_<id> for selecting corresponding object's mongo collection
+        """
+        self.db_str = db_str
+        self.record_repo = RecordObjectRepository(db_str, coll=obj_id)
         self.field_obj_repo = FieldObjectRepository(db_str)
-        
-    async def create_record(self, record: RecordObjectSchema) -> str:
-        record = record.model_dump()
+
+    async def create_record(
+        self, record: RecordObjectSchema, current_user_id: str
+    ) -> str:
         obj_id = record.pop("object_id")
-        obj_details = await self.obj_repo.get_object_with_all_fields(obj_id)
-        fields_obj = obj_details.get("fields")
+        inserted_record = {"_id": str(ObjectId()), "object_id": obj_id}
+        for field_id, field_value in record.items():
+            field_detail = await self.field_obj_repo.find_one_by_field_id(
+                obj_id, field_id
+            )
+            field_type = field_detail.get("field_type")
+            if field_type == FieldObjectType.TEXT:
+                length = field_detail.get("length")
+                if not isinstance(field_value, str):
+                    raise RecordException(
+                        f"field_value '{field_value}' of type {field_type} must be str."
+                    )
+                if len(field_value) > length:
+                    raise RecordException(f"len(field_value) must be < {length}")
+
+            elif field_type == FieldObjectType.EMAIL:
+                email_regex = (
+                    "^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*@[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*$"
+                )
+                match = re.search(email_regex, field_value)
+                if not match:
+                    raise RecordException(
+                        f"field_value '{field_value}' of type {field_type} must match email_regex {email_regex}"
+                    )
+
+            elif field_type == FieldObjectType.PHONE_NUMBER:
+                country_code = field_detail.get("country_code")
+                if country_code == "+84":
+                    vn_phone_regex = "^(0|84)(2(0[3-9]|1[0-6|8|9]|2[0-2|5-9]|3[2-9]|4[0-9]|5[1|2|4-9]|6[0-3|9]|7[0-7]|8[0-9]|9[0-4|6|7|9])|3[2-9]|5[5|6|8|9]|7[0|6-9]|8[0-6|8|9]|9[0-4|6-9])([0-9]{7})$"
+                    match = re.search(vn_phone_regex, field_value)
+                    if not match:
+                        raise RecordException(
+                            f"field_value '{field_value}' of type {field_type} must be match vn_phone_regex {vn_phone_regex}"
+                        )
+
+            elif field_type == FieldObjectType.SELECT:
+                options = field_detail.get("options")
+                if field_value not in options:
+                    raise RecordException(
+                        f"field_value '{field_value}' of type {field_type} must exist in options {options}"
+                    )
+
+            elif field_type == FieldObjectType.REFERENCE_OBJECT:
+                ref_obj_id = field_detail.get("ref_obj_id")  # obj_<name>_<id>
+                # obj_id's record repo
+                ref_record_repo = RecordObjectRepository(self.db_str, ref_obj_id)
+                ref_record = await ref_record_repo.find_one_by_id(field_value)
+                if not ref_record:
+                    raise RecordException(
+                        f"Not found ref record '{field_value}' in {ref_obj_id}"
+                    )
+
+                field_value = {"ref_to": ref_record.get("_id"), "field_value": "_id"}
+
+            elif field_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
+                ref_field_obj_id = field_detail.get(
+                    "ref_field_obj_id"
+                )  # obj_<name>_<id>.fd_<name>_<id>
+                splitted = ref_field_obj_id.split(".")
+                ref_obj_id, ref_fld_id = splitted[0], splitted[1]
+                # obj_id's record repo
+                ref_record_repo = RecordObjectRepository(self.db_str, ref_obj_id)
+                ref_record = await ref_record_repo.find_one_by_id(field_value)
+                if not ref_record:
+                    raise RecordException(
+                        f"Not found ref record '{field_value} in {ref_obj_id}"
+                    )
+
+                field_value = {
+                    "ref_to": ref_record.get("_id"),
+                    "field_value": ref_fld_id,
+                }
+
+            inserted_record.update({field_id: field_value})
+
+        inserted_record.update(
+            {
+                "created_at": get_current_hcm_datetime(),
+                "modified_at": get_current_hcm_datetime(),
+                "created_by": current_user_id,
+                "modified_by": current_user_id,
+            }
+        )
+        return await self.record_repo.insert_one(
+            RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True)
+        )
+
+    async def get_all_records_with_detail(
+        self, object_id: str, page: int = 1, page_size: int = 100
+    ) -> List[RecordObjectModel]:
+        ref_field_obj_details = await self.field_obj_repo.get_all_by_field_types(
+            object_id,
+            [
+                FieldObjectType.REFERENCE_OBJECT.value,
+                FieldObjectType.REFERENCE_FIELD_OBJECT.value,
+            ],
+        )
         
+        list_fields = []
+        for ref_field_detail in ref_field_obj_details:
+            field_id = ref_field_detail.get("field_id")
+            ref_obj_id = ""
+            if ref_field_detail.get("field_type") == FieldObjectType.REFERENCE_FIELD_OBJECT.value:
+                ref_field_obj = ref_field_detail.get("ref_field_obj_id")
+                ref_obj_id = ref_field_obj.split(".")[0]
+            else:
+                ref_obj_id = ref_field_detail.get("ref_obj_id")
+            
+            list_fields.append({
+                "ref_obj_id": ref_obj_id,
+                "local_field_id": field_id
+            })
+        
+        skip = (page - 1) * page_size
+        return await self.record_repo.get_all_with_parsing_ref_detail(list_fields, skip, page_size)

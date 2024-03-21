@@ -5,6 +5,7 @@ from Object.models import ObjectModel
 from RootAdministrator.constants import HIDDEN_METADATA_INFO
 
 from app.common.db_connector import DBCollections, client
+from app.common.enums import FieldObjectType
 
 
 class IObjectRepository(ABC):
@@ -43,8 +44,8 @@ class ObjectRepository(IObjectRepository):
     def __init__(self, db_str: str, coll: str = DBCollections.OBJECT):
         global client
         self.db_str = db_str
-        self.repo = client.get_database(db_str)
-        self.obj_coll = self.repo.get_collection(coll)
+        self.db = client.get_database(db_str)
+        self.obj_coll = self.db.get_collection(coll)
 
     async def insert_one(self, obj: ObjectModel) -> str:
         result = await self.obj_coll.insert_one(obj)
@@ -64,6 +65,10 @@ class ObjectRepository(IObjectRepository):
         return await self.obj_coll.find_one({"obj_id": obj_id}, projection)
 
     async def get_object_with_all_fields(self, obj_id: str) -> Optional[dict]:
+        """
+            :Params:
+            - obj_id: _id
+        """
         pipeline = [
             {"$match": {"_id": obj_id}},
             {
@@ -74,6 +79,7 @@ class ObjectRepository(IObjectRepository):
                     "as": "fields",
                 }
             },
+            {"$project": {"fields.object_id": 0}},
         ]
         async for doc in self.obj_coll.aggregate(pipeline):
             return doc

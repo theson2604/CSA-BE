@@ -28,12 +28,9 @@ class FieldPhoneNumber(FieldObjectBase):
     country_code: str = Field(..., alias="country_code")
     
 class FieldReferenceObject(FieldObjectBase):
-    field_value: str = Field(..., alias="field_value")
     display_value: str = Field(..., alias="display_value")
     ref_obj_id: str = Field(..., alias="ref_obj_id")
     
 class FieldReferenceFieldObject(FieldObjectBase):
-    field_value: str = Field(..., alias="field_value")
     display_value: str = Field(..., alias="display_value")
-    ref_obj_id: str = Field(..., alias="ref_obj_id")
     ref_field_obj_id: str = Field(..., alias="ref_field_obj_id")

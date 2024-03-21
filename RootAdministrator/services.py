@@ -78,7 +78,7 @@ class RootAdministratorServices:
         await self.repo.insert_admin(record.model_dump(by_alias=True))
         return True
     
-    async def find_all_system_admins(self, page: int = 1, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]:
+    async def find_all_system_admins(self, page: int = 1, page_size: int = 100) -> List[Union[RootModel, AdministratorModel]]: # type: ignore
         skip = (page - 1) * page_size
         projection = {"pwd": 0, "system_role": 0}
         
@@ -118,7 +118,7 @@ class RootAdministratorServices:
         )
         return await self.repo.insert_user(record.model_dump(by_alias=True))
 
-    async def find_all_company_users(self, db: str, page: int = 0, page_size: int = 0) -> List[Union[RootModel, UserModel]]:
+    async def find_all_company_users(self, db: str, page: int = 1, page_size: int = 100) -> List[Union[RootModel, UserModel]]: # type: ignore
         skip = (page - 1) * page_size
         projection = {"pwd": 0, "system_role": 0}
         
