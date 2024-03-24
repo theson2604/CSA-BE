@@ -19,9 +19,9 @@ class IRecordObjectRepository(ABC):
     ) -> List[RecordObjectModel]:
         raise NotImplementedError
 
-    # @abstractmethod
-    # async def find_one_by_id(self, id: str, projection: dict = None) -> RecordObjectModel:
-    #     raise NotImplementedError
+    @abstractmethod
+    async def find_one_by_id(self, id: str, projection: dict = None) -> RecordObjectModel:
+        raise NotImplementedError
 
     # @abstractmethod
     # async def count_all(self, query: dict = {}) -> int:
@@ -85,8 +85,8 @@ class RecordObjectRepository(IRecordObjectRepository):
         
         return await self.record_coll.aggregate(pipeline).to_list(length=None)
 
-    # async def find_one_by_id(self, id: str, projection: dict = None) -> RecordObjectModel:
-    #     return await self.record_coll.find_one({"_id": id}, projection)
+    async def find_one_by_id(self, id: str, projection: dict = None) -> RecordObjectModel:
+        return await self.record_coll.find_one({"_id": id}, projection)
 
     # async def count_all(self, query: dict = {}) -> int:
     #     return await self.record_coll.count_documents(query)
