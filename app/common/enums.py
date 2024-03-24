@@ -7,6 +7,7 @@ class SystemUserRole(str, Enum):
 
 class FieldObjectType(str, Enum):
     TEXT = 'text'
+    TEXTAREA = 'textarea'
     EMAIL = 'email'
     SELECT = 'select'
     PHONE_NUMBER = 'phonenumber'

@@ -18,6 +18,9 @@ class FieldObjectBase(BaseModel):
 class FieldText(FieldObjectBase):
     length: int = Field(..., gt=0, alias="length")
     
+class FieldTextArea(FieldObjectBase):
+    pass
+    
 class FieldEmail(FieldObjectBase):
     pass
 
