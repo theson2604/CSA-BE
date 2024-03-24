@@ -79,6 +79,7 @@ class RecordObjectRepository(IRecordObjectRepository):
             pipeline = pipeline + stages
             
         pipeline += [
+            {"$sort": {"created_at": -1}},
             {"$skip": page},
             {"$limit": page_size}
         ]
