@@ -144,21 +144,34 @@ class RecordObjectService(IRecordObjectService):
                 FieldObjectType.REFERENCE_FIELD_OBJECT.value,
             ],
         )
-        
+
         list_fields = []
         for ref_field_detail in ref_field_obj_details:
             field_id = ref_field_detail.get("field_id")
             ref_obj_id = ""
-            if ref_field_detail.get("field_type") == FieldObjectType.REFERENCE_FIELD_OBJECT.value:
+            if (
+                ref_field_detail.get("field_type")
+                == FieldObjectType.REFERENCE_FIELD_OBJECT.value
+            ):
                 ref_field_obj = ref_field_detail.get("ref_field_obj_id")
                 ref_obj_id = ref_field_obj.split(".")[0]
             else:
                 ref_obj_id = ref_field_detail.get("ref_obj_id")
-            
-            list_fields.append({
-                "ref_obj_id": ref_obj_id,
-                "local_field_id": field_id
-            })
-        
+
+            list_fields.append({"ref_obj_id": ref_obj_id, "local_field_id": field_id})
+
         skip = (page - 1) * page_size
-        return await self.record_repo.get_all_with_parsing_ref_detail(list_fields, skip, page_size)
+        records = await self.record_repo.get_all_with_parsing_ref_detail(
+            list_fields, skip, page_size
+        )
+        if records and isinstance(records, list) and len(records) == 1:
+            records = records[0]
+            if isinstance(records, dict):
+                records.update(
+                    {
+                        "total_records": records.get("total_records", [{"total": -1}])[
+                            0
+                        ].get("total")
+                    }
+                )
+                return records

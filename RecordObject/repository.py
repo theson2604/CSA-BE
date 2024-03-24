@@ -16,7 +16,7 @@ class IRecordObjectRepository(ABC):
     @abstractmethod
     async def get_all_with_parsing_ref_detail(
         self, field_details: List[dict], page: int = 1, page_size: int = 100
-    ) -> List[RecordObjectModel]:
+    ) -> list:
         raise NotImplementedError
 
     @abstractmethod
@@ -44,15 +44,22 @@ class RecordObjectRepository(IRecordObjectRepository):
 
     async def get_all_with_parsing_ref_detail(
         self, field_details: List[dict], page: int = 1, page_size: int = 100
-    ) -> List[RecordObjectModel]:
+    ) -> list:
         """
-        Get all Record Object with reference detail parsing \n
+        Get all Record Object with ref detail parsing \n
         :Params:
         - field_details: List[{"ref_obj_id": obj_<name>_<id>, "local_field_id": fd_<name>_<id>}]
         - page: Starting from 1
-        - page_size: int = 100
+        - page_size: int = 100 \n
+        :Return:
+        [
+            {
+                "total_records": [{"total": int}],
+                "record_details": List[RecordObjectModel] 
+            }
+        ]
         """
-        pipeline = []
+        paring_pipeline = []
         for field_detail in field_details:
             ref_obj_id = field_detail.get("ref_obj_id")
             local_field_id = field_detail.get("local_field_id")
@@ -76,12 +83,22 @@ class RecordObjectRepository(IRecordObjectRepository):
                     }
                 },
             ]
-            pipeline = pipeline + stages
+            paring_pipeline = paring_pipeline + stages
             
-        pipeline += [
+        paring_pipeline += [
             {"$sort": {"created_at": -1}},
             {"$skip": page},
             {"$limit": page_size}
+        ]
+        
+        # total_records count + parsing record_details
+        pipeline = [
+            {
+                "$facet": {
+                    "total_records": [{"$count": "total"}],
+                    "record_details": paring_pipeline
+                }
+            }
         ]
         
         return await self.record_coll.aggregate(pipeline).to_list(length=None)
