@@ -59,53 +59,49 @@ class RecordObjectRepository(IRecordObjectRepository):
             }
         ]
         """
-        try:
-            paring_pipeline = []
-            for field_detail in field_details:
-                ref_obj_id = field_detail.get("ref_obj_id")
-                local_field_id = field_detail.get("local_field_id")
-                stages = [
-                    {
-                        "$lookup": {
-                            "from": f"{ref_obj_id}",
-                            "localField": f"{local_field_id}.ref_to",
-                            "foreignField": "_id",
-                            "as": "ref",
-                        }
-                    },
-                    {"$set": {f"{local_field_id}.ref_to": {"$first": "$ref"}}},
-                    {
-                        "$project": {
-                            f"{local_field_id}.ref_to.created_at": 0,
-                            f"{local_field_id}.ref_to.modified_at": 0,
-                            f"{local_field_id}.ref_to.created_by": 0,
-                            f"{local_field_id}.ref_to.modified_by": 0,
-                            "ref": 0,
-                        }
-                    },
-                ]
-                paring_pipeline = paring_pipeline + stages
-                
-            paring_pipeline += [
-                {"$sort": {"created_at": -1}},
-                {"$skip": page},
-                {"$limit": page_size}
-            ]
-            
-            # total_records count + parsing record_details
-            pipeline = [
+        paring_pipeline = []
+        for field_detail in field_details:
+            ref_obj_id = field_detail.get("ref_obj_id")
+            local_field_id = field_detail.get("local_field_id")
+            stages = [
                 {
-                    "$facet": {
-                        "total_records": [{"$count": "total"}],
-                        "record_details": paring_pipeline
+                    "$lookup": {
+                        "from": f"{ref_obj_id}",
+                        "localField": f"{local_field_id}.ref_to",
+                        "foreignField": "_id",
+                        "as": "ref",
                     }
-                }
+                },
+                {"$set": {f"{local_field_id}.ref_to": {"$first": "$ref"}}},
+                {
+                    "$project": {
+                        f"{local_field_id}.ref_to.created_at": 0,
+                        f"{local_field_id}.ref_to.modified_at": 0,
+                        f"{local_field_id}.ref_to.created_by": 0,
+                        f"{local_field_id}.ref_to.modified_by": 0,
+                        "ref": 0,
+                    }
+                },
             ]
+            paring_pipeline = paring_pipeline + stages
             
-            return await self.record_coll.aggregate(pipeline).to_list(length=None)
-        except Exception as e:
-            print(e)
-            return []
+        paring_pipeline += [
+            {"$sort": {"created_at": -1}},
+            {"$skip": page},
+            {"$limit": page_size}
+        ]
+        
+        # total_records count + parsing record_details
+        pipeline = [
+            {
+                "$facet": {
+                    "total_records": [{"$count": "total"}],
+                    "record_details": paring_pipeline
+                }
+            }
+        ]
+        
+        return await self.record_coll.aggregate(pipeline).to_list(length=None)
 
     async def find_one_by_id(self, id: str, projection: dict = None) -> RecordObjectModel:
         return await self.record_coll.find_one({"_id": id}, projection)

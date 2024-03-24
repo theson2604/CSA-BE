@@ -169,7 +169,7 @@ class RecordObjectService(IRecordObjectService):
             records = records[0]
             if isinstance(records, dict):
                 total = records.get("total_records", [{"total": -1}])
-                if total and isinstance(records, list) and len(total) == 1:
+                if total and isinstance(total, list) and len(total) == 1:
                     records.update({"total_records": total[0].get("total")})
                 else:
                     records.update({"total_records": 0})
