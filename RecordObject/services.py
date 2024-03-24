@@ -164,14 +164,16 @@ class RecordObjectService(IRecordObjectService):
         records = await self.record_repo.get_all_with_parsing_ref_detail(
             list_fields, skip, page_size
         )
+
         if records and isinstance(records, list) and len(records) == 1:
             records = records[0]
             if isinstance(records, dict):
-                records.update(
-                    {
-                        "total_records": records.get("total_records", [{"total": -1}])[
-                            0
-                        ].get("total")
-                    }
-                )
+                total = records.get("total_records", [{"total": -1}])
+                if total and isinstance(records, list) and len(total) == 1:
+                    records.update({"total_records": total[0].get("total")})
+                else:
+                    records.update({"total_records": 0})
+                    
                 return records
+
+        return []
