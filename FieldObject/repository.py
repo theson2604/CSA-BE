@@ -132,21 +132,7 @@ class FieldObjectRepository(IFieldObjectRepository):
         - obj_id: _id
         """
         pipeline = [
-            {
-                "$match": {
-                    "$and": [
-                        {"object_id": obj_id},
-                        {
-                            "field_type": {
-                                "$in": [
-                                    FieldObjectType.REFERENCE_OBJECT.value,
-                                    FieldObjectType.REFERENCE_FIELD_OBJECT.value,
-                                ]
-                            }
-                        },
-                    ]
-                }
-            },
+            {"$match": {"$and": [{"object_id": obj_id}]}},
             {
                 "$graphLookup": {
                     "from": DBCollections.FIELD_OBJECT,
@@ -154,6 +140,14 @@ class FieldObjectRepository(IFieldObjectRepository):
                     "connectFromField": "ref_obj_id_value",
                     "connectToField": "object_id",
                     "as": "linking_fields",
+                    "restrictSearchWithMatch": {
+                        "field_type": {
+                            "$in": [
+                                FieldObjectType.REFERENCE_OBJECT.value,
+                                FieldObjectType.REFERENCE_FIELD_OBJECT.value,
+                            ]
+                        }
+                    },
                 }
             },
         ]

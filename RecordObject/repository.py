@@ -63,11 +63,11 @@ class RecordObjectRepository(IRecordObjectRepository):
             }
         ]
         """
-        parsed_ref_fields = await self.field_obj_repo.get_all_field_refs_deeply(
+        deep_ref_fields = await self.field_obj_repo.get_all_field_refs_deeply(
             object_id
         )
         parsing_ref_pipeline = []
-        for field_detail in parsed_ref_fields:
+        for field_detail in deep_ref_fields:
             full_ref_field_obj_id = field_detail.get(
                 "ref_field_obj_id"
             )  # obj_<name>_<id>.fd_<name>_<id>
@@ -87,9 +87,9 @@ class RecordObjectRepository(IRecordObjectRepository):
                 {"$set": {f"{base_local_field_id}.ref_to": {"$first": "$ref"}}},
             ]
             parsing_ref_pipeline = parsing_ref_pipeline + stages
-            # Pasrse Linking Fields
+            # Parse Linking Fields
             linking_fields = field_detail.get("linking_fields", [])
-            for linking_field in linking_fields[:-1]:
+            for linking_field in linking_fields:
                 local_field_id = linking_field.get("field_id")
                 full_ref_field_obj_id = linking_field.get(
                     "ref_field_obj_id"

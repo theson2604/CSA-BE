@@ -137,29 +137,6 @@ class RecordObjectService(IRecordObjectService):
     async def get_all_records_with_detail(
         self, object_id: str, page: int = 1, page_size: int = 100
     ) -> List[RecordObjectModel]:
-        # ref_field_obj_details = await self.field_obj_repo.get_all_by_field_types(
-        #     object_id,
-        #     [
-        #         FieldObjectType.REFERENCE_OBJECT.value,
-        #         FieldObjectType.REFERENCE_FIELD_OBJECT.value,
-        #     ],
-        # )
-
-        # list_fields = []
-        # for ref_field_detail in ref_field_obj_details:
-        #     field_id = ref_field_detail.get("field_id")
-        #     ref_obj_id = ""
-        #     if (
-        #         ref_field_detail.get("field_type")
-        #         == FieldObjectType.REFERENCE_FIELD_OBJECT.value
-        #     ):
-        #         ref_field_obj = ref_field_detail.get("ref_field_obj_id")
-        #         ref_obj_id = ref_field_obj.split(".")[0]
-        #     else:
-        #         ref_obj_id = ref_field_detail.get("ref_obj_id")
-
-        #     list_fields.append({"ref_obj_id": ref_obj_id, "local_field_id": field_id})
-
         skip = (page - 1) * page_size
         records = await self.record_repo.get_all_with_parsing_ref_detail(
             object_id, skip, page_size
