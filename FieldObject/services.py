@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Union
 from bson import ObjectId
 import re
-from FieldObject.models import FieldEmail, FieldPhoneNumber, FieldReferenceObject, FieldSelect, FieldText, FieldReferenceFieldObject, FieldObjectBase, FieldTextArea
+from FieldObject.models import FieldEmail, FieldId, FieldPhoneNumber, FieldReferenceObject, FieldSelect, FieldText, FieldReferenceFieldObject, FieldObjectBase, FieldTextArea
 
 from FieldObject.repository import FieldObjectRepository
 from FieldObject.schemas import FieldObjectSchema, UpdateFieldObjectSchema
@@ -16,11 +16,23 @@ class FieldObjectServiceException(Exception):
 
 class IFieldObjectService(ABC):
     @abstractmethod
-    async def create_many_field_object(self, object_id: str, fields: List[FieldObjectSchema]) -> List[str]:
+    async def validate_and_get_all_field_models(self, object_id: str, fields: List[FieldObjectSchema]) -> List[FieldObjectBase]:
         raise NotImplementedError
     
     @abstractmethod
-    async def update_many_field_object(self, object_id: str, fields: List[UpdateFieldObjectSchema]) -> List[str]:
+    async def create_many_fields_object(self, object_id: str, fields: List[FieldObjectSchema]) -> List[str]:
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def update_one_field(self, field: UpdateFieldObjectSchema) -> int:
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def update_sorting(self, fields: List[str]):
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def create_one_field(self, field: FieldObjectSchema) -> str:
         raise NotImplementedError
     
     @abstractmethod
@@ -32,20 +44,30 @@ class FieldObjectService(IFieldObjectService):
         self.repo = FieldObjectRepository(db_str)
         self.object_repo = ObjectRepository(db_str)
         
-    async def create_many_field_object(self, object_id: str, fields: List[FieldObjectSchema]) -> List[str]:
+    async def validate_and_get_all_field_models(self, object_id: str, fields: List[FieldObjectSchema]) -> List[FieldObjectBase]:
         try:
             list_fields = []
+            obj = await self.object_repo.find_one_by_id(object_id)
+            if not obj:
+                raise FieldObjectServiceException(f"Not found object by _id {object_id}")
+            
             for index, field in enumerate(fields):
                 field = field.model_dump()
                 field_base = {
-                    "_id": str(ObjectId()),
+                    "_id": str(ObjectId()) if not field.get("id") else field.get("id"),
                     "field_name": field.get("field_name"),
                     "field_type": field.get("field_type"),
-                    "field_id": generate_field_id(field.get("field_name")),
+                    "field_id": generate_field_id(field.get("field_name")) if not field.get("field_id") else field.get("field_id"),
                     "sorting_id": index,
                     "object_id": object_id
                 }
-                if field.get("field_type") is FieldObjectType.TEXT:
+                if field.get("field_type") is FieldObjectType.ID:
+                    field_base.update({
+                        "prefix": field.get("prefix")
+                    })
+                    list_fields.append(FieldId.model_validate(field_base).model_dump(by_alias=True))
+                
+                elif field.get("field_type") is FieldObjectType.TEXT:
                     field_base.update({
                         "length": field.get("length")
                     })
@@ -110,16 +132,38 @@ class FieldObjectService(IFieldObjectService):
                     })
                     
                     list_fields.append(FieldReferenceFieldObject.model_validate(field_base).model_dump(by_alias=True))
-                    
-            return await self.repo.insert_many(list_fields)
+            
+            return list_fields
         
         except Exception as e:
             raise FieldObjectServiceException(e)
+        
+    async def create_many_fields_object(self, object_id: str, fields: List[FieldObjectSchema]) -> List[str]:
+        field_models = await self.validate_and_get_all_field_models(object_id, fields)
+        return await self.repo.insert_many(field_models)
     
-    async def update_many_field_object(self, object_id: str, fields: List[UpdateFieldObjectSchema]) -> List[str]:
-        list_fields = []
-        for field in fields:
-            pass
+    async def update_one_field(self, field: UpdateFieldObjectSchema) -> int:
+        field_dump = field.model_dump()
+        field_models = await self.validate_and_get_all_field_models(field_dump.get("object_id"), [field])
+        if isinstance(field_models, list) and len(field_models) == 1:
+            field_model = field_models[0]
+            field_model.update({"sorting_id": field_dump.get("sorting_id")})
+            return await self.repo.update_one_by_id(field_model.pop("_id"), field_model)
+        
+    async def update_sorting(self, fields: List[str]):
+        sorted_list = []
+        for index, field_id in enumerate(fields):
+            sorted_list += [{"_id": field_id, "sorting_id": index}]
+        
+        await self.repo.update_many(sorted_list)
+        
+    async def create_one_field(self, field: FieldObjectSchema) -> str:
+        field_dump = field.model_dump()
+        field_models = await self.validate_and_get_all_field_models(field_dump.get("object_id"), [field])
+        if isinstance(field_models, list) and len(field_models) == 1:
+            field_model = field_models[0]
+            field_model.update({"sorting_id": field_dump.get("sorting_id")})
+            return await self.repo.insert_one(field_model)
     
     async def get_all_fields_by_obj_id(self, object_id: str) -> List[Union[FieldObjectBase]]:
         return await self.repo.find_all({"object_id": object_id})

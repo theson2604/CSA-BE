@@ -156,8 +156,6 @@ class RecordObjectRepository(IRecordObjectRepository):
             {"$limit": page_size},
         ]
         
-        print(parsing_ref_pipeline)
-
         # total_records count + parsing record_details
         pipeline = [
             {

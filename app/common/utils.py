@@ -2,6 +2,7 @@ import pytz
 from datetime import datetime
 from unidecode import unidecode
 import random
+from app.common.db_connector import DBCollections, client
 
 def get_current_hcm_datetime() -> str:
     """
@@ -41,3 +42,13 @@ def generate_object_id(name: str = "") -> str:
     rand_num = random.randint(0, 999)
     rand_3_digits = f"{rand_num:03}"
     return "obj_" + convert_str(name) + f"_{rand_3_digits}"
+
+def generate_next_record_id(db_str: str, obj_id: str):
+    """
+    :Params:
+    - obj_id: obj_<name>_<id>
+    """
+    counter_coll = client.get_database(db_str).get_collection(DBCollections.RECORD_COUNTERS)
+    
+    return counter_coll.find_one_and_update({"obj_id": obj_id}, {"$inc": { "seq": 1 }}, upsert=True, projection={"_id": 0, "seq": 1, "obj_id": 1})
+    

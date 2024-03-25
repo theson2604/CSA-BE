@@ -23,9 +23,13 @@ class IFieldObjectRepository(ABC):
     @abstractmethod
     async def insert_many(self, fields: List[Union[FieldObjectBase]]) -> List[str]:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def insert_one(self, field: FieldObjectBase) -> str:
+        raise NotImplementedError
 
     @abstractmethod
-    async def update_one_by_id(self, id: str, field: dict):
+    async def update_one_by_id(self, id: str, field: dict) -> int:
         raise NotImplementedError
 
     @abstractmethod
@@ -73,18 +77,24 @@ class FieldObjectRepository(IFieldObjectRepository):
         await self.field_object_coll.create_index(index_key, **index_options)
 
     async def insert_many(self, fields: List[Union[FieldObjectBase]]) -> List[str]:
-        await self.create_indexing(field_id="field_id", index_name="field_id")
+        # await self.create_indexing(field_id="field_id", index_name="field_id")
         result = await self.field_object_coll.insert_many(fields)
         return result.inserted_ids
+    
+    async def insert_one(self, field: FieldObjectBase) -> str:
+        result = await self.field_object_coll.insert_one(field)
+        return result.inserted_id
 
-    async def update_one_by_id(self, id: str, field: dict):
-        await self.field_object_coll.update_one({"_id": id}, {"$set": field})
+    async def update_one_by_id(self, id: str, field: dict) -> int:
+        result = await self.field_object_coll.update_one({"_id": id}, {"$set": field})
+        return result.modified_count
 
     async def update_many(self, fields: List[dict]):
         for field in fields:
-            await self.update_one_by_id(field.pop("id"), field)  # Have to check more
+            await self.update_one_by_id(field.pop("_id"), field)  # Have to check more
 
     async def find_one_by_id(self, id: str) -> Union[FieldObjectBase]:
+        # self.field_object_coll.
         return await self.field_object_coll.find_one({"_id": id})
 
     async def find_one_by_field_id(

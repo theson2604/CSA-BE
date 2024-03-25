@@ -84,7 +84,7 @@ class ObjectService(IObjectService):
             obj_only = {"obj_name": obj_with_fields.get("obj_name"), "group_obj_id": obj_with_fields.get("group_obj_id")}
             new_obj_id = await self.create_object_only(ObjectSchema(**obj_only), current_user_id)
             # Create Field Object
-            await self.field_obj_service.create_many_field_object(new_obj_id, obj_with_fields_schema.fields)
+            await self.field_obj_service.create_many_fields_object(new_obj_id, obj_with_fields_schema.fields)
             return new_obj_id
         except FieldObjectServiceException as e:
             if new_obj_id:

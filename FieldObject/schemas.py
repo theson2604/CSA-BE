@@ -7,6 +7,11 @@ from app.common.enums import FieldObjectType
 class FieldObjectSchema(BaseModel):
     field_type: FieldObjectType
     field_name: str
+    object_id: str
+    sorting_id: Optional[int] = None
+    # Id
+    prefix: Optional[str] = None
+    
     # Text
     length: Optional[int] = None
     
@@ -23,9 +28,19 @@ class FieldObjectSchema(BaseModel):
     def validate_field_obj_schema(self):
         schema = self.model_dump()
         field_type = schema.get("field_type")
-        if field_type == FieldObjectType.TEXT:
+        if field_type == FieldObjectType.ID:
+            if not schema.get("prefix"):
+                raise ValueError(f"missing required key 'prefix' for field_type {FieldObjectType.ID}.")
+            
+        elif field_type == FieldObjectType.TEXT:
             if not schema.get("length"):
                 raise ValueError(f"missing required key 'length' for field_type {FieldObjectType.TEXT}.")
+            
+        elif field_type == FieldObjectType.EMAIL:
+            pass
+        
+        elif field_type == FieldObjectType.TEXTAREA:
+            pass
             
         elif field_type == FieldObjectType.SELECT:
             if not schema.get("options"):
@@ -60,22 +75,13 @@ class FieldObjectSchema(BaseModel):
             match = re.search(regex_str, src)
             if not match:
                 raise ValueError(f"invalid 'src' {src}. It must be {regex_str}.")
-            
+        
+        else:
+            raise ValueError(f"invalid 'field_type' {field_type}.")
+                    
         return self
-
-class UpdateFieldObjectSchema(BaseModel):
+    
+class UpdateFieldObjectSchema(FieldObjectSchema):
     id: str = Field(..., alias="_id")
-    field_type: FieldObjectType
-    field_name: str
-    # Text
-    length: Optional[int] = None
-    
-    # Select
-    options: Optional[List[str]] = None
-    
-    # Phone Number
-    country_code: Optional[str] = None
-    number: Optional[str] = None
-    
-    # Reference Object
-    source: Optional[str] = None
+    field_id: str
+    sorting_id: int

@@ -14,6 +14,9 @@ class FieldObjectBase(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True
     )
+
+class FieldId(FieldObjectBase):
+    prefix: str = Field(..., alias="prefix")
     
 class FieldText(FieldObjectBase):
     length: int = Field(..., gt=0, alias="length")
