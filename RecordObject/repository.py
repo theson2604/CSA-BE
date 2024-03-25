@@ -100,15 +100,15 @@ class RecordObjectRepository(IRecordObjectRepository):
                 local_field_id = linking_field.get("field_id")
 
                 full_ref_field_obj_id = (
-                    field_detail.get("ref_obj_id")
-                    if field_detail.get("field_type")
+                    linking_field.get("ref_obj_id")
+                    if linking_field.get("field_type")
                     == FieldObjectType.REFERENCE_OBJECT
-                    else field_detail.get("ref_field_obj_id")
+                    else linking_field.get("ref_field_obj_id")
                 )
 
                 ref_obj_id = (
                     full_ref_field_obj_id
-                    if field_detail.get("field_type")
+                    if linking_field.get("field_type")
                     == FieldObjectType.REFERENCE_OBJECT
                     else full_ref_field_obj_id.split(".")[0]
                 )
@@ -155,6 +155,8 @@ class RecordObjectRepository(IRecordObjectRepository):
             {"$skip": page},
             {"$limit": page_size},
         ]
+        
+        print(parsing_ref_pipeline)
 
         # total_records count + parsing record_details
         pipeline = [
