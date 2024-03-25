@@ -7,6 +7,7 @@ from RecordObject.models import RecordObjectModel
 from RootAdministrator.constants import HIDDEN_METADATA_INFO
 
 from app.common.db_connector import DBCollections, client
+from app.common.enums import FieldObjectType
 
 
 class IRecordObjectRepository(ABC):
@@ -63,15 +64,21 @@ class RecordObjectRepository(IRecordObjectRepository):
             }
         ]
         """
-        deep_ref_fields = await self.field_obj_repo.get_all_field_refs_deeply(
-            object_id
-        )
+        deep_ref_fields = await self.field_obj_repo.get_all_field_refs_deeply(object_id)
         parsing_ref_pipeline = []
         for field_detail in deep_ref_fields:
-            full_ref_field_obj_id = field_detail.get(
-                "ref_field_obj_id"
-            )  # obj_<name>_<id>.fd_<name>_<id>
-            ref_obj_id = full_ref_field_obj_id.split(".")[0]
+            full_ref_field_obj_id = (
+                field_detail.get("ref_obj_id")
+                if field_detail.get("field_type") == FieldObjectType.REFERENCE_OBJECT
+                else field_detail.get("ref_field_obj_id")
+            )
+
+            ref_obj_id = (
+                full_ref_field_obj_id
+                if field_detail.get("field_type") == FieldObjectType.REFERENCE_OBJECT
+                else full_ref_field_obj_id.split(".")[0]
+            )
+            
             base_local_field_id = field_detail.get("field_id")
             local_field_accumulator = f"{base_local_field_id}"
 
@@ -91,10 +98,21 @@ class RecordObjectRepository(IRecordObjectRepository):
             linking_fields = field_detail.get("linking_fields", [])
             for linking_field in linking_fields:
                 local_field_id = linking_field.get("field_id")
-                full_ref_field_obj_id = linking_field.get(
-                    "ref_field_obj_id"
-                )  # obj_<name>_<id>.fd_<name>_<id>
-                ref_obj_id = full_ref_field_obj_id.split(".")[0]
+
+                full_ref_field_obj_id = (
+                    field_detail.get("ref_obj_id")
+                    if field_detail.get("field_type")
+                    == FieldObjectType.REFERENCE_OBJECT
+                    else field_detail.get("ref_field_obj_id")
+                )
+
+                ref_obj_id = (
+                    full_ref_field_obj_id
+                    if field_detail.get("field_type")
+                    == FieldObjectType.REFERENCE_OBJECT
+                    else full_ref_field_obj_id.split(".")[0]
+                )
+
                 local_field_accumulator = (
                     f"{local_field_accumulator}.ref_to.{local_field_id}"
                 )
