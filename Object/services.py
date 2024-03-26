@@ -24,7 +24,7 @@ class IObjectService(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def get_all_objects(self) -> List[dict]:
+    async def get_all_objects_with_field_details(self) -> List[dict]:
         raise NotImplementedError
     
     @abstractmethod
@@ -63,18 +63,8 @@ class ObjectService(IObjectService):
         
         return await self.repo.insert_one(obj_model.model_dump(by_alias=True))
 
-    async def get_all_objects(self) -> dict:
-        objects = await self.repo.find_all()
-        ret_objects = {}
-        for obj in objects:
-            group_id = obj.pop("group_obj_id")
-            if not ret_objects.get(group_id):
-                ret_objects.update({group_id: []})
-                ret_objects[group_id].append(obj)
-            else:
-                ret_objects[group_id].append(obj)
-
-        return ret_objects
+    async def get_all_objects_with_field_details(self) -> List[dict]:
+        return await self.repo.get_all_objects_with_field_details()
     
     async def create_object_with_fields(self, obj_with_fields: ObjectWithFieldSchema, current_user_id: str) -> str:
         try:
