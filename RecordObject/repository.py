@@ -26,6 +26,12 @@ class IRecordObjectRepository(ABC):
         self, id: str, projection: dict = None
     ) -> RecordObjectModel:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def create_indexing(
+        self, field_id: str
+    ) -> RecordObjectModel:
+        raise NotImplementedError
 
     # @abstractmethod
     # async def count_all(self, query: dict = {}) -> int:
@@ -42,6 +48,14 @@ class RecordObjectRepository(IRecordObjectRepository):
         self.db = client.get_database(db_str)
         self.record_coll = self.db.get_collection(coll)
         self.field_obj_repo = FieldObjectRepository(db_str)
+        
+    async def create_indexing(self, field_id: str):
+        existing_indexes = await self.record_coll.index_information()
+        if field_id in existing_indexes:
+            return
+        index_key = field_id
+        index_options = {"name": field_id, "unique": True, "sparse": False}
+        await self.record_coll.create_index(index_key, **index_options)
 
     async def insert_one(self, record: RecordObjectModel) -> str:
         result = await self.record_coll.insert_one(record)

@@ -12,7 +12,7 @@ from RecordObject.repository import RecordObjectRepository
 from RecordObject.schemas import RecordObjectSchema
 from app.common.enums import FieldObjectType
 from app.common.errors import HTTPBadRequest
-from app.common.utils import get_current_hcm_datetime
+from app.common.utils import generate_next_record_id, get_current_hcm_datetime
 
 
 class RecordException(Exception):
@@ -47,12 +47,17 @@ class RecordObjectService(IRecordObjectService):
         self, record: RecordObjectSchema, current_user_id: str
     ) -> str:
         obj_id = record.pop("object_id")
-        inserted_record = {"_id": str(ObjectId()), "object_id": obj_id}
+        inserted_record = {"object_id": obj_id}
+        
         for field_id, field_value in record.items():
             field_detail = await self.field_obj_repo.find_one_by_field_id(
                 obj_id, field_id
             )
             field_type = field_detail.get("field_type")
+            # if field_type == FieldObjectType.ID:
+            #     seq = generate_next_record_id(self.db_str, obj_id)
+            #     print(seq)
+                
             if field_type == FieldObjectType.TEXT:
                 length = field_detail.get("length")
                 if not isinstance(field_value, str):
@@ -122,8 +127,19 @@ class RecordObjectService(IRecordObjectService):
 
             inserted_record.update({field_id: field_value})
 
+        list_field_details = await self.field_obj_repo.get_all_by_field_types(obj_id, [FieldObjectType.ID])
+        field_id_detail = list_field_details[0]
+        field_id, prefix = field_id_detail.get("field_id"), field_id_detail.get("prefix")
+        seq = await generate_next_record_id(self.db_str, obj_id)
+        id = seq.get("seq")
+        concat_prefix_id = f"{prefix}{id}"
+        
+        await self.record_repo.create_indexing(field_id_detail.get("field_id"))
+        
         inserted_record.update(
             {
+                "_id": str(ObjectId()),
+                field_id: concat_prefix_id,
                 "created_at": get_current_hcm_datetime(),
                 "modified_at": get_current_hcm_datetime(),
                 "created_by": current_user_id,

@@ -7,7 +7,7 @@ from FieldObject.models import FieldEmail, FieldId, FieldPhoneNumber, FieldRefer
 from FieldObject.repository import FieldObjectRepository
 from FieldObject.schemas import FieldObjectSchema, UpdateFieldObjectSchema
 from Object.repository import ObjectRepository
-from app.common.enums import FieldObjectType
+from app.common.enums import FIELD_ID, FieldObjectType
 from app.common.errors import HTTPBadRequest
 from app.common.utils import generate_field_id
 
@@ -63,7 +63,7 @@ class FieldObjectService(IFieldObjectService):
                 }
                 if field.get("field_type") is FieldObjectType.ID:
                     field_base.update({
-                        "field_name": FieldObjectType.ID_NAME.value,
+                        "field_name": FIELD_ID,
                         "prefix": field.get("prefix")
                     })
                     list_fields.append(FieldId.model_validate(field_base).model_dump(by_alias=True))

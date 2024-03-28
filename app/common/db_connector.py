@@ -10,7 +10,7 @@ PyObjectId = Annotated[str, BeforeValidator(str)]
 
 # DB Collections
 class DBCollections(str, Enum):
-    RECORD_COUNTERS = "RecordCounters"
+    RECORD_COUNTER = "RecordCounter"
     GROUP_OBJECTS = "GroupObjects"
     FIELD_OBJECT = "FieldObject"
     OBJECT = "Object"
