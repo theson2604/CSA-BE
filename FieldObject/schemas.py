@@ -8,6 +8,7 @@ class FieldObjectSchema(BaseModel):
     field_type: FieldObjectType
     field_name: str
     
+    object_id: Optional[str] = None
     sorting_id: Optional[int] = None
     # Id
     prefix: Optional[str] = None
