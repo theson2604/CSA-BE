@@ -7,7 +7,7 @@ from app.common.enums import FieldObjectType
 class FieldObjectSchema(BaseModel):
     field_type: FieldObjectType
     field_name: str
-    object_id: str
+    
     sorting_id: Optional[int] = None
     # Id
     prefix: Optional[str] = None
@@ -83,5 +83,6 @@ class FieldObjectSchema(BaseModel):
     
 class UpdateFieldObjectSchema(FieldObjectSchema):
     id: str = Field(..., alias="_id")
+    object_id: str
     field_id: str
     sorting_id: int

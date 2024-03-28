@@ -63,6 +63,7 @@ class FieldObjectService(IFieldObjectService):
                 }
                 if field.get("field_type") is FieldObjectType.ID:
                     field_base.update({
+                        "field_name": FieldObjectType.ID_NAME.value,
                         "prefix": field.get("prefix")
                     })
                     list_fields.append(FieldId.model_validate(field_base).model_dump(by_alias=True))
