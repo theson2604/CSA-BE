@@ -80,7 +80,7 @@ async def get_detail_group_by_id(
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
 
-@router.get("/get-all-groups")
+@router.get("/get-all-groups-with-details")
 @protected_route([SystemUserRole.ADMINISTRATOR])
 async def get_all_groups(
     CREDENTIALS: AuthCredentialDepend,
@@ -89,7 +89,7 @@ async def get_all_groups(
 ):
     try:
         group_object_service = GroupObjectServices(CURRENT_USER.get("db"))
-        return await group_object_service.get_all_groups()
+        return await group_object_service.get_all_groups_with_details()
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

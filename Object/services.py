@@ -64,6 +64,9 @@ class ObjectService(IObjectService):
         return await self.repo.insert_one(obj_model.model_dump(by_alias=True))
 
     async def get_all_objects_with_field_details(self) -> List[dict]:
+        """
+            Include parsing Fields
+        """
         return await self.repo.get_all_objects_with_field_details()
     
     async def create_object_with_fields(self, obj_with_fields: ObjectWithFieldSchema, current_user_id: str) -> str:
