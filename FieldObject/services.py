@@ -64,7 +64,7 @@ class FieldObjectService(IFieldObjectService):
                 if field.get("field_type") is FieldObjectType.ID:
                     field_base.update({
                         "field_name": FIELD_ID,
-                        "prefix": field.get("prefix")
+                        "prefix": field.get("prefix").upper()
                     })
                     list_fields.append(FieldId.model_validate(field_base).model_dump(by_alias=True))
                 
