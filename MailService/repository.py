@@ -10,6 +10,10 @@ class IMailServiceRepository(ABC):
     @abstractmethod
     async def insert_email(self, email: EmailModel):
         raise NotImplementedError
+
+    @abstractmethod 
+    async def find_email(self, query: dict, projection: dict = None):
+        raise NotImplementedError
     
 class MailServiceRepository(IMailServiceRepository):
     def __init__(self, db_str: str = ROOT_CSA_DB, coll: str = RootCollections.EMAILS.value):
@@ -19,4 +23,8 @@ class MailServiceRepository(IMailServiceRepository):
         self.emails_coll = self.db.get_collection(coll)
         
     async def insert_email(self, email: EmailModel):
-        return await self.emails_coll.insert_one(email)
+        result = await self.emails_coll.insert_one(email)
+        return result.inserted_id
+    
+    async def find_email(self, query: dict, projection: dict = None):
+        return await self.emails_coll.find_one(query, projection)

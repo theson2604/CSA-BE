@@ -33,13 +33,13 @@ class IMailServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def get_mail_pwd(self, email: str) -> str:
+    async def get_mail_pwd(self, email: str, admin_id: str) -> str:
         raise NotImplementedError
 
 class MailServices(IMailServices):
     def __init__(self, db):
         self.repo = MailServiceRepository()
-        self.root_repo = RootAdministratorRepository()
+        # self.root_repo = RootAdministratorRepository()
 
         self.db_str = db
 
@@ -52,12 +52,7 @@ class MailServices(IMailServices):
             iv_int = int(binascii.hexlify(iv), 16)
             ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
             aes = AES.new(key, AES.MODE_CTR, counter=ctr)
-            print('before')
-            tmp = b'asdfafsd'
             ciphertext = aes.encrypt(pwd.encode("utf-8"))
-            print('after')
-
-            # return base64.b64encode(key).decode("utf-8"), base64.b64encode(iv).decode("utf-8"), base64.b64encode(ciphertext).decode("utf-8")
             return key, iv, ciphertext
         
         except Exception as e:
@@ -69,12 +64,13 @@ class MailServices(IMailServices):
             # key = base64.b64decode(key.encode("utf-8"))
             # iv = base64.b64decode(iv.encode("utf-8"))
             # ciphertext = base64.b64decode(ciphertext.encode("utf-8"))
-            iv_int = int(iv.encode('hex'), 16)
+            iv_int = int.from_bytes(iv, byteorder="big")
             ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
 
             aes = AES.new(key, AES.MODE_CTR, counter=ctr)
             return aes.decrypt(ciphertext).decode("utf-8")
-        except:
+        except Exception as e:
+            print(f"Decryption error: {e}")
             raise Exception("error in decrypt")
 
 
@@ -83,7 +79,7 @@ class MailServices(IMailServices):
         admin_id = email_obj.get("admin")
         system_admin = await self.root_repo.find_one_by_id(admin_id, self.db_str)
         if not system_admin:
-            raise HTTPBadRequest("Cannot found system admin by admin_id")
+            raise HTTPBadRequest("Cannot find system admin by admin_id")
 
         key, iv, ciphertext = self.encrypt_aes(email_obj.get("pwd"))
 
@@ -98,20 +94,22 @@ class MailServices(IMailServices):
 
         return await self.repo.insert_email(record.model_dump(by_alias=True))
     
-    async def send_one(self, mail: SendMailSchema) -> str:
+    async def send_one(self, mail: SendMailSchema, admin_id: str) -> str:
         mail = mail.model_dump()
         email = mail.get("send_from")
         mail_model = MIMEText(mail.get("content"))
         mail_model["Subject"] = mail.get("subject")
         mail_model["From"] = email
         mail_model["To"] = ",".join(mail.get("send_to"))
-        mail_pwd = await self.get_mail_pwd(email)
-        print(mail_pwd)
+        mail_pwd = await self.get_mail_pwd(email, admin_id)
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp_server:
             smtp_server.login(email, mail_pwd)
             smtp_server.sendmail(email, mail.get("send_to"), mail_model.as_string())
         return "Message sent!"
     
-    async def get_mail_pwd(self, email: str) -> str:
-        user = await self.repo.find_one_by_email(email, projection={"modified_at": 0, "created_at": 0})
-        return user.get("mail_pwd")
+    async def get_mail_pwd(self, email: str, admin_id: str) -> str:
+        print("admin_ID: " + admin_id)
+        result = await self.repo.find_email({"email": email, "admin_id": admin_id}, projection={"modified_at": 0, "created_at": 0})
+        if not result:
+            raise HTTPBadRequest("Cannot find email")
+        return self.decrypt_aes(result.get("key"), result.get("iv"), result.get("pwd"))

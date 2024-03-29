@@ -28,7 +28,7 @@ async def create_email(
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
 
-@router.post("/send")
+@router.post("/send-email")
 @protected_route([SystemUserRole.ADMINISTRATOR])
 async def send_mail(
     mail: SendMailSchema,
@@ -37,8 +37,10 @@ async def send_mail(
     CURRENT_USER = None
 ):
     try:
-        mail_service = MailServices()
-        return await mail_service.send_one(mail)
+        db = CURRENT_USER.get("db")
+        admin_id = CURRENT_USER.get("_id")
+        mail_service = MailServices(db)
+        return await mail_service.send_one(mail, admin_id)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
