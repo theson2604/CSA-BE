@@ -4,6 +4,7 @@ import asyncio
 import re
 
 from bson import ObjectId
+import pymongo
 
 from FieldObject.repository import FieldObjectRepository
 from Object.repository import ObjectRepository
@@ -134,7 +135,7 @@ class RecordObjectService(IRecordObjectService):
         id = seq.get("seq")
         concat_prefix_id = f"{prefix}{id}"
         
-        await self.record_repo.create_indexing(field_id_detail.get("field_id"))
+        await self.record_repo.create_indexing([(field_id_detail.get("field_id"), pymongo.ASCENDING, True)])
         
         inserted_record.update(
             {

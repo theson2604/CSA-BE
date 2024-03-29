@@ -26,11 +26,9 @@ class IRecordObjectRepository(ABC):
         self, id: str, projection: dict = None
     ) -> RecordObjectModel:
         raise NotImplementedError
-    
+
     @abstractmethod
-    async def create_indexing(
-        self, field_id: str
-    ) -> RecordObjectModel:
+    async def create_indexing(self, fields: List[tuple]) -> RecordObjectModel:
         raise NotImplementedError
 
     # @abstractmethod
@@ -48,14 +46,21 @@ class RecordObjectRepository(IRecordObjectRepository):
         self.db = client.get_database(db_str)
         self.record_coll = self.db.get_collection(coll)
         self.field_obj_repo = FieldObjectRepository(db_str)
-        
-    async def create_indexing(self, field_id: str):
+
+    async def create_indexing(self, fields: List[tuple]):
+        """
+        :Params:
+            - [(field_id: fd_<name>_<id>, direction: pymongo.ASCENDING, unique: bool)]
+        """
         existing_indexes = await self.record_coll.index_information()
-        if field_id in existing_indexes:
-            return
-        index_key = field_id
-        index_options = {"name": field_id, "unique": True, "sparse": False}
-        await self.record_coll.create_index(index_key, **index_options)
+        for field in fields:
+            if field[0] in existing_indexes:
+                return
+            index_key, direction = field[0], field[1]
+            index_options = {"name": index_key, "unique": field[2], "sparse": False}
+            await self.record_coll.create_index(
+                [(index_key, direction)], **index_options
+            )
 
     async def insert_one(self, record: RecordObjectModel) -> str:
         result = await self.record_coll.insert_one(record)
@@ -92,7 +97,7 @@ class RecordObjectRepository(IRecordObjectRepository):
                 if field_detail.get("field_type") == FieldObjectType.REFERENCE_OBJECT
                 else full_ref_field_obj_id.split(".")[0]
             )
-            
+
             base_local_field_id = field_detail.get("field_id")
             local_field_accumulator = f"{base_local_field_id}"
 
@@ -169,7 +174,7 @@ class RecordObjectRepository(IRecordObjectRepository):
             {"$skip": page},
             {"$limit": page_size},
         ]
-        
+
         # total_records count + parsing record_details
         pipeline = [
             {
