@@ -49,6 +49,7 @@ class RecordObjectService(IRecordObjectService):
         self.db_str = db_str
         self.record_repo = RecordObjectRepository(db_str, coll=obj_id)
         self.field_obj_repo = FieldObjectRepository(db_str)
+        self.object_repo = ObjectRepository(db_str) 
 
     async def create_record(
         self, record: RecordObjectSchema, current_user_id: str
@@ -108,7 +109,11 @@ class RecordObjectService(IRecordObjectService):
                         f"Not found ref record '{field_value}' in {ref_obj_id}"
                     )
 
-                field_value = {"ref_to": ref_record.get("_id"), "field_value": "_id"}
+                obj_detail = await self.object_repo.find_one_by_object_id(ref_obj_id)
+                field_ids = await self.field_obj_repo.get_all_by_field_types(obj_detail.get("_id"), [FieldObjectType.ID.value])
+                
+                if field_ids and len(field_ids) == 1:
+                    field_value = {"ref_to": ref_record.get("_id"), "field_value": field_ids[0].get("field_id")}
 
             elif field_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
                 ref_field_obj_id = field_detail.get(

@@ -76,6 +76,9 @@ class ObjectRepository(IObjectRepository):
     async def find_one_by_object_id(
         self, obj_id: str, projection: dict = None
     ) -> ObjectModel:
+        """
+        Find Object by obj_<name>_<id>
+        """
         return await self.obj_coll.find_one({"obj_id": obj_id}, projection)
 
     async def get_all_objects_with_field_details(self) -> Optional[list]:
