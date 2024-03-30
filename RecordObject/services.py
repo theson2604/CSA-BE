@@ -32,6 +32,12 @@ class IRecordObjectService(ABC):
         self, object_id: str, page: int = 1, page_size: int = 100
     ) -> List[RecordObjectModel]:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def get_one_record_by_id_with_detail(
+        self, record_id: str, object_id: str
+    ) -> RecordObjectModel:
+        raise NotImplementedError
 
 
 class RecordObjectService(IRecordObjectService):
@@ -167,3 +173,13 @@ class RecordObjectService(IRecordObjectService):
                 return records
 
         return []
+
+    async def get_one_record_by_id_with_detail(
+        self, record_id: str, object_id: str
+    ) -> RecordObjectModel:
+        """
+        :Params:
+        - record_id: Record's _id
+        - object_id: Object's _id
+        """
+        return await self.record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id)

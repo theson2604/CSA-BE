@@ -16,8 +16,18 @@ class IRecordObjectRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def get_parsing_ref_detail_pipeline(self, object_id: str) -> List[dict]:
+        raise NotImplementedError
+
+    @abstractmethod
     async def get_all_with_parsing_ref_detail(
-        self, field_details: List[dict], page: int = 1, page_size: int = 100
+        self, object_id: str, page: int = 1, page_size: int = 100
+    ) -> list:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_one_by_id_with_parsing_ref_detail(
+        self, record_id: str, object_id: str
     ) -> list:
         raise NotImplementedError
 
@@ -66,22 +76,11 @@ class RecordObjectRepository(IRecordObjectRepository):
         result = await self.record_coll.insert_one(record)
         return result.inserted_id
 
-    async def get_all_with_parsing_ref_detail(
-        self, object_id: str, page: int = 1, page_size: int = 100
-    ) -> list:
+    async def get_parsing_ref_detail_pipeline(self, object_id: str) -> List[dict]:
         """
-        Get all Record Object with ref detail parsing \n
+        Get parsing ref detail pipeline \n
         :Params:
-        - object_id: _id
-        - page: Starting from 1
-        - page_size: int = 100 \n
-        :Return:
-        [
-            {
-                "total_records": [{"total": int}],
-                "record_details": List[RecordObjectModel]
-            }
-        ]
+        - object_id: Object's _id
         """
         deep_ref_fields = await self.field_obj_repo.get_all_field_refs_deeply(object_id)
         parsing_ref_pipeline = []
@@ -168,6 +167,27 @@ class RecordObjectRepository(IRecordObjectRepository):
                     },
                 }
             ]
+        
+        return parsing_ref_pipeline
+
+    async def get_all_with_parsing_ref_detail(
+        self, object_id: str, page: int = 1, page_size: int = 100
+    ) -> list:
+        """
+        Get all Record Object with ref detail parsing \n
+        :Params:
+        - object_id: Object's _id
+        - page: Starting from 1
+        - page_size: int = 100 \n
+        :Return:
+        [
+            {
+                "total_records": [{"total": int}],
+                "record_details": List[RecordObjectModel]
+            }
+        ]
+        """
+        parsing_ref_pipeline = await self.get_parsing_ref_detail_pipeline(object_id)
 
         parsing_ref_pipeline += [
             {"$sort": {"created_at": -1}},
@@ -185,6 +205,15 @@ class RecordObjectRepository(IRecordObjectRepository):
             }
         ]
 
+        return await self.record_coll.aggregate(pipeline).to_list(length=None)
+
+    async def get_one_by_id_with_parsing_ref_detail(
+        self, record_id: str, object_id: str
+    ) -> list:
+        one_record_pipeline = [{"$match": {"_id": record_id}}]
+        parsing_ref_pipeline = await self.get_parsing_ref_detail_pipeline(object_id)
+
+        pipeline = one_record_pipeline + parsing_ref_pipeline
         return await self.record_coll.aggregate(pipeline).to_list(length=None)
 
     async def find_one_by_id(
