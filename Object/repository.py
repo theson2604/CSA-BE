@@ -95,7 +95,13 @@ class ObjectRepository(IObjectRepository):
                     "as": "fields",
                 }
             },
-            {"$project": {"fields.object_id": 0}},
+            {
+                "$set": {
+                    "fields": {
+                        "$sortArray": {"input": "$fields", "sortBy": {"sorting_id": 1}}
+                    }
+                }
+            },
         ]
         async for doc in self.obj_coll.aggregate(pipeline):
             return doc
