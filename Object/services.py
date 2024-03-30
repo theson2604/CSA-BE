@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
+import asyncio
 from typing import List
 from bson import ObjectId
 
 from fastapi import HTTPException
+import pymongo
 from FieldObject.repository import FieldObjectRepository
 from FieldObject.services import FieldObjectServiceException, FieldObjectService
 from GroupObjects.repository import GroupObjectRepository
@@ -51,15 +53,19 @@ class ObjectService(IObjectService):
         group_obj_id = group.get("_id") if group.get("_id") else group.get("id")
         last_index_in_group = await self.repo.count_all({"group_obj_id": group_obj_id})
         
+        obj_id = generate_object_id(obj_name)
+        
         obj_model = ObjectModel(
             id = str(ObjectId()),
             obj_name = obj_name,
-            obj_id = generate_object_id(obj_name),
+            obj_id = obj_id,
             group_obj_id = group_obj_id,
             sorting_id = last_index_in_group,
             modified_by = current_user_id,
             created_by = current_user_id
         )
+        
+        asyncio.create_task(self.repo.create_indexing([(obj_id, pymongo.ASCENDING, True)]))
         
         return await self.repo.insert_one(obj_model.model_dump(by_alias=True))
 

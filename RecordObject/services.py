@@ -61,10 +61,7 @@ class RecordObjectService(IRecordObjectService):
                 obj_id, field_id
             )
             field_type = field_detail.get("field_type")
-            # if field_type == FieldObjectType.ID:
-            #     seq = generate_next_record_id(self.db_str, obj_id)
-            #     print(seq)
-                
+            
             if field_type == FieldObjectType.TEXT:
                 length = field_detail.get("length")
                 if not isinstance(field_value, str):

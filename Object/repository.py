@@ -10,6 +10,10 @@ from app.common.enums import FieldObjectType
 
 class IObjectRepository(ABC):
     @abstractmethod
+    async def create_indexing(self, objects: List[tuple]):
+        raise NotImplementedError
+        
+    @abstractmethod
     async def insert_one(self, obj: ObjectModel) -> str:
         raise NotImplementedError
 
@@ -46,6 +50,21 @@ class ObjectRepository(IObjectRepository):
         self.db_str = db_str
         self.db = client.get_database(db_str)
         self.obj_coll = self.db.get_collection(coll)
+        
+    async def create_indexing(self, objects: List[tuple]):
+        """
+        :Params:
+            - [(object_id: obj_<name>_<id>, direction: pymongo.ASCENDING, unique: bool)]
+        """
+        existing_indexes = await self.obj_coll.index_information()
+        for object in objects:
+            if object[0] in existing_indexes:
+                return
+            index_key, direction = object[0], object[1]
+            index_options = {"name": index_key, "unique": object[2], "sparse": False}
+            await self.obj_coll.create_index(
+                [(index_key, direction)], **index_options
+            )
 
     async def insert_one(self, obj: ObjectModel) -> str:
         result = await self.obj_coll.insert_one(obj)
