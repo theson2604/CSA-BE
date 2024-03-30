@@ -1,18 +1,19 @@
-from MailService.models import EmailModel
+from MailService.models import EmailModel, TemplateModel
 from MailService.repository import MailServiceRepository
-from MailService.schemas import SendMailSchema, EmailSchema
+from MailService.schemas import *
 from abc import ABC, abstractmethod
+from app.common.db_connector import DBCollections
 from app.common.errors import HTTPBadRequest
 from app.settings.config import KEY_BYTES
-from fastapi import Depends
+# from fastapi import Depends
 from bson import ObjectId
+from Object.repository import ObjectRepository
 from RootAdministrator.repository import RootAdministratorRepository
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from Crypto import Random
 from email.mime.text import MIMEText
 import binascii
-import base64
 import smtplib
 
 class IMailServices(ABC):
@@ -25,7 +26,7 @@ class IMailServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def create_email(self, email: EmailSchema) -> str:
+    async def create_email(self, email: EmailSchema) -> bool:
         raise NotImplementedError
 
     @abstractmethod
@@ -35,17 +36,22 @@ class IMailServices(ABC):
     @abstractmethod
     async def get_mail_pwd(self, email: str, admin_id: str) -> str:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def create_template(self) -> bool:
+        raise NotImplementedError
 
 class MailServices(IMailServices):
     def __init__(self, db):
         self.repo = MailServiceRepository()
-        # self.root_repo = RootAdministratorRepository()
+        self.template_repo = MailServiceRepository(db, DBCollections.EMAIL_TEMPLATE)
+        self.root_repo = RootAdministratorRepository()
+        self.obj_repo = ObjectRepository(db)
 
         self.db_str = db
 
     def encrypt_aes(self, pwd: str):
         try:
-            print(type(pwd))
             key = Random.new().read(KEY_BYTES)
             iv = Random.new().read(AES.block_size)
                                 
@@ -61,9 +67,6 @@ class MailServices(IMailServices):
     
     def decrypt_aes(self, key, iv, ciphertext):
         try:
-            # key = base64.b64decode(key.encode("utf-8"))
-            # iv = base64.b64decode(iv.encode("utf-8"))
-            # ciphertext = base64.b64decode(ciphertext.encode("utf-8"))
             iv_int = int.from_bytes(iv, byteorder="big")
             ctr = Counter.new(AES.block_size * 8, initial_value=iv_int)
 
@@ -77,6 +80,11 @@ class MailServices(IMailServices):
     async def create_email(self, email: EmailSchema):
         email_obj = email.model_dump()
         admin_id = email_obj.get("admin")
+        address = email_obj.get("email")
+        registered_email = await self.repo.find_email_by_name(address)
+        if registered_email:
+            raise HTTPBadRequest(f"Email {address} has been registed")
+
         system_admin = await self.root_repo.find_one_by_id(admin_id, self.db_str)
         if not system_admin:
             raise HTTPBadRequest("Cannot find system admin by admin_id")
@@ -85,14 +93,15 @@ class MailServices(IMailServices):
 
         record = EmailModel(
             _id = str(ObjectId()),
-            email = email_obj.get("email"),
+            email = address,
             pwd = ciphertext,
             key = key,
             iv = iv,
             admin = admin_id
         )
 
-        return await self.repo.insert_email(record.model_dump(by_alias=True))
+        await self.repo.insert_email(record.model_dump(by_alias=True))
+        return True
     
     async def send_one(self, mail: SendMailSchema, admin_id: str) -> str:
         mail = mail.model_dump()
@@ -108,8 +117,25 @@ class MailServices(IMailServices):
         return "Message sent!"
     
     async def get_mail_pwd(self, email: str, admin_id: str) -> str:
-        print("admin_ID: " + admin_id)
         result = await self.repo.find_email({"email": email, "admin_id": admin_id}, projection={"modified_at": 0, "created_at": 0})
         if not result:
             raise HTTPBadRequest("Cannot find email")
         return self.decrypt_aes(result.get("key"), result.get("iv"), result.get("pwd"))
+
+    async def create_template(self, template: TemplateSchema) -> str:
+        template = template.model_dump()
+        object_id = template.get("object")
+        ref_obj = await self.obj_repo.find_one_by_id(object_id)
+        if not ref_obj:
+            raise HTTPBadRequest(f"Not found ref_obj {object_id}.")
+
+        record = TemplateModel(
+            _id = str(ObjectId()),
+            name = template.get("name"),
+            object_id = object_id,
+            subject = template.get("subject"),
+            body = template.get("body")
+        )
+        
+        await self.template_repo.insert_template(record.model_dump(by_alias=True))
+        return True

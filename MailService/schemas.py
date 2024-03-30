@@ -24,3 +24,8 @@ class SendMailSchema(BaseModel):
     subject: Optional[str] = None
     content: str = Field(..., max_length=100)
     
+class TemplateSchema(BaseModel):
+    name: str = Field(..., max_length=100)
+    object: str = Field(..., alias="object_id")
+    subject: str = Field(..., max_length=100)
+    body: str = Field(...)

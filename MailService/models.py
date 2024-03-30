@@ -17,3 +17,10 @@ class EmailModel(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True
     )
+
+class TemplateModel(BaseModel):
+    id: str = Field(..., alias="_id")
+    name: str = Field(..., alias="name")
+    object: str = Field(..., alias="object_id")
+    subject: str = Field(..., alias="subject")
+    body: str = Field(..., alias="body")

@@ -2,7 +2,7 @@ from typing import List
 from typing_extensions import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
-from MailService.schemas import SendMailSchema, EmailSchema
+from MailService.schemas import SendMailSchema, EmailSchema, TemplateSchema
 from MailService.services import MailServices
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
@@ -41,6 +41,24 @@ async def send_mail(
         admin_id = CURRENT_USER.get("_id")
         mail_service = MailServices(db)
         return await mail_service.send_one(mail, admin_id)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
+@router.post("/create-template")
+@protected_route([SystemUserRole.ADMINISTRATOR])
+async def create_email(
+    template: TemplateSchema,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        db = CURRENT_USER.get("db")
+        mail_service = MailServices(db)
+        return await mail_service.create_template(template)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
