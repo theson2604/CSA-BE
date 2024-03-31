@@ -29,7 +29,7 @@ class IGroupObjectServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def get_all_groups(self, query: dict = {}) -> List[GroupObjectModel]:
+    async def get_all_groups_with_details(self) -> List[dict]:
         raise NotImplementedError
     
     @abstractmethod
@@ -39,13 +39,9 @@ class IGroupObjectServices(ABC):
 
 class GroupObjectServices(IGroupObjectServices):
     def __init__(self, db_str: str):
-        #Repo
         self.repo = GroupObjectRepository(db_str)
         self.users_repo = RootAdministratorRepository()
-
-        #Service
         self.obj_service = ObjectService(db_str)
-
         self.db_str = db_str
     
     async def create_group(self, group: GroupObjectSchema) -> str:
@@ -105,8 +101,11 @@ class GroupObjectServices(IGroupObjectServices):
         
         return group
  
-    async def get_all_groups(self, query: dict = {}) -> List[GroupObjectModel]:
-        return await self.repo.find_all(query)
+    async def get_all_groups_with_details(self) -> List[dict]:
+        """
+        Get all GroupObject with parsing Object details, nested parsing FieldObject details
+        """
+        return await self.repo.get_all_groups_with_details()
         
     async def get_all_user_groups(self, user_id: str) -> List[GroupObjectModel]:
         return await self.get_all_groups({"manager_id": user_id})

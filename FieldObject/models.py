@@ -14,9 +14,15 @@ class FieldObjectBase(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True
     )
+
+class FieldId(FieldObjectBase):
+    prefix: str = Field(..., alias="prefix")
     
 class FieldText(FieldObjectBase):
     length: int = Field(..., gt=0, alias="length")
+    
+class FieldTextArea(FieldObjectBase):
+    pass
     
 class FieldEmail(FieldObjectBase):
     pass
@@ -30,7 +36,9 @@ class FieldPhoneNumber(FieldObjectBase):
 class FieldReferenceObject(FieldObjectBase):
     display_value: str = Field(..., alias="display_value")
     ref_obj_id: str = Field(..., alias="ref_obj_id")
+    ref_obj_id_value: str = Field(..., alias="ref_obj_id_value")
     
 class FieldReferenceFieldObject(FieldObjectBase):
     display_value: str = Field(..., alias="display_value")
     ref_field_obj_id: str = Field(..., alias="ref_field_obj_id")
+    ref_obj_id_value: str = Field(..., alias="ref_obj_id_value")

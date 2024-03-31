@@ -4,6 +4,7 @@ import asyncio
 import re
 
 from bson import ObjectId
+import pymongo
 
 from FieldObject.repository import FieldObjectRepository
 from Object.repository import ObjectRepository
@@ -12,7 +13,7 @@ from RecordObject.repository import RecordObjectRepository
 from RecordObject.schemas import RecordObjectSchema
 from app.common.enums import FieldObjectType
 from app.common.errors import HTTPBadRequest
-from app.common.utils import get_current_hcm_datetime
+from app.common.utils import generate_next_record_id, get_current_hcm_datetime
 
 
 class RecordException(Exception):
@@ -31,6 +32,12 @@ class IRecordObjectService(ABC):
         self, object_id: str, page: int = 1, page_size: int = 100
     ) -> List[RecordObjectModel]:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def get_one_record_by_id_with_detail(
+        self, record_id: str, object_id: str
+    ) -> RecordObjectModel:
+        raise NotImplementedError
 
 
 class RecordObjectService(IRecordObjectService):
@@ -42,17 +49,20 @@ class RecordObjectService(IRecordObjectService):
         self.db_str = db_str
         self.record_repo = RecordObjectRepository(db_str, coll=obj_id)
         self.field_obj_repo = FieldObjectRepository(db_str)
+        self.object_repo = ObjectRepository(db_str) 
 
     async def create_record(
         self, record: RecordObjectSchema, current_user_id: str
     ) -> str:
         obj_id = record.pop("object_id")
-        inserted_record = {"_id": str(ObjectId()), "object_id": obj_id}
+        inserted_record = {"object_id": obj_id}
+        
         for field_id, field_value in record.items():
             field_detail = await self.field_obj_repo.find_one_by_field_id(
                 obj_id, field_id
             )
             field_type = field_detail.get("field_type")
+            
             if field_type == FieldObjectType.TEXT:
                 length = field_detail.get("length")
                 if not isinstance(field_value, str):
@@ -99,7 +109,11 @@ class RecordObjectService(IRecordObjectService):
                         f"Not found ref record '{field_value}' in {ref_obj_id}"
                     )
 
-                field_value = {"ref_to": ref_record.get("_id"), "field_value": "_id"}
+                obj_detail = await self.object_repo.find_one_by_object_id(ref_obj_id)
+                field_ids = await self.field_obj_repo.get_all_by_field_types(obj_detail.get("_id"), [FieldObjectType.ID.value])
+                
+                if field_ids and len(field_ids) == 1:
+                    field_value = {"ref_to": ref_record.get("_id"), "field_value": field_ids[0].get("field_id")}
 
             elif field_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
                 ref_field_obj_id = field_detail.get(
@@ -122,8 +136,19 @@ class RecordObjectService(IRecordObjectService):
 
             inserted_record.update({field_id: field_value})
 
+        list_field_details = await self.field_obj_repo.get_all_by_field_types(obj_id, [FieldObjectType.ID])
+        field_id_detail = list_field_details[0]
+        field_id, prefix = field_id_detail.get("field_id"), field_id_detail.get("prefix")
+        seq = await generate_next_record_id(self.db_str, obj_id)
+        id = seq.get("seq")
+        concat_prefix_id = f"{prefix}{id}"
+        
+        await self.record_repo.create_indexing([(field_id_detail.get("field_id"), pymongo.ASCENDING, True)])
+        
         inserted_record.update(
             {
+                "_id": str(ObjectId()),
+                field_id: concat_prefix_id,
                 "created_at": get_current_hcm_datetime(),
                 "modified_at": get_current_hcm_datetime(),
                 "created_by": current_user_id,
@@ -137,28 +162,26 @@ class RecordObjectService(IRecordObjectService):
     async def get_all_records_with_detail(
         self, object_id: str, page: int = 1, page_size: int = 100
     ) -> List[RecordObjectModel]:
-        ref_field_obj_details = await self.field_obj_repo.get_all_by_field_types(
-            object_id,
-            [
-                FieldObjectType.REFERENCE_OBJECT.value,
-                FieldObjectType.REFERENCE_FIELD_OBJECT.value,
-            ],
-        )
-        
-        list_fields = []
-        for ref_field_detail in ref_field_obj_details:
-            field_id = ref_field_detail.get("field_id")
-            ref_obj_id = ""
-            if ref_field_detail.get("field_type") == FieldObjectType.REFERENCE_FIELD_OBJECT.value:
-                ref_field_obj = ref_field_detail.get("ref_field_obj_id")
-                ref_obj_id = ref_field_obj.split(".")[0]
-            else:
-                ref_obj_id = ref_field_detail.get("ref_obj_id")
-            
-            list_fields.append({
-                "ref_obj_id": ref_obj_id,
-                "local_field_id": field_id
-            })
-        
         skip = (page - 1) * page_size
-        return await self.record_repo.get_all_with_parsing_ref_detail(list_fields, skip, page_size)
+        records = await self.record_repo.get_all_with_parsing_ref_detail(
+            object_id, skip, page_size
+        )
+
+        if records and isinstance(records, list) and len(records) == 1:
+            records = records[0]
+            if isinstance(records, dict):
+                total = records.get("total_records", [{"total": 0}])
+                records.update({"total_records": total[0].get("total")})
+                return records
+
+        return []
+
+    async def get_one_record_by_id_with_detail(
+        self, record_id: str, object_id: str
+    ) -> RecordObjectModel:
+        """
+        :Params:
+        - record_id: Record's _id
+        - object_id: Object's _id
+        """
+        return await self.record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id)

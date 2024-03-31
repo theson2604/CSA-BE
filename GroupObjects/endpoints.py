@@ -80,7 +80,7 @@ async def get_detail_group_by_id(
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
 
-@router.get("/get-all-groups")
+@router.get("/get-all-groups-with-details")
 @protected_route([SystemUserRole.ADMINISTRATOR])
 async def get_all_groups(
     CREDENTIALS: AuthCredentialDepend,
@@ -89,7 +89,7 @@ async def get_all_groups(
 ):
     try:
         group_object_service = GroupObjectServices(CURRENT_USER.get("db"))
-        return await group_object_service.get_all_groups()
+        return await group_object_service.get_all_groups_with_details()
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -106,25 +106,6 @@ async def get_all_groups(
     try:
         group_object_service = GroupObjectServices(CURRENT_USER.get("db"))
         return await group_object_service.get_all_user_groups(CURRENT_USER.get("_id"))
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        if isinstance(e, Exception):
-            raise HTTPBadRequest(str(e))
-        
-@router.delete("/delete-one")
-@protected_route([SystemUserRole.ADMINISTRATOR])
-async def delete_one_group(
-    group_id: str,
-    CREDENTIALS: AuthCredentialDepend,
-    AUTHEN_SERVICE: AuthServiceDepend,
-    CURRENT_USER = None
-):
-    try:
-        group_object_service = GroupObjectServices(CURRENT_USER.get("db"))
-        if not await group_object_service.delete_one_group_obj_by_id(group_id):
-            raise HTTPBadRequest('could not delete')
-        return "Group has been deleted"
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

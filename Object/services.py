@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
+import asyncio
 from typing import List
 from bson import ObjectId
 
 from fastapi import HTTPException
+import pymongo
 from FieldObject.repository import FieldObjectRepository
 from FieldObject.services import FieldObjectServiceException, FieldObjectService
 from GroupObjects.repository import GroupObjectRepository
@@ -24,7 +26,7 @@ class IObjectService(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def get_all_objects(self) -> List[dict]:
+    async def get_all_objects_with_field_details(self) -> List[dict]:
         raise NotImplementedError
     
     @abstractmethod
@@ -59,30 +61,27 @@ class ObjectService(IObjectService):
         group_obj_id = group.get("_id") if group.get("_id") else group.get("id")
         last_index_in_group = await self.repo.count_all({"group_obj_id": group_obj_id})
         
+        obj_id = generate_object_id(obj_name)
+        
         obj_model = ObjectModel(
             id = str(ObjectId()),
             obj_name = obj_name,
-            obj_id = generate_object_id(obj_name),
+            obj_id = obj_id,
             group_obj_id = group_obj_id,
             sorting_id = last_index_in_group,
             modified_by = current_user_id,
             created_by = current_user_id
         )
         
+        asyncio.create_task(self.repo.create_indexing([(obj_id, pymongo.ASCENDING, True)]))
+        
         return await self.repo.insert_one(obj_model.model_dump(by_alias=True))
 
-    async def get_all_objects(self) -> dict:
-        objects = await self.repo.find_all()
-        ret_objects = {}
-        for obj in objects:
-            group_id = obj.pop("group_obj_id")
-            if not ret_objects.get(group_id):
-                ret_objects.update({group_id: []})
-                ret_objects[group_id].append(obj)
-            else:
-                ret_objects[group_id].append(obj)
-
-        return ret_objects
+    async def get_all_objects_with_field_details(self) -> List[dict]:
+        """
+            Include parsing Fields
+        """
+        return await self.repo.get_all_objects_with_field_details()
     
     async def create_object_with_fields(self, obj_with_fields: ObjectWithFieldSchema, current_user_id: str) -> str:
         try:
@@ -92,7 +91,7 @@ class ObjectService(IObjectService):
             obj_only = {"obj_name": obj_with_fields.get("obj_name"), "group_obj_id": obj_with_fields.get("group_obj_id")}
             new_obj_id = await self.create_object_only(ObjectSchema(**obj_only), current_user_id)
             # Create Field Object
-            await self.field_obj_service.create_many_field_object(new_obj_id, obj_with_fields_schema.fields)
+            await self.field_obj_service.create_many_fields_object(new_obj_id, obj_with_fields_schema.fields)
             return new_obj_id
         except FieldObjectServiceException as e:
             if new_obj_id:

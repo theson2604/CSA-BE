@@ -6,7 +6,9 @@ class SystemUserRole(str, Enum):
     USER = 'user'
 
 class FieldObjectType(str, Enum):
+    ID = 'id'
     TEXT = 'text'
+    TEXTAREA = 'textarea'
     EMAIL = 'email'
     SELECT = 'select'
     PHONE_NUMBER = 'phonenumber'
@@ -15,3 +17,4 @@ class FieldObjectType(str, Enum):
     
 class StatusCodeException(int, Enum):
     BAD_REQUEST = 400
+    FIELD_ID = "ID"

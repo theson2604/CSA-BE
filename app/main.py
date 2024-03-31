@@ -55,5 +55,5 @@ app.include_router(RootAdministrator.endpoints.router, prefix="/api/root", tags=
 app.include_router(GroupObjects.endpoints.router, prefix="/api/group-objects", tags=["Group Objects"])
 app.include_router(Object.endpoints.router, prefix="/api/object", tags=["Object"])
 app.include_router(RecordObject.endpoints.router, prefix="/api/record", tags=["Record"])
-app.include_router(FieldObject.endpoints.router, prefix="/api/field", tags=["Field"])
+app.include_router(FieldObject.endpoints.router, prefix="/api/field-object", tags=["Field Object"])
 app.include_router(MailService.endpoints.router, prefix="/api/mail", tags=["Mail"])

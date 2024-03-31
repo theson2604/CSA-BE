@@ -45,7 +45,7 @@ async def create_object_with_fields(
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
         
-@router.get("/get-all-objects")
+@router.get("/get-all-objects-with-field-details")
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
 async def get_all_objects(
     CREDENTIALS: AuthCredentialDepend,
@@ -55,7 +55,7 @@ async def get_all_objects(
     try:
         db_str = CURRENT_USER.get("db")
         obj_service = ObjectService(db_str)
-        return await obj_service.get_all_objects()
+        return await obj_service.get_all_objects_with_field_details()
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
