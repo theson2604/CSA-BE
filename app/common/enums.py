@@ -17,4 +17,5 @@ class FieldObjectType(str, Enum):
     
 class StatusCodeException(int, Enum):
     BAD_REQUEST = 400
-    FIELD_ID = "ID"
+
+FIELD_ID = "ID"
