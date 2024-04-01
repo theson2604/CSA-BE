@@ -14,8 +14,9 @@ class DBCollections(str, Enum):
     GROUP_OBJECTS = "GroupObjects"
     FIELD_OBJECT = "FieldObject"
     OBJECT = "Object"
+    EMAIL_TEMPLATE = "EmailTemplate"
 
 # Root Collections
 class RootCollections(str, Enum):
     USERS = "SystemUsers"
-    
+    EMAILS = "SystemEmails"

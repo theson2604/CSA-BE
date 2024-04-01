@@ -29,5 +29,6 @@ try:
     MongoConfig = MongoConfiguration(**config)
     SECRET_SALT = config.get("SECRET_SALT")
     JWT_ALGORITHM = config.get("JWT_ALGORITHM")
+    KEY_BYTES = config.get("KEY_BYTES")
 except ValidationError as e:
     print(e)

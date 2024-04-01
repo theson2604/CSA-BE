@@ -2,6 +2,8 @@ from typing import List
 from GroupObjects.models import GroupObjectModel
 from GroupObjects.schemas import GroupObjectSchema, UpdateGroupObjectSchema
 from GroupObjects.repository import GroupObjectRepository, IGroupObjectRepository
+from Object.repository import ObjectRepository
+from Object.services import ObjectService
 from bson import ObjectId
 from abc import ABC, abstractmethod
 from RootAdministrator.constants import HIDDEN_SYSTEM_USER_INFO
@@ -39,6 +41,7 @@ class GroupObjectServices(IGroupObjectServices):
     def __init__(self, db_str: str):
         self.repo = GroupObjectRepository(db_str)
         self.users_repo = RootAdministratorRepository()
+        self.obj_service = ObjectService(db_str)
         self.db_str = db_str
     
     async def create_group(self, group: GroupObjectSchema) -> str:
@@ -106,3 +109,8 @@ class GroupObjectServices(IGroupObjectServices):
         
     async def get_all_user_groups(self, user_id: str) -> List[GroupObjectModel]:
         return await self.get_all_groups({"manager_id": user_id})
+    
+    async def delete_one_group_obj_by_id(self, id: str) -> bool:
+        await self.obj_service.delete_all_objects_by_group_id(id)
+
+        return await self.repo.delete_one_by_id(id)
