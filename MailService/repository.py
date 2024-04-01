@@ -23,6 +23,10 @@ class IMailServiceRepository(ABC):
     async def insert_template(self, template: TemplateModel, projection: dict = None):
         raise NotImplementedError
     
+    @abstractmethod 
+    async def find_template_by_id(self, id: str, projection: dict = None):
+        raise NotImplementedError
+    
 class MailServiceRepository(IMailServiceRepository):
     def __init__(self, db_str: str = ROOT_CSA_DB, coll: str = RootCollections.EMAILS.value):
         global client
@@ -43,3 +47,8 @@ class MailServiceRepository(IMailServiceRepository):
     async def insert_template(self, template: TemplateModel, projection: dict = None):
         result = await self.coll.insert_one(template, projection)
         return result.inserted_id
+    
+    async def find_template_by_id(self, id: str, projection: dict = None):
+        return await self.coll.find_one({"_id": id}, projection)
+    
+    
