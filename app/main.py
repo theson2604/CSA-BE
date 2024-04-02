@@ -10,6 +10,7 @@ import Object.endpoints
 import RecordObject.endpoints
 import FieldObject.endpoints
 import MailService.endpoints
+import InboundRule.endpoints
 
 app = FastAPI()
 
@@ -57,3 +58,4 @@ app.include_router(Object.endpoints.router, prefix="/api/object", tags=["Object"
 app.include_router(RecordObject.endpoints.router, prefix="/api/record", tags=["Record"])
 app.include_router(FieldObject.endpoints.router, prefix="/api/field-object", tags=["Field Object"])
 app.include_router(MailService.endpoints.router, prefix="/api/mail", tags=["Mail"])
+app.include_router(InboundRule.endpoints.router, prefix="/api/inbound-rule", tags=["Inbound Rule"])
