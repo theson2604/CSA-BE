@@ -14,7 +14,7 @@ import json
 
 class IInboundRule(ABC):
     @abstractmethod
-    async def process_file(self, file: UploadFile = File(...)):
+    async def process_file(self, file: UploadFile = File(...), data: FileSchema = None):
         raise NotImplementedError
 
 class InboundRule(IInboundRule):
@@ -27,7 +27,9 @@ class InboundRule(IInboundRule):
         # self.db_str = db
         pass
 
-    async def process_file(self, file: UploadFile = File(...)):
+    async def process_file(self, file_obj: dict):
+        file = file_obj.get("file")
+        # config
         file_extension = file.filename.split(".")[-1]
         if file_extension.lower() == "csv":
             csvReader = csv.DictReader(codecs.iterdecode(file.file, 'utf-8'))

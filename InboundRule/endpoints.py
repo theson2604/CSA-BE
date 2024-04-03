@@ -14,7 +14,7 @@ router = APIRouter()
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.ADMINISTRATOR])
 async def inbound_file(
     file: UploadFile,
-    # data: FileSchema,
+    config: FileSchema,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
     CURRENT_USER = None
@@ -22,7 +22,7 @@ async def inbound_file(
     try:
         db = CURRENT_USER.get("db")
         inbound_rule_service = InboundRule(db)
-        return await inbound_rule_service.process_file(file)
+        return await inbound_rule_service.process_file({"file": file, "config": config})
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
