@@ -2,7 +2,7 @@ from typing import List
 from typing_extensions import Annotated
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
-# from MailService.schemas import SendMailSchema, EmailSchema, TemplateSchema
+from InboundRule.schemas import FileSchema
 from InboundRule.services import InboundRule
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
@@ -14,6 +14,7 @@ router = APIRouter()
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.ADMINISTRATOR])
 async def inbound_file(
     file: UploadFile,
+    # data: FileSchema,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
     CURRENT_USER = None
