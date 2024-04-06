@@ -38,7 +38,7 @@ class ElasticsearchRecord(ElasticsearchBase):
         )
 
     async def index_doc(self, record_id: str, doc: dict):
-        await self.es.index(index=self.obj_indexing, id=record_id, document=doc)
+        await self.es.index(index=self.obj_index, id=record_id, document=doc)
 
     async def create_obj_index(self):
         settings = {

@@ -11,6 +11,7 @@ from Object.repository import ObjectRepository
 from RecordObject.models import RecordObjectModel
 from RecordObject.repository import RecordObjectRepository
 from RecordObject.schemas import RecordObjectSchema
+from RecordObject.search import ElasticsearchRecord
 from app.common.enums import FieldObjectType
 from app.common.errors import HTTPBadRequest
 from app.common.utils import generate_next_record_id, get_current_hcm_datetime
@@ -41,7 +42,7 @@ class IRecordObjectService(ABC):
 
 
 class RecordObjectService(IRecordObjectService):
-    def __init__(self, db_str: str, obj_id_str: str):
+    def __init__(self, db_str: str, obj_id_str: str, obj_id: str):
         """
         :Parameters:
         obj_id_str: obj_<name>_<id> for selecting corresponding object's mongo collection
@@ -51,6 +52,7 @@ class RecordObjectService(IRecordObjectService):
         self.record_repo = RecordObjectRepository(db_str, coll=obj_id_str)
         self.field_obj_repo = FieldObjectRepository(db_str)
         self.object_repo = ObjectRepository(db_str) 
+        self.elastic_service = ElasticsearchRecord(db_str, obj_id_str, obj_id)
 
     async def create_record(
         self, record: RecordObjectSchema, current_user_id: str
@@ -156,6 +158,10 @@ class RecordObjectService(IRecordObjectService):
                 "modified_by": current_user_id,
             }
         )
+        
+        cpy_record = inserted_record.copy()
+        self.elastic_service.index_doc(record_id=cpy_record.pop("_id"), doc=cpy_record)
+        
         return await self.record_repo.insert_one(
             RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True)
         )

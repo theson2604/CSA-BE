@@ -29,7 +29,7 @@ async def create_record(
         if not obj:
             raise HTTPBadRequest(f"Not found {obj_id} object by _id")
         
-        record_service = RecordObjectService(db_str, obj.get("obj_id"))
+        record_service = RecordObjectService(db_str, obj.get("obj_id"), obj_id)
         return await record_service.create_record(record, current_user_id)
     
     except Exception as e:
@@ -56,7 +56,7 @@ async def get_all_records(
         if not obj:
             raise HTTPBadRequest(f"Not found {obj_id} object by _id")
         
-        record_service = RecordObjectService(db_str, obj.get("obj_id"))
+        record_service = RecordObjectService(db_str, obj.get("obj_id"), obj_id)
         return await record_service.get_all_records_with_detail(obj_id, page, page_size)
     
     except Exception as e:
@@ -82,7 +82,7 @@ async def get_record_detail(
         if not obj:
             raise HTTPBadRequest(f"Not found {obj_id} object by _id")
         
-        record_service = RecordObjectService(db_str, obj.get("obj_id"))
+        record_service = RecordObjectService(db_str, obj.get("obj_id"), obj_id)
         return await record_service.get_one_record_by_id_with_detail(record_id, obj_id)
     
     except Exception as e:
