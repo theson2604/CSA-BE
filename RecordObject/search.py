@@ -15,6 +15,17 @@ class ElasticsearchRecord(ElasticsearchBase):
         self.record_repo = RecordObjectRepository(db_str, coll=obj_id_str)
         self.obj_repo = ObjectRepository(db_str)
 
+    async def search_record(self, query: dict) -> List[dict]:
+        matching_fields = []
+        for field_id, query_str in query.items():
+            matching_fields.append({"match": {field_id: query_str}})
+
+        return await self.es.search(
+            index=self.obj_index,
+            body={"query": {"bool": {"must": matching_fields}}},
+            size=10,
+        )
+
     async def index_doc(self, record_id: str, doc: dict):
         await self.es.index(index=self.obj_indexing, id=record_id, document=doc)
 
@@ -30,14 +41,14 @@ class ElasticsearchRecord(ElasticsearchBase):
         await self.es.indices.create(
             index=self.obj_index, settings=settings, mappings=mappings
         )
-        
+
     async def gen_docs(self):
         records = await self.record_repo.find_all()
         for record in records:
             yield {
                 "_index": self.obj_index,
                 "_id": record.pop("_id"),
-                "_source": record
+                "_source": record,
             }
 
     async def sync_docs(self) -> bool:
@@ -46,7 +57,7 @@ class ElasticsearchRecord(ElasticsearchBase):
         if not await self.es.indices.exists(index=self.obj_index):
             await self.create_obj_index()
             await async_bulk(self.es, self.gen_docs())
-        
+
         elif await self.es.indices.exists(index=self.obj_index):
             count_docs = await self.es.count(index=self.obj_index)
             count_docs = count_docs["count"]
@@ -55,7 +66,7 @@ class ElasticsearchRecord(ElasticsearchBase):
                 await self.es.indices.delete(index=self.obj_index)
                 await self.create_obj_index()
                 await async_bulk(self.es, self.gen_docs())
-                
+
         return True
 
     async def parse_mappings(self):
@@ -63,13 +74,16 @@ class ElasticsearchRecord(ElasticsearchBase):
         mappings = {}
         for field in obj_detail.get("fields"):
             mapping_analyzer = self.get_mapping_by_field_type(field.get("field_type"))
-            if mapping_analyzer is CustomAnalyzer.AUTOCOMPLETE_VI_TEXT or CustomAnalyzer.AUTOCOMPLETE_EMAIL:
+            if (
+                mapping_analyzer is CustomAnalyzer.AUTOCOMPLETE_VI_TEXT
+                or CustomAnalyzer.AUTOCOMPLETE_EMAIL
+            ):
                 mappings[field.get("field_id")] = {
                     "type": "text",
                     "analyzer": mapping_analyzer.value,
                     "search_analyzer": CustomAnalyzer.AUTOCOMPLETE_SEARCH.value,
                 }
-                
+
             elif mapping_analyzer is CustomAnalyzer.AUTOCOMPLETE_PHONENUMBER:
                 mappings[field.get("field_id")] = {
                     "type": "text",
@@ -79,11 +93,11 @@ class ElasticsearchRecord(ElasticsearchBase):
             elif mapping_analyzer is CustomAnalyzer.STANDARD:
                 mappings[field.get("field_id")] = {
                     "type": "text",
-                    "analyzer": CustomAnalyzer.STANDARD.value
+                    "analyzer": CustomAnalyzer.STANDARD.value,
                 }
-        
+
         return mappings
-    
+
     def get_mapping_by_field_type(self, field_type: FieldObjectType):
         mappings = {
             FieldObjectType.ID: CustomAnalyzer.STANDARD,

@@ -92,9 +92,9 @@ async def get_record_detail(
             raise HTTPBadRequest(str(e))
         
         
-@router.post("/elastic/health-check")
+@router.post("/health-check")
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
-async def search_record(
+async def health_check(
     obj_id: str,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
@@ -109,6 +109,33 @@ async def search_record(
         obj_id_str = obj.get("obj_id")
         elastic_service = ElasticsearchRecord(db_str, obj_id_str, obj_id)
         return await elastic_service.sync_docs()
+    
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+
+
+@router.post("/search")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def search_record(
+    record: RecordObjectSchema,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None,
+):
+    try:
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        record = record.model_dump()
+        obj_id = record.pop("object_id")
+        obj_repo = ObjectRepository(db_str)
+        obj = await obj_repo.find_one_by_id(obj_id)
+        if not obj:
+            raise HTTPBadRequest(f"Not found {obj_id} object by _id")
+        obj_id_str = obj.get("obj_id")
+        elastic_service = ElasticsearchRecord(db_str, obj_id_str, obj_id)
+        return await elastic_service.search_record(record)
     
     except Exception as e:
         if isinstance(e, HTTPException):
