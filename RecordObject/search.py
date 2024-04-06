@@ -48,7 +48,8 @@ class ElasticsearchRecord(ElasticsearchBase):
             await async_bulk(self.es, self.gen_docs())
         
         elif await self.es.indices.exists(index=self.obj_index):
-            count_docs = await self.es.cat.count(index=self.obj_index)["count"]
+            count_docs = await self.es.count(index=self.obj_index)
+            count_docs = count_docs["count"]
             count_records = await self.record_repo.count_all()
             if count_docs != count_records:
                 await self.es.indices.delete(index=self.obj_index)
