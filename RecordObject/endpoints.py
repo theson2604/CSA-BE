@@ -1,8 +1,11 @@
+from typing import List
 from fastapi import APIRouter, HTTPException
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from Object.repository import ObjectRepository
 from RecordObject.schemas import RecordObjectSchema
+from RecordObject.search import ElasticsearchRecord
 from RecordObject.services import RecordObjectService
+from app.common.elastic import ElasticsearchBase
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
 from app.dependencies.authentication import protected_route
@@ -86,4 +89,29 @@ async def get_record_detail(
         if isinstance(e, HTTPException):
             raise e
         if isinstance(e, Exception):
-            raise HTTPBadRequest(str(e))        
+            raise HTTPBadRequest(str(e))
+        
+        
+@router.post("/elastic/health-check")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def search_record(
+    obj_id: str,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None,
+):
+    try:
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        obj_repo = ObjectRepository(db_str)
+        obj = await obj_repo.find_one_by_id(obj_id)
+        if not obj:
+            raise HTTPBadRequest(f"Not found {obj_id} object by _id")
+        obj_id_str = obj.get("obj_id")
+        elastic_service = ElasticsearchRecord(db_str, obj_id_str, obj_id)
+        return await elastic_service.sync_docs()
+    
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))

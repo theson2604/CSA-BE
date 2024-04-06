@@ -36,14 +36,20 @@ class IRecordObjectRepository(ABC):
         self, id: str, projection: dict = None
     ) -> RecordObjectModel:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def find_all(
+        self, projection: dict = None
+    ) -> List[RecordObjectModel]:
+        raise NotImplementedError
 
     @abstractmethod
     async def create_indexing(self, fields: List[tuple]) -> RecordObjectModel:
         raise NotImplementedError
 
-    # @abstractmethod
-    # async def count_all(self, query: dict = {}) -> int:
-    #     raise NotImplementedError
+    @abstractmethod
+    async def count_all(self, query: dict = {}) -> int:
+        raise NotImplementedError
 
     # @abstractmethod
     # async def delete_one_by_id(self, id: str) -> bool:
@@ -220,9 +226,14 @@ class RecordObjectRepository(IRecordObjectRepository):
         self, id: str, projection: dict = None
     ) -> RecordObjectModel:
         return await self.record_coll.find_one({"_id": id}, projection)
+    
+    async def find_all(
+        self, projection: dict = None
+    ) -> List[RecordObjectModel]:
+        return await self.record_coll.find({}, projection).to_list(length=None)
 
-    # async def count_all(self, query: dict = {}) -> int:
-    #     return await self.record_coll.count_documents(query)
+    async def count_all(self, query: dict = {}) -> int:
+        return await self.record_coll.count_documents(query)
 
     # async def delete_one_by_id(self, id: str) -> bool:
     #     return await self.record_coll.delete_one({"_id": id})

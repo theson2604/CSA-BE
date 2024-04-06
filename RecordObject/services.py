@@ -41,13 +41,14 @@ class IRecordObjectService(ABC):
 
 
 class RecordObjectService(IRecordObjectService):
-    def __init__(self, db_str: str, obj_id: str):
+    def __init__(self, db_str: str, obj_id_str: str):
         """
         :Parameters:
-        obj_id: obj_<name>_<id> for selecting corresponding object's mongo collection
+        obj_id_str: obj_<name>_<id> for selecting corresponding object's mongo collection
         """
         self.db_str = db_str
-        self.record_repo = RecordObjectRepository(db_str, coll=obj_id)
+        self.obj_id_str = obj_id_str
+        self.record_repo = RecordObjectRepository(db_str, coll=obj_id_str)
         self.field_obj_repo = FieldObjectRepository(db_str)
         self.object_repo = ObjectRepository(db_str) 
 

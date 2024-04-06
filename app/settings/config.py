@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ValidationError
 import yaml
+import os
 
 with open('app/configs/env.yml', 'r') as file:
     # Load the YAML data
@@ -29,5 +30,10 @@ try:
     MongoConfig = MongoConfiguration(**config)
     SECRET_SALT = config.get("SECRET_SALT")
     JWT_ALGORITHM = config.get("JWT_ALGORITHM")
+    ROOT_DIR = config.get("ROOT_DIR")
+    ELASTIC_HOST = config.get("ELASTIC_HOST")
+    ELASTIC_USERNAME = config.get("ELASTIC_USERNAME")
+    ELASTIC_PASSWORD = config.get("ELASTIC_PASSWORD")
+    
 except ValidationError as e:
     print(e)
