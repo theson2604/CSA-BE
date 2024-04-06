@@ -15,15 +15,26 @@ class ElasticsearchRecord(ElasticsearchBase):
         self.record_repo = RecordObjectRepository(db_str, coll=obj_id_str)
         self.obj_repo = ObjectRepository(db_str)
 
-    async def search_record(self, query: dict) -> List[dict]:
+    async def search_record(
+        self, query: dict, page: int = 1, page_size: int = 10
+    ) -> List[dict]:
         matching_fields = []
+        skip = (page - 1) * page_size
         for field_id, query_str in query.items():
             matching_fields.append({"match": {field_id: query_str}})
 
-        return await self.es.search(
+        response = await self.es.search(
             index=self.obj_index,
             body={"query": {"bool": {"must": matching_fields}}},
-            size=10,
+            stored_fields=[],
+            from_=skip,
+            size=page_size,
+        )
+
+        result = response.get("hits", {"hits": []}).get("hits")
+        record_ids = [o.get("_id") for o in result]
+        return await self.record_repo.get_many_by_ids_with_parsing_ref_detail(
+            record_ids, self.obj_id
         )
 
     async def index_doc(self, record_id: str, doc: dict):

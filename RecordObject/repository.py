@@ -32,15 +32,19 @@ class IRecordObjectRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def get_many_by_ids_with_parsing_ref_detail(
+        self, list_ids: List[str], object_id: str
+    ) -> list:
+        raise NotImplementedError
+
+    @abstractmethod
     async def find_one_by_id(
         self, id: str, projection: dict = None
     ) -> RecordObjectModel:
         raise NotImplementedError
-    
+
     @abstractmethod
-    async def find_all(
-        self, projection: dict = None
-    ) -> List[RecordObjectModel]:
+    async def find_all(self, projection: dict = None) -> List[RecordObjectModel]:
         raise NotImplementedError
 
     @abstractmethod
@@ -173,7 +177,7 @@ class RecordObjectRepository(IRecordObjectRepository):
                     },
                 }
             ]
-        
+
         return parsing_ref_pipeline
 
     async def get_all_with_parsing_ref_detail(
@@ -222,15 +226,24 @@ class RecordObjectRepository(IRecordObjectRepository):
         pipeline = one_record_pipeline + parsing_ref_pipeline
         return await self.record_coll.aggregate(pipeline).to_list(length=None)
 
+    async def get_many_by_ids_with_parsing_ref_detail(
+        self, list_ids: List[str], object_id: str
+    ) -> list:
+        one_record_pipeline = [{"$match": {"_id": {"$in": list_ids}}}]
+        parsing_ref_pipeline = await self.get_parsing_ref_detail_pipeline(object_id)
+
+        pipeline = one_record_pipeline + parsing_ref_pipeline
+        return await self.record_coll.aggregate(pipeline).to_list(length=None)
+
     async def find_one_by_id(
         self, id: str, projection: dict = None
     ) -> RecordObjectModel:
         return await self.record_coll.find_one({"_id": id}, projection)
-    
+
     async def find_all(
-        self, projection: dict = None
+        self, query: dict = {}, projection: dict = None
     ) -> List[RecordObjectModel]:
-        return await self.record_coll.find({}, projection).to_list(length=None)
+        return await self.record_coll.find(query, projection).to_list(length=None)
 
     async def count_all(self, query: dict = {}) -> int:
         return await self.record_coll.count_documents(query)
