@@ -123,6 +123,8 @@ async def search_record(
     record: RecordObjectSchema,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
+    page: int = 1,
+    page_size: int = 10,
     CURRENT_USER = None,
 ):
     try:
@@ -135,7 +137,7 @@ async def search_record(
             raise HTTPBadRequest(f"Not found {obj_id} object by _id")
         obj_id_str = obj.get("obj_id")
         elastic_service = ElasticsearchRecord(db_str, obj_id_str, obj_id)
-        return await elastic_service.search_record(record)
+        return await elastic_service.search_record(record, page, page_size)
     
     except Exception as e:
         if isinstance(e, HTTPException):
