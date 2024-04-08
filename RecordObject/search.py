@@ -6,6 +6,7 @@ from app.common.elastic import ElasticsearchBase
 from app.common.enums import FieldObjectType
 from elasticsearch.helpers import async_bulk
 
+import timeit 
 
 class ElasticsearchRecord(ElasticsearchBase):
     def __init__(self, db_str: str, obj_id_str: str, obj_id: str):
@@ -22,7 +23,9 @@ class ElasticsearchRecord(ElasticsearchBase):
         skip = (page - 1) * page_size
         for field_id, query_str in query.items():
             matching_fields.append({"match": {field_id: query_str}})
-
+            
+        startTime = timeit.default_timer()
+        
         response = await self.es.search(
             index=self.obj_index,
             body={"query": {"bool": {"must": matching_fields}}},
@@ -30,12 +33,20 @@ class ElasticsearchRecord(ElasticsearchBase):
             from_=skip,
             size=page_size,
         )
+        
+        endTime = timeit.default_timer()
+        print("elastic search time:", endTime - startTime)
 
         result = response.get("hits", {"hits": []}).get("hits")
         record_ids = [o.get("_id") for o in result]
-        return await self.record_repo.get_many_by_ids_with_parsing_ref_detail(
+        
+        startTime = timeit.default_timer()
+        res =  await self.record_repo.get_many_by_ids_with_parsing_ref_detail(
             record_ids, self.obj_id
         )
+        endTime = timeit.default_timer()
+        print("mongo parse time:", endTime - startTime)
+        return res
 
     async def index_doc(self, record_id: str, doc: dict):
         await self.es.index(index=self.obj_index, id=record_id, document=doc)
@@ -87,7 +98,7 @@ class ElasticsearchRecord(ElasticsearchBase):
             mapping_analyzer = self.get_mapping_by_field_type(field.get("field_type"))
             if (
                 mapping_analyzer is CustomAnalyzer.AUTOCOMPLETE_VI_TEXT
-                or CustomAnalyzer.AUTOCOMPLETE_EMAIL
+                or mapping_analyzer is CustomAnalyzer.AUTOCOMPLETE_EMAIL
             ):
                 mappings[field.get("field_id")] = {
                     "type": "text",
@@ -118,7 +129,7 @@ class ElasticsearchRecord(ElasticsearchBase):
             FieldObjectType.SELECT: CustomAnalyzer.AUTOCOMPLETE_VI_TEXT,
         }
 
-        return mappings[field_type]
+        return mappings.get(field_type)
 
     def get_analyzer_config(self):
         return {
