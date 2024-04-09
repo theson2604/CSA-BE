@@ -29,9 +29,10 @@ class ElasticsearchRecord(ElasticsearchBase):
         response = await self.es.search(
             index=self.obj_index,
             body={"query": {"bool": {"must": matching_fields}}},
-            stored_fields=[],
+            # stored_fields=[],
             from_=skip,
             size=page_size,
+            filter_path="hits.hits._id"
         )
         
         endTime = timeit.default_timer()

@@ -169,6 +169,11 @@ class RecordObjectRepository(IRecordObjectRepository):
             parsing_ref_pipeline += [
                 {
                     "$project": {
+                        "created_at": 0,
+                        "modified_at": 0,
+                        "created_by": 0,
+                        "modified_by": 0,
+                        "object_id": 0,
                         f"{base_local_field_id}.ref_to.created_at": 0,
                         f"{base_local_field_id}.ref_to.modified_at": 0,
                         f"{base_local_field_id}.ref_to.created_by": 0,
@@ -231,8 +236,13 @@ class RecordObjectRepository(IRecordObjectRepository):
     ) -> list:
         one_record_pipeline = [{"$match": {"_id": {"$in": list_ids}}}]
         parsing_ref_pipeline = await self.get_parsing_ref_detail_pipeline(object_id)
-
-        pipeline = one_record_pipeline + parsing_ref_pipeline
+        # Scoring order
+        scoring_order_pipeline = [
+            {"$addFields": {"orderIndex": {"$indexOfArray": [list_ids, "$_id"]}}},
+            {"$sort": {"orderIndex": 1}},
+            {"$unset": "orderIndex"},
+        ]
+        pipeline = one_record_pipeline + parsing_ref_pipeline + scoring_order_pipeline
         return await self.record_coll.aggregate(pipeline).to_list(length=None)
 
     async def find_one_by_id(
