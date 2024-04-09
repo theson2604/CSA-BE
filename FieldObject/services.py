@@ -168,3 +168,13 @@ class FieldObjectService(IFieldObjectService):
     
     async def get_all_fields_by_obj_id(self, object_id: str) -> List[Union[FieldObjectBase]]:
         return await self.repo.find_all({"object_id": object_id})
+
+    async def delete_one_field_by_id(self, field_id: str) -> bool:
+        return await self.repo.delete_one_by_id(field_id)
+
+    async def delete_all_fields_by_obj_id(self, object_id: str) -> bool:
+        object = await self.obj_repo.find_one_by_id(object_id)
+        if not object:
+            raise HTTPBadRequest("Cannot find Object by object_id")
+        
+        return await self.repo.delete_many({"object_id": object_id})

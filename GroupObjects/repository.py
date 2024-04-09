@@ -32,6 +32,10 @@ class IGroupObjectRepository(ABC):
     @abstractmethod
     async def count_all(self, query: dict = {}) -> int:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def delete_one_by_id(self, id: str) -> bool:
+        raise NotImplementedError
 
 
 class GroupObjectRepository(IGroupObjectRepository):
@@ -100,3 +104,7 @@ class GroupObjectRepository(IGroupObjectRepository):
 
     async def count_all(self, query: dict = {}) -> int:
         return await self.group_obj_coll.count_documents(query)
+
+    async def delete_one_by_id(self, id: str) -> bool:
+        result = await self.group_obj_coll.delete_one({"_id": id})
+        return True if result else False

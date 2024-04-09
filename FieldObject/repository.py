@@ -112,7 +112,6 @@ class FieldObjectRepository(IFieldObjectRepository):
 
     async def find_all(self, query: dict = {}) -> List[Union[FieldObjectBase]]:
         return await self.field_object_coll.find(query).to_list(length=None)
-
     async def get_all_by_field_types(
         self, obj_id: str, field_types: List[FieldObjectType]
     ) -> List[Union[FieldObjectBase]]:

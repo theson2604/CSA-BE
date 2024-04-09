@@ -35,5 +35,6 @@ try:
     ELASTIC_USERNAME = config.get("ELASTIC_USERNAME")
     ELASTIC_PASSWORD = config.get("ELASTIC_PASSWORD")
     
+    KEY_BYTES = config.get("KEY_BYTES")
 except ValidationError as e:
     print(e)

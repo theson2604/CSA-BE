@@ -33,6 +33,14 @@ class IObjectService(ABC):
     async def get_object_detail_by_id(self, id: str) -> dict:
         raise NotImplementedError
     
+    @abstractmethod
+    async def delete_one_object_by_id(self, object_id: str) -> bool:
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def delete_all_objects_by_group_id(self, group_obj_id: str) -> bool:
+        raise NotImplementedError
+    
     
 class ObjectService(IObjectService):
     def __init__(self, db_str: str):

@@ -130,6 +130,5 @@ class ObjectRepository(IObjectRepository):
 
     async def count_all(self, query: dict = {}) -> int:
         return await self.obj_coll.count_documents(query)
-
     async def delete_one_by_id(self, id: str) -> bool:
         return await self.obj_coll.delete_one({"_id": id})

@@ -79,3 +79,21 @@ async def get_detail_object_by_id(
             raise e
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
+        
+@router.delete("/delete-one")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def delete_one_object(
+    object_id: str,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        object_service = ObjectService(CURRENT_USER.get("db"))
+        await object_service.delete_one_object_by_id(object_id)
+        return "Object has been deleted"
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
