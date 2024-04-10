@@ -1,3 +1,4 @@
+import re
 from MailService.models import EmailModel, TemplateModel
 from MailService.repository import MailServiceRepository
 from MailService.schemas import *
@@ -8,6 +9,7 @@ from app.settings.config import KEY_BYTES
 # from fastapi import Depends
 from bson import ObjectId
 from Object.repository import ObjectRepository
+from RecordObject.repository import RecordObjectRepository
 from RootAdministrator.repository import RootAdministratorRepository
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
@@ -26,6 +28,10 @@ class IMailServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
+    def get_field_id(self, src):
+        raise NotImplementedError
+    
+    @abstractmethod
     async def create_email(self, email: EmailSchema) -> bool:
         raise NotImplementedError
 
@@ -38,15 +44,25 @@ class IMailServices(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    async def create_template(self) -> bool:
+    async def create_template(self, template: TemplateSchema) -> str:
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def get_all_templates(self) -> List:
+        raise NotImplementedError
+    
+    @abstractmethod
+    async def get_templates_by_object_id(self, object_id) -> List:
         raise NotImplementedError
 
 class MailServices(IMailServices):
-    def __init__(self, db):
+    def __init__(self, db, coll: str = None):
         self.repo = MailServiceRepository()
         self.template_repo = MailServiceRepository(db, DBCollections.EMAIL_TEMPLATE)
         self.root_repo = RootAdministratorRepository()
         self.obj_repo = ObjectRepository(db)
+        if coll != None:
+            self.record_repo = RecordObjectRepository(db, coll)
 
         self.db_str = db
 
@@ -76,6 +92,28 @@ class MailServices(IMailServices):
             print(f"Decryption error: {e}")
             raise Exception("error in decrypt")
 
+    def get_field_id(self, src):
+        positions = []
+        for i in range(len(src)):
+            if src[i] == "@":
+                positions.append(i)
+        print(positions)
+        field_ids = ["" for _ in range(len(positions))]
+        for idx in range(len(positions)):
+            i = positions[idx]
+            while i+1 < len(src) and (src[i+1].isalnum() or src[i+1] == "_"):
+                i += 1
+                field_ids[idx] += (src[i])
+            idx = i
+        return field_ids, positions
+    
+    @staticmethod
+    def field_id_to_field_value(mail_body, field_ids, record):
+        for i in range(0, len(field_ids)):
+            print("REPLACE")
+            field_id = f"@{field_ids[i]}"
+            content = record[0].get(f"{field_ids[i]}")
+            mail_body = mail_body.replace(field_id, content)
 
     async def create_email(self, email: EmailSchema):
         email_obj = email.model_dump()
@@ -106,11 +144,32 @@ class MailServices(IMailServices):
     async def send_one(self, mail: SendMailSchema, admin_id: str) -> str:
         mail = mail.model_dump()
         email = mail.get("send_from")
-        mail_model = MIMEText(mail.get("content"))
+        mail_pwd = await self.get_mail_pwd(email, admin_id)
+
+        record = await self.record_repo.get_one_by_id_with_parsing_ref_detail(mail.get("record"), mail.get("object"))
+        if not record:
+            raise HTTPBadRequest("NONE")
+        print(f"Can not find record")
+
+        """
+        body
+        hello Mr.@fd_name_758, l123oihsdaf;
+        """
+        
+        mail_body = mail.get("body")
+        mail_subject = mail.get("subject")
+        field_ids_subject, postions = self.get_field_id(mail_subject)
+        field_ids_body, postions = self.get_field_id(mail_body)
+        MailServices.field_id_to_field_value(mail_body, field_ids_subject, record)
+        MailServices.field_id_to_field_value(mail_body, field_ids_body, record)
+
+        print(mail_body)
+        mail_model = MIMEText(mail_body)
         mail_model["Subject"] = mail.get("subject")
         mail_model["From"] = email
         mail_model["To"] = ",".join(mail.get("send_to"))
         mail_pwd = await self.get_mail_pwd(email, admin_id)
+
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp_server:
             smtp_server.login(email, mail_pwd)
             smtp_server.sendmail(email, mail.get("send_to"), mail_model.as_string())
@@ -139,3 +198,9 @@ class MailServices(IMailServices):
         
         await self.template_repo.insert_template(record.model_dump(by_alias=True))
         return True
+    
+    async def get_all_templates(self) -> List:
+        return await self.template_repo.get_all_templates()
+    
+    async def get_templates_by_object_id(self, object_id) -> List:
+        return await self.template_repo.get_templates_by_object_id(object_id)

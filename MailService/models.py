@@ -24,3 +24,10 @@ class TemplateModel(BaseModel):
     object: str = Field(..., alias="object_id")
     subject: str = Field(..., alias="subject")
     body: str = Field(..., alias="body")
+
+    created_at: str = Field(..., alias="created_at", default_factory=get_current_hcm_datetime)
+    modified_at: str = Field(..., alias="modified_at", default_factory=get_current_hcm_datetime)
+    
+    model_config = ConfigDict(
+        populate_by_name=True
+    )

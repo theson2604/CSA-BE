@@ -1,6 +1,6 @@
 from typing import List
 from typing_extensions import Annotated
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, File, Body
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from InboundRule.schemas import FileSchema
 from InboundRule.services import InboundRule
@@ -13,10 +13,10 @@ router = APIRouter()
 @router.post("/inbound-file")
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.ADMINISTRATOR])
 async def inbound_file(
-    file: UploadFile,
-    config: FileSchema,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
+    config: FileSchema = Form(),
+    file: UploadFile = File(...),
     CURRENT_USER = None
 ):
     try:
