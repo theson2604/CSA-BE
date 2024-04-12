@@ -114,6 +114,7 @@ class MailServices(IMailServices):
             field_id = f"@{field_ids[i]}"
             content = record[0].get(f"{field_ids[i]}")
             mail_body = mail_body.replace(field_id, content)
+            return mail_body
 
     async def create_email(self, email: EmailSchema):
         email_obj = email.model_dump()
@@ -146,26 +147,28 @@ class MailServices(IMailServices):
         email = mail.get("send_from")
         mail_pwd = await self.get_mail_pwd(email, admin_id)
 
-        record = await self.record_repo.get_one_by_id_with_parsing_ref_detail(mail.get("record"), mail.get("object"))
+        template = await self.template_repo.find_template_by_id(mail.get("template"))
+        if not template:
+            raise HTTPBadRequest(f"Can not find template")
+
+        record = await self.record_repo.get_one_by_id_with_parsing_ref_detail(mail.get("record"), template.get("object_id"))
         if not record:
             raise HTTPBadRequest("NONE")
-        print(f"Can not find record")
 
         """
         body
         hello Mr.@fd_name_758, l123oihsdaf;
         """
         
-        mail_body = mail.get("body")
-        mail_subject = mail.get("subject")
+        mail_body = template.get("body")
+        mail_subject = template.get("subject")
         field_ids_subject, postions = self.get_field_id(mail_subject)
         field_ids_body, postions = self.get_field_id(mail_body)
-        MailServices.field_id_to_field_value(mail_body, field_ids_subject, record)
-        MailServices.field_id_to_field_value(mail_body, field_ids_body, record)
+        mail_subject = MailServices.field_id_to_field_value(mail_subject, field_ids_subject, record)
+        mail_body = MailServices.field_id_to_field_value(mail_body, field_ids_body, record)
 
-        print(mail_body)
         mail_model = MIMEText(mail_body)
-        mail_model["Subject"] = mail.get("subject")
+        mail_model["Subject"] = mail_subject
         mail_model["From"] = email
         mail_model["To"] = ",".join(mail.get("send_to"))
         mail_pwd = await self.get_mail_pwd(email, admin_id)
@@ -174,6 +177,7 @@ class MailServices(IMailServices):
             smtp_server.login(email, mail_pwd)
             smtp_server.sendmail(email, mail.get("send_to"), mail_model.as_string())
         return "Message sent!"
+
     
     async def get_mail_pwd(self, email: str, admin_id: str) -> str:
         result = await self.repo.find_email({"email": email, "admin_id": admin_id}, projection={"modified_at": 0, "created_at": 0})

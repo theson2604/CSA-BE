@@ -15,11 +15,12 @@ router = APIRouter()
 async def inbound_file(
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
-    config: FileSchema = Form(),
+    config: FileSchema = Depends(),
     file: UploadFile = File(...),
     CURRENT_USER = None
 ):
     try:
+        print(type(config))
         db = CURRENT_USER.get("db")
         inbound_rule_service = InboundRule(db)
         return await inbound_rule_service.process_file({"file": file, "config": config})

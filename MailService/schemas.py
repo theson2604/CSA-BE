@@ -10,6 +10,7 @@ class EmailSchema(BaseModel):
 
 class SendMailSchema(BaseModel):
     record: str = Field(..., alias="record_id")
+    template: str = Field(..., alias="template_id")
     object: str = Field(..., alias="object_id")
     send_from: str = Field(..., max_length=100)
     send_to: List[str] = Field(..., max_length=100)
@@ -23,8 +24,8 @@ class SendMailSchema(BaseModel):
                 raise ValueError("email address cannot be empty")
         return v
     
-    subject: str = Field(...)
-    body: str = Field(...)
+    # subject: str = Field(...)
+    # body: str = Field(...)
     
 class TemplateSchema(BaseModel):
     name: str = Field(..., max_length=100)

@@ -1,3 +1,5 @@
+
+
 # from InboundRule.models import EmailModel, TemplateModel
 # from InboundRule.repository import MailServiceRepository
 from InboundRule.schemas import *
@@ -29,7 +31,10 @@ class InboundRule(IInboundRule):
 
     async def process_file(self, file_obj: dict):
         file = file_obj.get("file")
-        # config
+        config = file_obj.get("config").model_dump()
+
+        mapping = json.loads(json.dumps(config.get("map")))
+        print(mapping)
         file_extension = file.filename.split(".")[-1]
         if file_extension.lower() == "csv":
             csvReader = csv.DictReader(codecs.iterdecode(file.file, 'utf-8'))
