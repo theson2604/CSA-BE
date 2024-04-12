@@ -15,15 +15,17 @@ router = APIRouter()
 async def inbound_file(
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
-    config: FileSchema = Depends(),
+    # config: FileSchema = Form(),
+    object_id: str = Form(),
+    mapping: str = Form(),
     file: UploadFile = File(...),
     CURRENT_USER = None
 ):
     try:
-        print(type(config))
+        # print(type(config))
         db = CURRENT_USER.get("db")
         inbound_rule_service = InboundRule(db)
-        return await inbound_rule_service.process_file({"file": file, "config": config})
+        return await inbound_rule_service.process_file({"file": file, "config": {"map": mapping, "object": object_id}})
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

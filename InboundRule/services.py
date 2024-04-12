@@ -31,7 +31,8 @@ class InboundRule(IInboundRule):
 
     async def process_file(self, file_obj: dict):
         file = file_obj.get("file")
-        config = file_obj.get("config").model_dump()
+        # config = file_obj.get("config").model_dump()
+        config = file_obj.get("config")
 
         mapping = json.loads(json.dumps(config.get("map")))
         print(mapping)
