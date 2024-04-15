@@ -13,10 +13,15 @@ from bson import ObjectId
 import csv
 import codecs
 import json
+import pandas as pd 
 
 class IInboundRule(ABC):
     @abstractmethod
-    async def process_file(self, file: UploadFile = File(...), data: FileSchema = None):
+    def process_data(data, mapping):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def inbound_file(self, file: UploadFile = File(...), data: FileSchema = None):
         raise NotImplementedError
 
 class InboundRule(IInboundRule):
@@ -29,23 +34,36 @@ class InboundRule(IInboundRule):
         # self.db_str = db
         pass
 
-    async def process_file(self, file_obj: dict):
-        file = file_obj.get("file")
-        # config = file_obj.get("config").model_dump()
-        config = file_obj.get("config")
+    @staticmethod
+    def process_data(df, config: dict):
+        mapping = json.loads(config.get("map"))
+        object_id = config.get("object")
+        cols = []
 
-        mapping = json.loads(json.dumps(config.get("map")))
-        print(mapping)
+        for key in mapping:
+            if key not in df.columns:
+                raise HTTPBadRequest(f"Can not find column ${key} in file")
+            cols.append(key)
+            
+        df = df[cols]
+        df.rename(columns=mapping, inplace=True)
+        df.insert(0, "object_id", [object_id for _ in range(0, len(df))])
+        json_str = df.to_json(orient="records")
+        return json.loads(json_str)
+    
+    async def inbound_file(self, file_inbound: dict):
+        file = file_inbound.get("file")
+        config = file_inbound.get("config")
         file_extension = file.filename.split(".")[-1]
         if file_extension.lower() == "csv":
-            csvReader = csv.DictReader(codecs.iterdecode(file.file, 'utf-8'))
-            # background_tasks.add_task(file.file.close)
-            data = list(csvReader)
+            df = pd.read_csv(file.file)
+            # csvReader = csv.DictReader(codecs.iterdecode(file.file, 'utf-8'))
+            # data = list(csvReader)
         elif file_extension.lower() == "json":
-            data = json.load(file.file)
+            df = pd.read_json(file.file, lines=True)
         else:
             raise HTTPBadRequest(f"Invalid file type {file_extension}.")
         
-        # for 
-        print(type(data))
-        return data
+        data = InboundRule.process_data(df, config)
+
+        return data[700:]
