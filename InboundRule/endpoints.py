@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, File, B
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from InboundRule.schemas import FileSchema
 from InboundRule.services import InboundRule
+from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
 from app.dependencies.authentication import protected_route
@@ -21,9 +22,15 @@ async def inbound_file(
     CURRENT_USER = None
 ):
     try:
-        db = CURRENT_USER.get("db")
-        inbound_rule_service = InboundRule(db)
-        return await inbound_rule_service.inbound_file({"file": file, "config": {"map": mapping, "object": object_id}})
+        db, user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        # obj_repo = ObjectRepository(db)
+        # obj = await obj_repo.find_one_by_id(object_id)
+        # if not obj:
+        #     raise HTTPBadRequest(f"Not found {object_id} object by _id")
+        
+        # inbound_rule_service = InboundRule(db, obj.get("obj_id"))
+        inbound_rule_service = InboundRule(db, object_id)
+        return await inbound_rule_service.inbound_file({"file": file, "config": {"map": mapping, "object": object_id}}, user_id)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

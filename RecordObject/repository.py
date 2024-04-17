@@ -14,6 +14,10 @@ class IRecordObjectRepository(ABC):
     @abstractmethod
     async def insert_one(self, record: RecordObjectModel) -> str:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def insert_many(self, record: List[RecordObjectModel]) -> str:
+        raise NotImplementedError
 
     @abstractmethod
     async def get_parsing_ref_detail_pipeline(self, object_id: str) -> List[dict]:
@@ -75,6 +79,10 @@ class RecordObjectRepository(IRecordObjectRepository):
     async def insert_one(self, record: RecordObjectModel) -> str:
         result = await self.record_coll.insert_one(record)
         return result.inserted_id
+    
+    async def insert_many(self, records: List[RecordObjectModel]) -> str:
+        result = await self.record_coll.insert_many(records)
+        return [inserted_id for inserted_id in result.inserted_ids]
 
     async def get_parsing_ref_detail_pipeline(self, object_id: str) -> List[dict]:
         """
