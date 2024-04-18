@@ -194,7 +194,6 @@ class RecordObjectService(IRecordObjectService):
     async def create_record_from_file(
         self, current_user_id: str, row, field_ids: List[str], field_details: dict, field_id_detail: dict
     ) -> RecordObjectModel:
-        record = {}
 
         obj_id = row["object_id"]
         inserted_record = {"object_id": obj_id}
@@ -269,7 +268,6 @@ class RecordObjectService(IRecordObjectService):
             inserted_record[field_id] = field_value
         
         field_id, prefix, counter = field_id_detail.get("field_id"), field_id_detail.get("prefix"), field_id_detail.get("counter")
-        print("SEQ: ", counter)
         id = counter.get("seq") + 1
         field_id_detail["counter"]["seq"] = id
         concat_prefix_id = f"{prefix}{id}"
