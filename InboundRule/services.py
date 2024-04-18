@@ -131,10 +131,6 @@ class InboundRule(IInboundRule):
         df = df.rename(columns=mapping)
         df.insert(0, "object_id", [object_id for _ in range(0, len(df))])
 
-        # records = [
-        #     await self.record_services.create_record_from_file(user_id, row, field_ids)
-        #     for _, row in df.iterrows()
-        # ]
         records = []
         field_details = {}
         field_id_detail = (await self.field_obj_repo.get_all_by_field_types(object_id, [FieldObjectType.ID]))[0]
@@ -142,7 +138,7 @@ class InboundRule(IInboundRule):
         field_id_detail["counter"] = counter
         # count = 0
 
-        chunk_size = 1000
+        chunk_size = 100
         df_chunks = [df[i:i+chunk_size] for i in range(0, len(df), chunk_size)]
 
         tasks = [

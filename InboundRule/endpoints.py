@@ -23,13 +23,13 @@ async def inbound_file(
 ):
     try:
         db, user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
-        # obj_repo = ObjectRepository(db)
-        # obj = await obj_repo.find_one_by_id(object_id)
-        # if not obj:
-        #     raise HTTPBadRequest(f"Not found {object_id} object by _id")
+        obj_repo = ObjectRepository(db)
+        obj = await obj_repo.find_one_by_id(object_id)
+        if not obj:
+            raise HTTPBadRequest(f"Not found {object_id} object by _id")
         
-        # inbound_rule_service = InboundRule(db, obj.get("obj_id"))
-        inbound_rule_service = InboundRule(db, object_id)
+        inbound_rule_service = InboundRule(db, obj.get("obj_id"))
+        # inbound_rule_service = InboundRule(db, object_id)
         return await inbound_rule_service.inbound_file({"file": file, "config": {"map": mapping, "object": object_id}}, user_id)
     except Exception as e:
         if isinstance(e, HTTPException):
