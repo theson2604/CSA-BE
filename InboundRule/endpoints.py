@@ -28,7 +28,7 @@ async def inbound_file(
         if not obj:
             raise HTTPBadRequest(f"Not found {object_id} object by _id")
         
-        inbound_rule_service = InboundRule(db, obj.get("obj_id"))
+        inbound_rule_service = InboundRule(db, obj.get("obj_id"), object_id)
         # inbound_rule_service = InboundRule(db, object_id)
         return await inbound_rule_service.inbound_file({"file": file, "config": {"map": mapping, "object": object_id}}, user_id)
     except Exception as e:

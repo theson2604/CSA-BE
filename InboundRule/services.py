@@ -22,13 +22,13 @@ class IInboundRule(ABC):
         raise NotImplementedError
 
 class InboundRule(IInboundRule):
-    def __init__(self, db, coll: str):
+    def __init__(self, db, obj_id_str: str, obj_id: str):
         # self.repo = MailServiceRepository()
         self.field_obj_repo = FieldObjectRepository(db)
-        if coll != None:
-            self.record_repo = RecordObjectRepository(db, coll)
+        if obj_id_str != None:
+            self.record_repo = RecordObjectRepository(db, obj_id_str)
 
-        self.record_services = RecordObjectService(db, coll)
+        self.record_services = RecordObjectService(db, obj_id_str, obj_id)
         self.db_str = db
 
     @staticmethod
