@@ -71,9 +71,15 @@ async def get_current_record_id(db_str: str, obj_id: str):
         DBCollections.RECORD_COUNTER
     )
 
-    return await counter_coll.find_one(
+    record = await counter_coll.find_one(
         {"_id": obj_id}
     )
+
+    if not record:
+        await counter_coll.insert_one({"_id": obj_id, "seq": 1})
+        return {"_id": obj_id, "seq": 1}
+    
+    return record
 
 async def update_record_id(db_str: str, obj_id: str, seq: int):
     """
