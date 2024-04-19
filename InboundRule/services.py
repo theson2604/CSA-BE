@@ -49,60 +49,6 @@ class InboundRule(IInboundRule):
         # return json.loads(json_str)
         return df
     
-    # async def inbound_file(self, file_inbound: dict, user_id: str):
-    #     start_time = time.time()
-    #     file = file_inbound.get("file")
-    #     file_extension = file.filename.split(".")[-1]
-    #     if file_extension.lower() == "csv":
-    #         df = pd.read_csv(file.file)
-    #     elif file_extension.lower() == "json":
-    #         df = pd.read_json(file.file, lines=True)
-    #     else:
-    #         raise HTTPBadRequest(f"Invalid file type {file_extension}.")
-        
-    #     # map column names to field_ids
-    #     config = file_inbound.get("config")
-    #     mapping = json.loads(config.get("map"))
-    #     object_id = config.get("object")
-    #     cols = []
-    #     field_ids = []
-
-    #     for key in mapping:
-    #         if key not in df.columns:
-    #             raise HTTPBadRequest(f"Can not find column ${key} in file")
-    #         cols.append(key)
-    #         field_ids.append(mapping[key])
-            
-    #     df = df[cols]
-    #     df = df.rename(columns=mapping)
-    #     df.insert(0, "object_id", [object_id for _ in range(0, len(df))])
-
-    #     # records = [
-    #     #     await self.record_services.create_record_from_file(user_id, row, field_ids)
-    #     #     for _, row in df.iterrows()
-    #     # ]
-    #     records = []
-    #     field_details = {}
-    #     field_id_detail = (await self.field_obj_repo.get_all_by_field_types(object_id, [FieldObjectType.ID]))[0]
-    #     counter = await get_current_record_id(self.db_str, object_id)
-    #     field_id_detail["counter"] = counter
-    #     # count = 0
-    #     for _, row in df.iterrows():
-    #         record = await self.record_services.create_record_from_file(user_id, row, field_ids, field_details, field_id_detail)
-    #         if record is not None:
-    #             records.append(record)
-    #         # else:
-    #         #     count += 1
-
-    #     results = await self.record_repo.insert_many(records)
-    #     await update_record_id(self.db_str, object_id, field_id_detail.get("counter").get("seq"))
-
-    #     end_time = time.time()
-    #     execution_time = end_time - start_time
-    #     print(f"Execution time: {execution_time} seconds")
-        
-    #     return results
-    
     async def inbound_file(self, file_inbound: dict, user_id: str):
         start_time = time.time()
         file = file_inbound.get("file")
@@ -110,10 +56,22 @@ class InboundRule(IInboundRule):
         if file_extension.lower() == "csv":
             df = pd.read_csv(file.file)
         elif file_extension.lower() == "json":
-            df = pd.read_json(file.file, lines=True)
+            default = 'lines'
+            file.file.seek(0)
+            first_char = await file.read(1)
+            file.file.seek(0)
+            if first_char == b'[':
+                default = 'array'
+                
+            if default == 'lines':
+                df = pd.read_json(file.file, lines=True)
+            else:
+                data = json.load(file.file)
+                df = pd.DataFrame(data)
         else:
             raise HTTPBadRequest(f"Invalid file type {file_extension}.")
         
+        print(df)
         # map column names to field_ids
         config = file_inbound.get("config")
         mapping = json.loads(config.get("map"))
@@ -138,7 +96,8 @@ class InboundRule(IInboundRule):
         field_id_detail["counter"] = counter
         # count = 0
 
-        chunk_size = 100
+        max_chunk_size = 1000
+        chunk_size = min(max_chunk_size, max(1, len(df) // 10))
         df_chunks = [df[i:i+chunk_size] for i in range(0, len(df), chunk_size)]
 
         tasks = [
