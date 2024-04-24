@@ -63,6 +63,8 @@ class IRecordObjectRepository(ABC):
     # async def delete_one_by_id(self, id: str) -> bool:
     #     raise NotImplementedError
 
+    async def update_one_by_id(self, id: str, record: dict) -> int:
+        raise NotImplementedError
 
 class RecordObjectRepository(IRecordObjectRepository):
     def __init__(self, db_str: str, coll: str):
@@ -268,3 +270,7 @@ class RecordObjectRepository(IRecordObjectRepository):
 
     # async def delete_one_by_id(self, id: str) -> bool:
     #     return await self.record_coll.delete_one({"_id": id})
+
+    async def update_one_by_id(self, id: str, record: dict) -> int:
+        result = await self.record_coll.update_one({"_id": id}, {"$set": record})
+        return result.modified_count
