@@ -297,8 +297,8 @@ class RecordObjectService(IRecordObjectService):
             inserted_record[field_id] = field_value
         
         field_id, prefix, counter = field_id_detail.get("field_id"), field_id_detail.get("prefix"), field_id_detail.get("counter")
-        id = counter.get("seq") + 1
-        field_id_detail["counter"]["seq"] = id
+        seq = await generate_next_record_id(self.db_str, obj_id)
+        id = seq.get("seq")
         concat_prefix_id = f"{prefix}{id}"
         
         await self.record_repo.create_indexing([(field_id, pymongo.ASCENDING, True)])
@@ -313,8 +313,12 @@ class RecordObjectService(IRecordObjectService):
                 "modified_by": current_user_id,
             }
         )
-        
-        return RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True)
+
+        asyncio.create_task(self.insert_record(inserted_record))
+        return True
+    
+    async def insert_record(self, inserted_record):
+        await self.record_repo.insert_one(RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True))
 
     async def update_one_record(self, record: dict, current_user_id: str) -> bool:
         record_id = record.pop("record_id")
@@ -334,3 +338,6 @@ class RecordObjectService(IRecordObjectService):
         })
 
         return await self.record_repo.update_one_by_id(record_id, updated_record)
+    
+    # async def insert_record(self, inserted_record):
+    #     self.record_repo.insert_one(RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True))

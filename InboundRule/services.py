@@ -105,8 +105,8 @@ class InboundRule(IInboundRule):
         field_details = {}
         field_id_details = await self.field_obj_repo.get_all_by_field_types(object_id, [FieldObjectType.ID])
         field_id_detail = field_id_details[0]
-        counter = await get_current_record_id(self.db_str, object_id)
-        field_id_detail["counter"] = counter
+        # counter = await get_current_record_id(self.db_str, object_id)
+        # field_id_detail["counter"] = counter
         # count = 0
         
         max_chunk_size = 1000
@@ -121,12 +121,12 @@ class InboundRule(IInboundRule):
         records_chunks = await asyncio.gather(*tasks)
         records = [record for records_chunk in records_chunks for record in records_chunk]
 
-        results = await self.record_repo.insert_many(records)
-        await update_record_id(self.db_str, object_id, field_id_detail.get("counter").get("seq"))
+        # results = await self.record_repo.insert_many(records)
+        # await update_record_id(self.db_str, object_id, field_id_detail.get("counter").get("seq"))
         end_time = time.time()
         execution_time = end_time - start_time
         print(f"Execution time: {execution_time} seconds")
-        return results
+        return len(records)
     
     async def process_file_rows(current_user_id, df, field_ids, field_details, field_id_detail, record_services):
         records = []
