@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Union
 from bson import ObjectId
 import re
-from FieldObject.models import FieldEmail, FieldId, FieldPhoneNumber, FieldReferenceObject, FieldSelect, FieldText, FieldReferenceFieldObject, FieldObjectBase, FieldTextArea
+from FieldObject.models import FieldEmail, FieldFloat, FieldId, FieldPhoneNumber, FieldReferenceObject, FieldSelect, FieldText, FieldReferenceFieldObject, FieldObjectBase, FieldTextArea
 
 from FieldObject.repository import FieldObjectRepository
 from FieldObject.schemas import FieldObjectSchema, UpdateFieldObjectSchema
@@ -73,6 +73,12 @@ class FieldObjectService(IFieldObjectService):
                         "length": field.get("length")
                     })
                     list_fields.append(FieldText.model_validate(field_base).model_dump(by_alias=True))
+                    
+                elif field.get("field_type") is FieldObjectType.FLOAT:
+                    field_base.update({
+                        "step": field.get("step")
+                    })
+                    list_fields.append(FieldFloat.model_validate(field_base).model_dump(by_alias=True))
                 
                 elif field.get("field_type") is FieldObjectType.TEXTAREA:
                     list_fields.append(FieldTextArea.model_validate(field_base).model_dump(by_alias=True))

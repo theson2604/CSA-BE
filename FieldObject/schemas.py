@@ -13,6 +13,9 @@ class FieldObjectSchema(BaseModel):
     # Id
     prefix: Optional[str] = None
     
+    # Float
+    step: Optional[float] = None
+    
     # Text
     length: Optional[int] = None
     
@@ -36,6 +39,10 @@ class FieldObjectSchema(BaseModel):
         elif field_type == FieldObjectType.TEXT:
             if not schema.get("length"):
                 raise ValueError(f"missing required key 'length' for field_type {FieldObjectType.TEXT}.")
+            
+        elif field_type == FieldObjectType.FLOAT:
+            if not schema.get("step"):
+                raise ValueError(f"missing required key 'step' for field_type {FieldObjectType.FLOAT}.")
             
         elif field_type == FieldObjectType.EMAIL:
             pass

@@ -132,7 +132,7 @@ class InboundRule(IInboundRule):
     async def process_file_rows(current_user_id, df, field_ids, field_details, field_id_detail, record_services):
         records = []
         for _, row in df.iterrows():
-            print(f"{field_ids, field_details, field_id_detail}")
+            # print(f"{field_ids, field_details, field_id_detail}")
             record = await record_services.create_record_from_file(current_user_id, row, field_ids, field_details, field_id_detail)
             if record is not None:
                 records.append(record)
@@ -141,7 +141,8 @@ class InboundRule(IInboundRule):
     async def inbound_file_with_new_obj(self, user_id: str, config: FileObjectSchema, file: UploadFile = File(...)):
         config_obj = config.model_dump()
         mapping = json.loads(config_obj.pop("map"))
-        config_obj["fields"] = json.loads(config_obj.get("fields"))
+        fields_mapping = json.loads(config_obj.get("fields"))
+        config_obj["fields"] = json.loads(fields_mapping)
         obj_with_fields = ObjectWithFieldSchema(**config_obj)
         obj_id = await self.obj_services.create_object_with_fields(obj_with_fields, user_id)
         obj_with_details = await self.obj_services.get_object_detail_by_id(obj_id)
@@ -157,4 +158,4 @@ class InboundRule(IInboundRule):
         
         self.record_repo = RecordObjectRepository(self.db_str, obj.get("obj_id"))
         self.record_services = RecordObjectService(self.db_str, obj.get("obj_id"), obj_id)
-        return await self.inbound_file({"file": file, "config": {"map": mapping, "object": obj_id}}, user_id)
+        asyncio.create_task(self.inbound_file({"file": file, "config": {"map": mapping, "object": obj_id}}, user_id))

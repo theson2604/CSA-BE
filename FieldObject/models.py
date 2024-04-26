@@ -21,6 +21,9 @@ class FieldId(FieldObjectBase):
 class FieldText(FieldObjectBase):
     length: int = Field(..., gt=0, alias="length")
     
+class FieldFloat(FieldObjectBase):
+    step: float = Field(..., alias="float")
+    
 class FieldTextArea(FieldObjectBase):
     pass
     
