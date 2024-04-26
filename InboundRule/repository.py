@@ -27,23 +27,12 @@ class IMailServiceRepository(ABC):
     async def find_template_by_id(self, id: str, projection: dict = None):
         raise NotImplementedError
     
-    @abstractmethod
-    async def get_all_templates(self) -> list:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def get_templates_by_object_id(self, object_id) -> list:
-        raise NotImplementedError
-    
 class MailServiceRepository(IMailServiceRepository):
     def __init__(self, db_str: str = ROOT_CSA_DB, coll: str = RootCollections.EMAILS.value):
         global client
-        try:
-            self.db_str = db_str
-            self.db =  client.get_database(db_str)
-            self.coll = self.db.get_collection(coll)
-        except Exception as e:
-            print("ERORR IN MONGODb: ", e)
+        self.db_str = db_str
+        self.db =  client.get_database(db_str)
+        self.coll = self.db.get_collection(coll)
         
     async def insert_email(self, email: EmailModel):
         result = await self.coll.insert_one(email)
@@ -62,23 +51,4 @@ class MailServiceRepository(IMailServiceRepository):
     async def find_template_by_id(self, id: str, projection: dict = None):
         return await self.coll.find_one({"_id": id}, projection)
     
-    async def get_all_templates(self) -> list:
-        pipeline = []
-        return await self.coll.aggregate(pipeline).to_list(length=None)
     
-    async def get_templates_by_object_id(self, object_id) -> list:
-        
-        pipeline = [
-            {
-                "$match": {
-                    "object_id": f"{object_id}"
-                }
-            },
-            {
-                "$sort": {
-                    "modified_at": -1
-                }
-            }
-        ]
-
-        return await self.coll.aggregate(pipeline).to_list(length=None)

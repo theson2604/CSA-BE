@@ -1,0 +1,7 @@
+https://www.google.com/search?q=Input+should+be+a+valid+dictionary+or+object+to+extract+fields+from&oq=Input+should+be+a+valid+dictionary+or+object+to+extract+fields+from&gs_lcrp=EgZjaHJvbWUyBggAEEUYOdIBBzIyOWowajGoAgCwAgA&sourceid=chrome&ie=UTF-8
+
+https://stackoverflow.com/questions/63110848/how-do-i-send-list-of-dictionary-as-body-parameter-together-with-files-in-fastap
+
+https://stackoverflow.com/questions/65504438/how-to-add-both-file-and-json-body-in-a-fastapi-post-request/70640522#70640522
+
+https://stackoverflow.com/questions/12385179/how-to-send-a-multipart-form-data-with-requests-in-python/70641755#70641755

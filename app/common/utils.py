@@ -61,3 +61,36 @@ async def generate_next_record_id(db_str: str, obj_id: str):
     return await counter_coll.find_one_and_update(
         {"_id": obj_id}, {"$inc": {"seq": 1}}, upsert=True, return_document=ReturnDocument.AFTER
     )
+
+async def get_current_record_id(db_str: str, obj_id: str):
+    """
+    :Params:
+    - obj_id: _id
+    """
+    counter_coll = client.get_database(db_str).get_collection(
+        DBCollections.RECORD_COUNTER
+    )
+
+    record = await counter_coll.find_one(
+        {"_id": obj_id}
+    )
+
+    if not record:
+        await counter_coll.insert_one({"_id": obj_id, "seq": 1})
+        return {"_id": obj_id, "seq": 1}
+    
+    return record
+
+async def update_record_id(db_str: str, obj_id: str, seq: int):
+    """
+    :Params:
+    - obj_id: _id
+    """
+    counter_coll = client.get_database(db_str).get_collection(
+        DBCollections.RECORD_COUNTER
+    )
+
+    filter = {"_id": obj_id}
+    new_value = {"$set": {"seq": seq}}
+
+    return await counter_coll.update_one(filter, new_value)

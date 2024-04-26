@@ -14,6 +14,10 @@ class IRecordObjectRepository(ABC):
     @abstractmethod
     async def insert_one(self, record: RecordObjectModel) -> str:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def insert_many(self, record: List[RecordObjectModel]) -> str:
+        raise NotImplementedError
 
     @abstractmethod
     async def get_parsing_ref_detail_pipeline(self, object_id: str) -> List[dict]:
@@ -59,6 +63,8 @@ class IRecordObjectRepository(ABC):
     # async def delete_one_by_id(self, id: str) -> bool:
     #     raise NotImplementedError
 
+    async def update_one_by_id(self, id: str, record: dict) -> int:
+        raise NotImplementedError
 
 class RecordObjectRepository(IRecordObjectRepository):
     def __init__(self, db_str: str, coll: str):
@@ -85,6 +91,10 @@ class RecordObjectRepository(IRecordObjectRepository):
     async def insert_one(self, record: RecordObjectModel) -> str:
         result = await self.record_coll.insert_one(record)
         return result.inserted_id
+    
+    async def insert_many(self, records: List[RecordObjectModel]) -> str:
+        result = await self.record_coll.insert_many(records)
+        return [inserted_id for inserted_id in result.inserted_ids]
 
     async def get_parsing_ref_detail_pipeline(self, object_id: str) -> List[dict]:
         """
@@ -260,3 +270,7 @@ class RecordObjectRepository(IRecordObjectRepository):
 
     # async def delete_one_by_id(self, id: str) -> bool:
     #     return await self.record_coll.delete_one({"_id": id})
+
+    async def update_one_by_id(self, id: str, record: dict) -> int:
+        result = await self.record_coll.update_one({"_id": id}, {"$set": record})
+        return result.modified_count

@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from Object.repository import ObjectRepository
-from RecordObject.schemas import RecordObjectSchema
+from RecordObject.schemas import RecordObjectSchema, UpdateRecordSchema
 from RecordObject.search import ElasticsearchRecord
 from RecordObject.services import RecordObjectService
 from app.common.elastic import ElasticsearchBase
@@ -138,6 +138,32 @@ async def search_record(
         obj_id_str = obj.get("obj_id")
         elastic_service = ElasticsearchRecord(db_str, obj_id_str, obj_id)
         return await elastic_service.search_record(record, page, page_size)
+    
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
+@router.post("/update-one")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def update_record(
+    record: UpdateRecordSchema,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None,
+):
+    try:
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        record = record.model_dump()
+        obj_id = record.get("object_id")
+        obj_repo = ObjectRepository(db_str)
+        obj = await obj_repo.find_one_by_id(obj_id)
+        if not obj:
+            raise HTTPBadRequest(f"Not found {obj_id} object by _id")
+        
+        record_service = RecordObjectService(db_str, obj.get("obj_id"), obj_id)
+        return await record_service.update_one_record(record, current_user_id)
     
     except Exception as e:
         if isinstance(e, HTTPException):

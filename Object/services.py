@@ -101,3 +101,19 @@ class ObjectService(IObjectService):
     
     async def get_object_detail_by_id(self, id: str) -> dict:
         return await self.repo.get_object_with_all_fields(id)
+    
+    async def delete_one_object_by_id(self, object_id: str) -> bool:
+        await self.field_obj_service.delete_all_fields_by_obj_id(object_id)
+
+        return await self.repo.delete_one_by_id(object_id)
+
+    async def delete_all_objects_by_group_id(self, group_obj_id: str) -> bool:
+        group = await self.group_obj_repo.find_one_by_id(group_obj_id)
+        if not group:
+            raise HTTPBadRequest("Cannot find Group Object by group_obj_id")
+        
+        list_obj = await self.repo.find_all({"group_obj_id": group_obj_id})
+        for obj in list_obj:
+            await self.field_obj_service.delete_all_fields_by_obj_id(obj.get('_id'))
+        
+        return await self.repo.delete_many({"group_obj_id": group_obj_id})
