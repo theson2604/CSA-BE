@@ -84,7 +84,6 @@ class InboundRule(IInboundRule):
 
         # map column names to field_ids
         config = file_inbound.get("config")
-        print(config, type(config))
         mapping = config.get("map")
         if type(mapping) is str:
             mapping = json.loads(mapping)
@@ -132,7 +131,6 @@ class InboundRule(IInboundRule):
     async def process_file_rows(current_user_id, df, field_ids, field_details, field_id_detail, record_services):
         records = []
         for _, row in df.iterrows():
-            # print(f"{field_ids, field_details, field_id_detail}")
             record = await record_services.create_record_from_file(current_user_id, row, field_ids, field_details, field_id_detail)
             if record is not None:
                 records.append(record)
@@ -141,16 +139,18 @@ class InboundRule(IInboundRule):
     async def inbound_file_with_new_obj(self, user_id: str, config: FileObjectSchema, file: UploadFile = File(...)):
         config_obj = config.model_dump()
         mapping = json.loads(config_obj.pop("map"))
+        parse_dict_mapping = json.loads(mapping)
         fields_mapping = json.loads(config_obj.get("fields"))
         config_obj["fields"] = json.loads(fields_mapping)
         obj_with_fields = ObjectWithFieldSchema(**config_obj)
         obj_id = await self.obj_services.create_object_with_fields(obj_with_fields, user_id)
         obj_with_details = await self.obj_services.get_object_detail_by_id(obj_id)
         fields_obj = obj_with_details.get("fields")
-        for key in mapping:
+        for key in parse_dict_mapping:
             for field_obj in fields_obj:
-                if field_obj["field_name"] == mapping.get(key):
-                    mapping.update({key: field_obj.get("field_id")})
+                if field_obj["field_name"] == parse_dict_mapping.get(key):
+                    parse_dict_mapping.update({key: field_obj.get("field_id")})
+        
         obj_repo = ObjectRepository(self.db_str)
         obj = await obj_repo.find_one_by_id(obj_id)
         if not obj:
@@ -158,4 +158,5 @@ class InboundRule(IInboundRule):
         
         self.record_repo = RecordObjectRepository(self.db_str, obj.get("obj_id"))
         self.record_services = RecordObjectService(self.db_str, obj.get("obj_id"), obj_id)
-        asyncio.create_task(self.inbound_file({"file": file, "config": {"map": mapping, "object": obj_id}}, user_id))
+        return await self.inbound_file({"file": file, "config": {"map": parse_dict_mapping, "object": obj_id}}, user_id)
+        # asyncio.create_task(self.inbound_file({"file": file, "config": {"map": parse_dict_mapping, "object": obj_id}}, user_id))

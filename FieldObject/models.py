@@ -22,7 +22,7 @@ class FieldText(FieldObjectBase):
     length: int = Field(..., gt=0, alias="length")
     
 class FieldFloat(FieldObjectBase):
-    step: float = Field(..., alias="float")
+    step: float = Field(..., alias="step")
     
 class FieldTextArea(FieldObjectBase):
     pass

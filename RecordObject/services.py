@@ -241,7 +241,7 @@ class RecordObjectService(IRecordObjectService):
                 
             elif field_type == FieldObjectType.FLOAT:
                 step = field_detail.get("step")
-                if field_value % step != 0:
+                if field_value % float(step) != 0:
                     return None
 
             elif field_type == FieldObjectType.EMAIL:
