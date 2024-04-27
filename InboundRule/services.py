@@ -12,6 +12,7 @@ from app.common.errors import HTTPBadRequest
 from app.common.utils import get_current_record_id, update_record_id
 from RecordObject.services import RecordObjectService
 from RecordObject.repository import RecordObjectRepository
+from functools import reduce
 import asyncio
 import json
 import pandas as pd 
@@ -90,19 +91,32 @@ class InboundRule(IInboundRule):
         object_id = config.get("object")
         cols = []
         field_ids = []
+        field_details = {}
 
         for key in mapping:
             if key not in df.columns:
                 raise HTTPBadRequest(f"Can not find column ${key} in file")
             cols.append(key)
-            field_ids.append(mapping[key])
-            
+            field_id = mapping[key]
+            field_ids.append(field_id)
+            # store all field_details to avoid redundant query
+            if not field_details.get(field_id):
+                field_detail = await self.field_obj_repo.find_one_by_field_id(
+                                    object_id, field_id
+                                )
+                field_details[field_id] = field_detail
+                field_type = field_details[field_id].get("field_type")
+                if field_type == FieldObjectType.REFERENCE_OBJECT:
+                    ref_obj_id = field_detail.get("ref_obj_id")  # obj_<name>_<id>
+                    obj_detail = await self.obj_repo.find_one_by_object_id(ref_obj_id)
+                    self.ref_record_repo = RecordObjectRepository(self.db_str, ref_obj_id)
+                    field_details[field_id]["field_ids"] = await self.field_obj_repo.get_all_by_field_types(obj_detail.get("_id"), [FieldObjectType.ID.value])
+
         df = df[cols]
         df = df.rename(columns=mapping)
         df.insert(0, "object_id", [object_id for _ in range(0, len(df))])
 
         records = []
-        field_details = {}
         field_id_details = await self.field_obj_repo.get_all_by_field_types(object_id, [FieldObjectType.ID])
         field_id_detail = field_id_details[0]
         # counter = await get_current_record_id(self.db_str, object_id)
@@ -114,7 +128,7 @@ class InboundRule(IInboundRule):
         df_chunks = [df[i:i+chunk_size] for i in range(0, len(df), chunk_size)]
 
         tasks = [
-            InboundRule.process_file_rows(user_id, df_chunk, field_ids, field_details, field_id_detail, self.record_services)
+            self.process_file_rows(user_id, df_chunk, field_ids, field_details, field_id_detail)
             for df_chunk in df_chunks
         ]
 
@@ -128,13 +142,25 @@ class InboundRule(IInboundRule):
         print(f"Execution time: {execution_time} seconds")
         return len(records)
     
-    async def process_file_rows(current_user_id, df, field_ids, field_details, field_id_detail, record_services):
+    async def process_file_rows(self, current_user_id, df, field_ids, field_details, field_id_detail):
         records = []
-        for _, row in df.iterrows():
-            record = await record_services.create_record_from_file(current_user_id, row, field_ids, field_details, field_id_detail)
-            if record is not None:
-                records.append(record)
-        return records
+        # for _, row in df.iterrows():
+        #     record = await record_services.create_record_from_file(current_user_id, row, field_ids, field_details, field_id_detail)
+        #     if record is not None:
+        #         records.append(record)
+        object_id =""
+        
+        # df_records = df.loc[lambda df_: reduce(lambda x,y: (await self.record_services.check_field_value(df_[x], field_details, x, object_id, self.ref_record_repo)) & y, field_details, True)]
+        try:
+            df_records = df.loc[lambda df_: reduce(lambda x,y: (self.process_field(df_[y], field_details, y, object_id) & x), 
+                                                   list(field_details.keys()), True)]
+        except Exception as e:
+            raise HTTPBadRequest(f"NOT TRUE {e}")
+        print(len(df_records))
+        raise HTTPBadRequest("STOP")
+    
+    async def process_field(self, df_column, field_details, field_id, object_id):
+        return await self.record_services.check_field_value(df_column, field_details, field_id, "123")
     
     async def inbound_file_with_new_obj(self, user_id: str, config: FileObjectSchema, file: UploadFile = File(...)):
         config_obj = config.model_dump()

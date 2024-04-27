@@ -152,6 +152,7 @@ class RecordObjectService(IRecordObjectService):
             record.update({field_id: field_value})
 
         return record
+    
 
     async def create_record(
         self, record: RecordObjectSchema, current_user_id: str
@@ -216,20 +217,15 @@ class RecordObjectService(IRecordObjectService):
         return await self.record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id)
 
     async def create_record_from_file(
-        self, current_user_id: str, row, field_ids: List[str], field_details: dict, field_id_detail: dict
+        self, current_user_id: str, row, fd_ids: List[str], field_details: dict, field_id_detail: dict
     ) -> RecordObjectModel:
 
         obj_id = row["object_id"]
         inserted_record = {"object_id": obj_id}
         
-        for field_id in field_ids:
+        for field_id in fd_ids:
             field_value = row[field_id]
             field_detail = field_details.get(field_id)
-            if field_detail == None:
-                field_detail = await self.field_obj_repo.find_one_by_field_id(
-                    obj_id, field_id
-                )
-                field_details[field_id] = field_detail
             field_type = field_detail.get("field_type")
             
             if field_type == FieldObjectType.TEXT:
@@ -339,5 +335,73 @@ class RecordObjectService(IRecordObjectService):
 
         return await self.record_repo.update_one_by_id(record_id, updated_record)
     
-    # async def insert_record(self, inserted_record):
-    #     self.record_repo.insert_one(RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True))
+
+    async def check_field_value(
+        self, field_value: dict, fd_details: dict, fd_id: str, obj_id: str
+    ) -> dict:
+        # for field_id, field_value in fd_details.items():
+        field_detail = fd_details.get(fd_id)
+        field_type = field_detail.get("field_type")
+        
+        if field_type == FieldObjectType.TEXT:
+            length = field_detail.get("length")
+            if not isinstance(field_value, str):
+                return False
+            if len(field_value) > length:
+                return False
+
+        elif field_type == FieldObjectType.EMAIL:
+            email_regex = (
+                "^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*@[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*$"
+            )
+            match = re.search(email_regex, field_value)
+            if not match:
+                return False
+
+        elif field_type == FieldObjectType.PHONE_NUMBER:
+            country_code = field_detail.get("country_code")
+            if country_code == "+84":
+                vn_phone_regex = "^(0|84)(2(0[3-9]|1[0-6|8|9]|2[0-2|5-9]|3[2-9]|4[0-9]|5[1|2|4-9]|6[0-3|9]|7[0-7]|8[0-9]|9[0-4|6|7|9])|3[2-9]|5[5|6|8|9]|7[0|6-9]|8[0-6|8|9]|9[0-4|6-9])([0-9]{7})$"
+                match = re.search(vn_phone_regex, field_value)
+                if not match:
+                    return False
+
+        elif field_type == FieldObjectType.SELECT:
+            options = field_detail.get("options")
+            if field_value not in options:
+                return False
+
+        elif field_type == FieldObjectType.REFERENCE_OBJECT:
+            ref_obj_id = field_detail.get("ref_obj_id")  # obj_<name>_<id>
+            # obj_id's record repo
+            ref_record_repo = RecordObjectRepository(self.db_str, ref_obj_id)
+            ref_record = await ref_record_repo.find_one_by_id(field_value)
+            if not ref_record:
+                return False
+
+            # obj_detail = await self.object_repo.find_one_by_object_id(ref_obj_id)
+            field_ids = fd_details.get(fd_id).get("field_ids")
+            
+            if field_ids and len(field_ids) == 1:
+                field_value = {"ref_to": ref_record.get("_id"), "field_value": field_ids[0].get("field_id")}
+
+        elif field_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
+            ref_field_obj_id = field_detail.get(
+                "ref_field_obj_id"
+            )  # obj_<name>_<id>.fd_<name>_<id>
+            splitted = ref_field_obj_id.split(".")
+            ref_obj_id, ref_fld_id = splitted[0], splitted[1]
+            # obj_id's record repo
+            ref_record_repo = RecordObjectRepository(self.db_str, ref_obj_id)
+            ref_record = await ref_record_repo.find_one_by_id(field_value)
+            if not ref_record:
+                return False
+
+            field_value = {
+                "ref_to": ref_record.get("_id"),
+                "field_value": ref_fld_id,
+            }
+
+            # record.update({fd_id: field_value})
+
+        return True
