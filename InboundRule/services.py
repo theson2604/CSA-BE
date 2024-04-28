@@ -116,6 +116,8 @@ class InboundRule(IInboundRule):
                     self.ref_record_repo = ref_record_repo
                     field_details[field_id]["field_ids"] = await self.field_obj_repo.get_all_by_field_types(obj_detail.get("_id"), [FieldObjectType.ID.value])
                     
+        cols.append("idx")
+        df.insert(len(df.axes[1]), "idx", range(0, len(df)))
         init_df = df
         df = df[cols]
         df = df.rename(columns=mapping)
@@ -143,7 +145,14 @@ class InboundRule(IInboundRule):
                 df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_ref_obj(x, field_detail, ref_obj_records.get(ref_obj_id), new_field_value)))]
                 df.replace({fd_id: new_field_value}, inplace=True)
             # elif fd_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
-
+        
+        # avoid inserting empty record to db
+        if len(df) == 0:
+            return (0, len(init_df))
+        
+        inserted_idx = df["idx"]
+        removed_df = init_df.loc[lambda df_: (~df_["idx"].isin(inserted_idx))]
+        df.drop(["idx"], axis=1, inplace=True)
 
         field_id, prefix = field_id_detail.get("field_id"), field_id_detail.get("prefix")
         seq = counter.get("seq") + 1
@@ -161,12 +170,12 @@ class InboundRule(IInboundRule):
         dict_records = df.to_dict(orient="records")
         records = [RecordObjectModel.model_validate(record).model_dump(by_alias=True) for record in dict_records]
 
-        results = await self.record_repo.insert_many(records)
+        results = await self.record_repo.insert_many(records) if len(records) > 1 else await self.record_repo.insert_one(records[0])
         await update_record_id(self.db_str, object_id, seq+len(results)-1)
         end_time = time.time()
         execution_time = end_time - start_time
         print(f"Execution time: {execution_time} seconds")
-        return (len(results), len(init_df) - len(results))
+        return (len(results), len(removed_df))
     
     def check_text(field_value, field_detail):
         length = field_detail.get("length")
