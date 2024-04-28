@@ -1,8 +1,5 @@
-from typing import List
-from typing_extensions import Annotated
-from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, File, Body
+from fastapi import APIRouter, Form, HTTPException, UploadFile, File
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
-from InboundRule.schemas import FileObjectSchema
 from InboundRule.services import InboundRule
 from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
@@ -42,7 +39,11 @@ async def inbound_file(
 async def inbound_file(
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
-    config: FileObjectSchema = Depends(),
+    # config: FileObjectSchema = Depends(),
+    obj_name: str = Form(),
+    group_obj_id: str = Form(),
+    fields: str = Form(),
+    map: str = Form(),
     file: UploadFile = File(...),
     CURRENT_USER = None
 ):
@@ -50,6 +51,12 @@ async def inbound_file(
         db, user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
         inbound_rule_service = InboundRule(db)
         # inbound_rule_service = InboundRule(db, object_id)
+        config = {
+            "obj_name": obj_name,
+            "group_obj_id": group_obj_id,
+            "fields": fields,
+            "map": map
+        }
         return await inbound_rule_service.inbound_file_with_new_obj(user_id, config, file)
     except Exception as e:
         if isinstance(e, HTTPException):

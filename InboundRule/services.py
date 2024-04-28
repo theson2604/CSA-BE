@@ -1,20 +1,19 @@
 import re
+from bson import ObjectId
 from fastapi import File, UploadFile
 from FieldObject.repository import FieldObjectRepository
-from FieldObject.services import FieldObjectService
 from InboundRule.schemas import *
 from abc import ABC, abstractmethod
 from Object.repository import ObjectRepository
 from Object.schemas import ObjectWithFieldSchema
 from Object.services import ObjectService
+from RecordObject.models import RecordObjectModel
 from app.common.db_connector import DBCollections
 from app.common.enums import FieldObjectType
 from app.common.errors import HTTPBadRequest
-from app.common.utils import get_current_record_id, update_record_id
+from app.common.utils import generate_next_record_id, get_current_hcm_datetime, get_current_record_id, update_record_id
 from RecordObject.services import RecordException, RecordObjectService
 from RecordObject.repository import RecordObjectRepository
-from functools import reduce
-import asyncio
 import json
 import pandas as pd 
 import time
@@ -47,7 +46,6 @@ class InboundRule(IInboundRule):
     @staticmethod
     def process_data(df, config: dict):
         mapping = json.loads(config.get("map"))
-        object_id = config.get("object")
         cols = []
 
         for key in mapping:
@@ -57,12 +55,11 @@ class InboundRule(IInboundRule):
             
         df = df[cols]
         df = df.rename(columns=mapping)
-        df.insert(0, "object_id", [object_id for _ in range(0, len(df))])
         # json_str = df.to_json(orient="records")
         # return json.loads(json_str)
         return df
     
-    async def inbound_file(self, file_inbound: dict, user_id: str):
+    async def inbound_file(self, file_inbound: dict, user_id: str) -> Tuple[int, int]:
         start_time = time.time()
         file = file_inbound.get("file")
         file_extension = file.filename.split(".")[-1]
@@ -119,32 +116,18 @@ class InboundRule(IInboundRule):
                     self.ref_record_repo = ref_record_repo
                     field_details[field_id]["field_ids"] = await self.field_obj_repo.get_all_by_field_types(obj_detail.get("_id"), [FieldObjectType.ID.value])
                     
-
+        init_df = df
         df = df[cols]
         df = df.rename(columns=mapping)
-        df.insert(0, "object_id", [object_id for _ in range(0, len(df))])
 
         records = []
         field_id_details = await self.field_obj_repo.get_all_by_field_types(object_id, [FieldObjectType.ID])
         field_id_detail = field_id_details[0]
-        # counter = await get_current_record_id(self.db_str, object_id)
+        counter = await get_current_record_id(self.db_str, object_id)
         # field_id_detail["counter"] = counter
-        # count = 0
-        
-        # max_chunk_size = 1000
-        # chunk_size = min(max_chunk_size, max(1, len(df) // 10))
-        # df_chunks = [df[i:i+chunk_size] for i in range(0, len(df), chunk_size)]
 
-        # tasks = [
-        #     self.process_file_rows(user_id, df_chunk, field_ids, field_details, field_id_detail)
-        #     for df_chunk in df_chunks
-        # ]
-
-        # records_chunks = await asyncio.gather(*tasks)
-        # records = [record for records_chunk in records_chunks for record in records_chunk]
-
-        new_field_value = {}
         for fd_id in field_ids:
+            new_field_value = {}
             field_detail = field_details.get(fd_id)
             fd_type = field_detail.get("field_type") 
             if fd_type in [FieldObjectType.TEXT]:
@@ -158,20 +141,32 @@ class InboundRule(IInboundRule):
             elif fd_type == FieldObjectType.REFERENCE_OBJECT:
                 ref_obj_id = field_detail.get("ref_obj_id")
                 df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_ref_obj(x, field_detail, ref_obj_records.get(ref_obj_id), new_field_value)))]
-                # elif fd_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
-                
-                
-            # df_records = df.loc[lambda df_: reduce(lambda x,y: (nest_asyncio.apply((self.process_field(df_[y], field_details, y, object_id))) & x), 
-            #                                        field_ids, True)]
-        print(len(df))
-        # raise HTTPBadRequest("STOP")
+                df.replace({fd_id: new_field_value}, inplace=True)
+            # elif fd_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
 
-        # results = await self.record_repo.insert_many(records)
-        # await update_record_id(self.db_str, object_id, field_id_detail.get("counter").get("seq"))
+
+        field_id, prefix = field_id_detail.get("field_id"), field_id_detail.get("prefix")
+        seq = counter.get("seq") + 1
+        prefix_ids = [f"{prefix}{i}" for i in range(seq, seq+len(df))]
+        _ids = [str(ObjectId()) for _ in range(len(df))]
+        current_time = get_current_hcm_datetime()
+        df.insert(0, "object_id", object_id)
+        df.insert(0, "_id", _ids)
+        df.insert(len(df.axes[1]), field_id, prefix_ids)
+        df.insert(len(df.axes[1]), "created_at", current_time)
+        df.insert(len(df.axes[1]), "modified_at", current_time)
+        df.insert(len(df.axes[1]), "created_by", user_id)
+        df.insert(len(df.axes[1]), "modified_by", user_id)
+
+        dict_records = df.to_dict(orient="records")
+        records = [RecordObjectModel.model_validate(record).model_dump(by_alias=True) for record in dict_records]
+
+        results = await self.record_repo.insert_many(records)
+        await update_record_id(self.db_str, object_id, seq+len(results)-1)
         end_time = time.time()
         execution_time = end_time - start_time
         print(f"Execution time: {execution_time} seconds")
-        return len(records)
+        return (len(results), len(init_df) - len(results))
     
     def check_text(field_value, field_detail):
         length = field_detail.get("length")
@@ -210,13 +205,8 @@ class InboundRule(IInboundRule):
             return False
 
         field_ids = field_detail.get("field_ids")
-        print("FIELD_IDS: ", field_ids)
-        print(field_value)
-        
         if field_ids and len(field_ids) == 1:
             new_field_value[field_value] = {"ref_to": field_value, "field_value": field_ids[0].get("field_id")}
-            print("AAAA", new_field_value[field_value])
-
         return True
     
     # def check_ref_field(field_value, field_detail):
@@ -236,33 +226,12 @@ class InboundRule(IInboundRule):
     #         "field_value": ref_fld_id,
     #     }
     
-    # async def process_file_rows(self, current_user_id, df, field_ids, field_details, field_id_detail):
-    #     records = []
-    #     # for _, row in df.iterrows():
-    #     #     record = await record_services.create_record_from_file(current_user_id, row, field_ids, field_details, field_id_detail)
-    #     #     if record is not None:
-    #     #         records.append(record)
-    #     object_id =""
-        
-    #     # df_records = df.loc[lambda df_: reduce(lambda x,y: (await self.record_services.check_field_value(df_[x], field_details, x, object_id, self.ref_record_repo)) & y, field_details, True)]
-    #     try:
-    #         df_records = df.loc[lambda df_: reduce(lambda x,y: (asyncio.run(self.process_field(df_[y], field_details, y, object_id)) & x), 
-    #                                                list(field_details.keys()), True)]
-    #     except Exception as e:
-    #         raise HTTPBadRequest(f"NOT TRUE {e}")
-    #     print(len(df_records))
-    #     raise HTTPBadRequest("STOP")
-    
-    # async def process_field(self, df_column, field_details, field_id, object_id):
-    #     return await self.record_services.check_field_value(df_column, field_details, field_id, "123")
-    
     async def inbound_file_with_new_obj(self, user_id: str, config: FileObjectSchema, file: UploadFile = File(...)):
-        config_obj = config.model_dump()
-        mapping = json.loads(config_obj.pop("map"))
+        mapping = json.loads(config.pop("map"))
         parse_dict_mapping = json.loads(mapping)
-        fields_mapping = json.loads(config_obj.get("fields"))
-        config_obj["fields"] = json.loads(fields_mapping)
-        obj_with_fields = ObjectWithFieldSchema(**config_obj)
+        fields_mapping = json.loads(config.get("fields"))
+        config["fields"] = json.loads(fields_mapping)
+        obj_with_fields = ObjectWithFieldSchema(**config)
         obj_id = await self.obj_services.create_object_with_fields(obj_with_fields, user_id)
         obj_with_details = await self.obj_services.get_object_detail_by_id(obj_id)
         fields_obj = obj_with_details.get("fields")
@@ -279,4 +248,3 @@ class InboundRule(IInboundRule):
         self.record_repo = RecordObjectRepository(self.db_str, obj.get("obj_id"))
         self.record_services = RecordObjectService(self.db_str, obj.get("obj_id"), obj_id)
         return await self.inbound_file({"file": file, "config": {"map": parse_dict_mapping, "object": obj_id}}, user_id)
-        # asyncio.create_task(self.inbound_file({"file": file, "config": {"map": parse_dict_mapping, "object": obj_id}}, user_id))
