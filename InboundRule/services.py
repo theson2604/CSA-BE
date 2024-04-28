@@ -2,10 +2,12 @@ import re
 from bson import ObjectId
 from fastapi import File, UploadFile
 from FieldObject.repository import FieldObjectRepository
+from FieldObject.schemas import FieldObjectSchema
+from FieldObject.services import FieldObjectService
 from InboundRule.schemas import *
 from abc import ABC, abstractmethod
 from Object.repository import ObjectRepository
-from Object.schemas import ObjectWithFieldSchema
+from Object.schemas import ObjectSchema, ObjectWithFieldSchema
 from Object.services import ObjectService
 from RecordObject.models import RecordObjectModel
 from app.common.db_connector import DBCollections
@@ -41,6 +43,7 @@ class InboundRule(IInboundRule):
             self.record_services = RecordObjectService(db, obj_id_str, obj_id)
 
         self.obj_services = ObjectService(db)
+        self.field_obj_services = FieldObjectService(db)
         self.db_str = db
 
     @staticmethod
@@ -236,25 +239,26 @@ class InboundRule(IInboundRule):
     #         "field_value": ref_fld_id,
     #     }
     
-    async def inbound_file_with_new_obj(self, user_id: str, config: FileObjectSchema, file: UploadFile = File(...)):
+    async def inbound_file_with_new_obj(self, current_user_id: str, config: FileObjectSchema, file: UploadFile = File(...)):
         mapping = json.loads(config.pop("map"))
-        parse_dict_mapping = json.loads(mapping)
         fields_mapping = json.loads(config.get("fields"))
-        config["fields"] = json.loads(fields_mapping)
-        obj_with_fields = ObjectWithFieldSchema(**config)
-        obj_id = await self.obj_services.create_object_with_fields(obj_with_fields, user_id)
-        obj_with_details = await self.obj_services.get_object_detail_by_id(obj_id)
+        config["fields"] = json.loads(json.dumps(fields_mapping))
+        obj_only = {"obj_name": config.get("obj_name"), "group_obj_id": config.get("group_obj_id")}
+        new_obj_id = await self.obj_services.create_object_only(ObjectSchema(**obj_only), current_user_id)
+        fields = [FieldObjectSchema(**field) for field in config.get("fields")]
+        await self.field_obj_services.create_many_fields_object(new_obj_id, [FieldObjectSchema(**field) for field in fields])
+        obj_with_details = await self.obj_services.get_object_detail_by_id(new_obj_id)
         fields_obj = obj_with_details.get("fields")
-        for key in parse_dict_mapping:
+        for key in mapping:
             for field_obj in fields_obj:
-                if field_obj["field_name"] == parse_dict_mapping.get(key):
-                    parse_dict_mapping.update({key: field_obj.get("field_id")})
+                if field_obj["field_name"] == mapping.get(key):
+                    mapping.update({key: field_obj.get("field_id")})
         
         obj_repo = ObjectRepository(self.db_str)
-        obj = await obj_repo.find_one_by_id(obj_id)
+        obj = await obj_repo.find_one_by_id(new_obj_id)
         if not obj:
-            raise HTTPBadRequest(f"Not found {obj_id} object by _id")
+            raise HTTPBadRequest(f"Not found {new_obj_id} object by _id")
         
         self.record_repo = RecordObjectRepository(self.db_str, obj.get("obj_id"))
-        self.record_services = RecordObjectService(self.db_str, obj.get("obj_id"), obj_id)
-        return await self.inbound_file({"file": file, "config": {"map": parse_dict_mapping, "object": obj_id}}, user_id)
+        self.record_services = RecordObjectService(self.db_str, obj.get("obj_id"), new_obj_id)
+        return await self.inbound_file({"file": file, "config": {"map": mapping, "object": new_obj_id}}, current_user_id)
