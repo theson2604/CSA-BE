@@ -241,12 +241,14 @@ class InboundRule(IInboundRule):
     
     async def inbound_file_with_new_obj(self, current_user_id: str, config: FileObjectSchema, file: UploadFile = File(...)):
         mapping = json.loads(config.pop("map"))
+        # mapping = json.loads(mapping)
         fields_mapping = json.loads(config.get("fields"))
         config["fields"] = json.loads(json.dumps(fields_mapping))
         obj_only = {"obj_name": config.get("obj_name"), "group_obj_id": config.get("group_obj_id")}
         new_obj_id = await self.obj_services.create_object_only(ObjectSchema(**obj_only), current_user_id)
-        fields = [FieldObjectSchema(**field) for field in config.get("fields")]
-        await self.field_obj_services.create_many_fields_object(new_obj_id, [FieldObjectSchema(**field) for field in fields])
+        # obj_with_fields = ObjectWithFieldSchema(**config)
+        # obj_id = await self.obj_services.create_object_with_fields(obj_with_fields, user_id)
+        await self.field_obj_services.create_many_fields_object(new_obj_id, [FieldObjectSchema(**field) for field in config.get("fields")])
         obj_with_details = await self.obj_services.get_object_detail_by_id(new_obj_id)
         fields_obj = obj_with_details.get("fields")
         for key in mapping:
