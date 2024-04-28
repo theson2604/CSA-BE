@@ -175,7 +175,7 @@ class InboundRule(IInboundRule):
         end_time = time.time()
         execution_time = end_time - start_time
         print(f"Execution time: {execution_time} seconds")
-        return (len(results), len(removed_df))
+        return len(results), removed_df
     
     def check_text(field_value, field_detail):
         length = field_detail.get("length")
