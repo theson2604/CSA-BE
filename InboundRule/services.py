@@ -123,6 +123,7 @@ class InboundRule(IInboundRule):
         cols.append("idx")
         df.insert(len(df.axes[1]), "idx", range(0, len(df)))
         init_df = df
+        df = df.dropna()
         df = df[cols]
         df = df.rename(columns=mapping)
 
