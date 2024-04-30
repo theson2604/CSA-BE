@@ -31,7 +31,7 @@ class FieldObjectSchema(BaseModel):
     
     # Reference Object / Field Object
     src: Optional[str] = None
-    replace: Optional[bool] = None
+    cascade_option: Optional[str] = None
     
     @model_validator(mode='after')
     def validate_field_obj_schema(self):
@@ -81,30 +81,32 @@ class FieldObjectSchema(BaseModel):
                 raise ValueError(f"Format be must be one of {base_formats}")
         
         elif field_type == FieldObjectType.REFERENCE_OBJECT:
-            src = schema.get("src")
+            src, cascade_option = schema.get("src"), schema.get("cascade_option")
             if not src:
                 raise ValueError(f"missing required key 'src' for 'field_type' {FieldObjectType.REFERENCE_OBJECT}.")
+            if not cascade_option:
+                raise ValueError(f"missing required setting 'cascade_option' for 'field_type' {FieldObjectType.REFERENCE_FIELD_OBJECT}.")
             
             regex_str = "^obj_\w+_\d{3}$"
             match = re.search(regex_str, src)
             if not match:
                 raise ValueError(f"invalid 'src' {src}. It must be {regex_str}.")
+            if cascade_option not in ["replace", "delete"]:
+                raise ValueError(f"invalid 'cascade_option' {cascade_option}. It must be either 'replace' or 'delete'.")
         
         elif field_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
-            src, replace = schema.get("src"), schema.get("replace")
+            src, cascade_option = schema.get("src"), schema.get("cascade_option")
             if not src:
-                raise ValueError(f"missing required key 'src' for 'field_type' {FieldObjectType.REFERENCE_FIELD_OBJECT}.")
-            
-            if not replace:
-                raise ValueError(f"missing required setting 'replace' for 'field_type' {FieldObjectType.REFERENCE_FIELD_OBJECT}.")
+                raise ValueError(f"missing required key 'src' for 'field_type' {FieldObjectType.REFERENCE_FIELD_OBJECT}.")  
+            if not cascade_option:
+                raise ValueError(f"missing required setting 'cascade_option' for 'field_type' {FieldObjectType.REFERENCE_FIELD_OBJECT}.")
             
             regex_str = "^obj_\w+_\d{3}.fd_\w+_\d{3}$"
             match = re.search(regex_str, src)
             if not match:
                 raise ValueError(f"invalid 'src' {src}. It must be {regex_str}.")
-            
-            if not isinstance(type(replace), bool):
-                raise ValueError(f"invalid 'replace' type {type(replace)}. It must be bool.")
+            if cascade_option not in ["replace", "delete"]:
+                raise ValueError(f"invalid 'cascade_option' {cascade_option}. It must be either 'replace' or 'delete'.")
         
         else:
             raise ValueError(f"invalid 'field_type' {field_type}.")
