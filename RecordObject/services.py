@@ -254,12 +254,12 @@ class RecordObjectService(IRecordObjectService):
         current_record = await self.record_repo.find_one_by_id(record_id)
         if not current_record:
             raise HTTPBadRequest(f"Can not find record {record_id}")
-        
+
         obj_id = record.pop("object_id")
         updated_record = {}
 
         updated_record = await self.process_fields(record, updated_record, obj_id)
-        
+
         updated_record.update(
         {
             "modified_at": get_current_hcm_datetime(),
@@ -267,7 +267,9 @@ class RecordObjectService(IRecordObjectService):
         })
 
         return await self.record_repo.update_one_by_id(record_id, updated_record)
-    
 
-    async def delete_one_record(self):
-        pass
+    async def delete_one_record(self, id: str, replace = False):
+        if not await self.record_repo.find_one_by_id(id):
+            raise HTTPBadRequest(f"Can not find Record by id {id}")
+
+        return await self.record_repo.delete_one_by_id(id, replace)

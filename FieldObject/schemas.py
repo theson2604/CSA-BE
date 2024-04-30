@@ -31,6 +31,7 @@ class FieldObjectSchema(BaseModel):
     
     # Reference Object / Field Object
     src: Optional[str] = None
+    replace: Optional[bool] = None
     
     @model_validator(mode='after')
     def validate_field_obj_schema(self):
@@ -90,14 +91,20 @@ class FieldObjectSchema(BaseModel):
                 raise ValueError(f"invalid 'src' {src}. It must be {regex_str}.")
         
         elif field_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
-            src = schema.get("src")
+            src, replace = schema.get("src"), schema.get("replace")
             if not src:
                 raise ValueError(f"missing required key 'src' for 'field_type' {FieldObjectType.REFERENCE_FIELD_OBJECT}.")
+            
+            if not replace:
+                raise ValueError(f"missing required setting 'replace' for 'field_type' {FieldObjectType.REFERENCE_FIELD_OBJECT}.")
             
             regex_str = "^obj_\w+_\d{3}.fd_\w+_\d{3}$"
             match = re.search(regex_str, src)
             if not match:
                 raise ValueError(f"invalid 'src' {src}. It must be {regex_str}.")
+            
+            if not isinstance(type(replace), bool):
+                raise ValueError(f"invalid 'replace' type {type(replace)}. It must be bool.")
         
         else:
             raise ValueError(f"invalid 'field_type' {field_type}.")

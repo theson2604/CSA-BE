@@ -147,6 +147,8 @@ class InboundRule(IInboundRule):
                 df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_phone(x, field_detail)))]
             elif fd_type == FieldObjectType.SELECT:
                 df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_select(x, field_detail)))]
+            elif fd_type == FieldObjectType.DATE:
+                df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_date(x, field_detail)))]
             elif fd_type == FieldObjectType.REFERENCE_OBJECT:
                 ref_obj_id = field_detail.get("ref_obj_id")
                 df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_ref_obj(x, field_detail, ref_obj_records.get(ref_obj_id), new_field_value)))]

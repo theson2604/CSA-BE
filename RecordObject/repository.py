@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Dict, List
 
 from FieldObject.models import FieldObjectBase
 from FieldObject.repository import FieldObjectRepository
+from Object.repository import ObjectRepository
 from RecordObject.models import RecordObjectModel
 from RootAdministrator.constants import HIDDEN_METADATA_INFO
 
 from app.common.db_connector import DBCollections, client
 from app.common.enums import FieldObjectType
+from app.common.errors import HTTPBadRequest
 
 
 class IRecordObjectRepository(ABC):
@@ -72,6 +74,7 @@ class RecordObjectRepository(IRecordObjectRepository):
         self.db = client.get_database(db_str)
         self.record_coll = self.db.get_collection(coll)
         self.field_obj_repo = FieldObjectRepository(db_str)
+        self.obj_repo = ObjectRepository(db_str)
 
     async def create_indexing(self, fields: List[tuple]):
         """
@@ -274,3 +277,92 @@ class RecordObjectRepository(IRecordObjectRepository):
     async def update_one_by_id(self, id: str, record: dict) -> int:
         result = await self.record_coll.update_one({"_id": id}, {"$set": record})
         return result.modified_count
+    
+    async def update_many(self, record_objects: Dict[str, List[dict]], obj_field_ids: Dict[str, List[str]]) -> int:
+        for key in obj_field_ids:
+            field_ids = obj_field_ids.get(key)
+            record_coll = self.db.get_collection(key)
+            filter = [{"_id": record.get("_id")} for record in record_objects.get(key)]
+            new_value = {}
+            for field_id in field_ids:
+                new_value[field_id] = None
+            update = {"$set": new_value}
+            result = await record_coll.update_many({"$or": filter}, update)
+            return result.matched_count
+
+    async def delete_one_by_id(self, id: str, replace):
+        # self.record_coll.find_one({"_id": id})
+
+        pipeline = [
+            {
+                "$lookup": {
+                    "from": "FieldObject",
+                    "localField": "object_id",
+                    "foreignField": "ref_obj_id_value",
+                    "as": "fields",
+                }
+            },
+            {
+                "$match": {
+                    "_id": id
+                }
+            },
+        ]
+
+        # .get("fields") = list of field_details that ref to current record
+        result = await self.record_coll.aggregate(pipeline).to_list(length=None)
+
+        # get object_id from field
+        ref_records = {}
+
+        # {
+        #   object_id: [field_ids]
+        # }
+        processed = {}
+        for field in result[0].get("fields"):
+            object_id = field.get("object_id")
+            obj_id = (await self.obj_repo.find_one_by_id(object_id)).get("obj_id")
+            field_id = field.get("field_id")
+            if obj_id in list(processed.keys()):
+                if field_id not in processed.get(obj_id):
+                    processed[obj_id].append(field_id)
+                continue
+
+            processed[obj_id] = [field_id]
+            # CASE UPDATE
+            if replace:
+                pipeline = [
+                    {
+                        "$lookup": {
+                            "from": obj_id,
+                            "localField": "_id",
+                            "foreignField": f"{field_id}.ref_to",
+                            "as": "records",
+                        }
+                    },
+                    {
+                        "$match": {
+                            "_id": id
+                        }
+                    },
+                    {
+                        "$project": {
+                            "records._id": 1,
+                        }
+                    }
+                ]
+
+            else:
+                # CASE DELETE
+                # just use delete_many({field_id.ref_to: object_id})
+                pass
+
+            # current record with records field as records of an object reffering to itself
+            ref_records[obj_id] = (await self.record_coll.aggregate(pipeline).to_list(length=None))[0].get("records")
+
+        if replace:
+            result = await self.update_many(ref_records, processed)
+        else:
+            result = None
+
+        return (await self.record_coll.delete_one({"_id": id})).deleted_count

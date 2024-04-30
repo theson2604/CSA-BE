@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from Object.repository import ObjectRepository
-from RecordObject.schemas import RecordObjectSchema, UpdateRecordSchema
+from RecordObject.schemas import DeleteRecordSchema, RecordObjectSchema, UpdateRecordSchema
 from RecordObject.search import ElasticsearchRecord
 from RecordObject.services import RecordObjectService
 from app.common.elastic import ElasticsearchBase
@@ -164,6 +164,32 @@ async def update_record(
         
         record_service = RecordObjectService(db_str, obj.get("obj_id"), obj_id)
         return await record_service.update_one_record(record, current_user_id)
+    
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
+@router.delete("/delete-one")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def update_record(
+    delete: DeleteRecordSchema,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None,
+):
+    try:
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        delete = delete.model_dump()
+        obj_id = delete.get("object_id")
+        obj_repo = ObjectRepository(db_str)
+        obj = await obj_repo.find_one_by_id(obj_id)
+        if not obj:
+            raise HTTPBadRequest(f"Not found {obj_id} object by _id")
+        
+        record_service = RecordObjectService(db_str, obj.get("obj_id"), obj_id)
+        return await record_service.delete_one_record(delete.get("record_id"), delete.get("replace"))
     
     except Exception as e:
         if isinstance(e, HTTPException):
