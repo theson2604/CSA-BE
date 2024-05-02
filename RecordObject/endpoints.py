@@ -173,7 +173,7 @@ async def update_record(
         
 @router.delete("/delete-one")
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
-async def update_record(
+async def delete_record(
     delete: DeleteRecordSchema,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
@@ -189,7 +189,7 @@ async def update_record(
             raise HTTPBadRequest(f"Not found {obj_id} object by _id")
         
         record_service = RecordObjectService(db_str, obj.get("obj_id"), obj_id)
-        return await record_service.delete_one_record(delete.get("record_id"), delete.get("replace"))
+        return await record_service.delete_one_record(delete.get("record_id"), [])
     
     except Exception as e:
         if isinstance(e, HTTPException):

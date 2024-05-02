@@ -24,4 +24,3 @@ class DeleteRecordSchema(BaseModel):
 
     object_id: str = Field(..., alias="object_id")
     record_id: str = Field(..., alias="record_id")
-    replace: bool = Field(..., alias="replace")

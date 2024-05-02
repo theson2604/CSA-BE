@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List
 
-from FieldObject.models import FieldObjectBase
 from FieldObject.repository import FieldObjectRepository
 from Object.repository import ObjectRepository
 from RecordObject.models import RecordObjectModel
@@ -75,6 +74,7 @@ class RecordObjectRepository(IRecordObjectRepository):
         self.record_coll = self.db.get_collection(coll)
         self.field_obj_repo = FieldObjectRepository(db_str)
         self.obj_repo = ObjectRepository(db_str)
+        self.db_str = db_str
 
     async def create_indexing(self, fields: List[tuple]):
         """
@@ -278,19 +278,15 @@ class RecordObjectRepository(IRecordObjectRepository):
         result = await self.record_coll.update_one({"_id": id}, {"$set": record})
         return result.modified_count
     
-    async def update_many(self, record_objects: Dict[str, List[dict]], obj_field_ids: Dict[str, List[str]]) -> int:
-        for key in obj_field_ids:
-            field_ids = obj_field_ids.get(key)
-            record_coll = self.db.get_collection(key)
-            filter = [{"_id": record.get("_id")} for record in record_objects.get(key)]
-            new_value = {}
-            for field_id in field_ids:
-                new_value[field_id] = None
-            update = {"$set": new_value}
-            result = await record_coll.update_many({"$or": filter}, update)
-            return result.matched_count
+    async def update_many(self, filter, update: dict, coll = None) -> int:
+        record_coll = self.db.get_collection(coll) if coll else self.record_coll
+        if isinstance(type(filter), dict):
+            result = await record_coll.update_many(filter, update)
+        elif isinstance(type(filter), list(dict)):
+            result = await record_coll.update_many({"$or": id}, update)
+        return result.matched_count
 
-    async def delete_one_by_id(self, id: str, replace):
+    async def delete_one_by_id(self, id: str, scope: List[str]):
         # self.record_coll.find_one({"_id": id})
 
         pipeline = [
@@ -316,53 +312,71 @@ class RecordObjectRepository(IRecordObjectRepository):
         ref_records = {}
 
         # {
-        #   object_id: [field_ids]
+        #   obj_id: [field_ids]
         # }
         processed = {}
         for field in result[0].get("fields"):
             object_id = field.get("object_id")
             obj_id = (await self.obj_repo.find_one_by_id(object_id)).get("obj_id")
             field_id = field.get("field_id")
+            cascade_option = field.get("cascade_option")
             if obj_id in list(processed.keys()):
                 if field_id not in processed.get(obj_id):
                     processed[obj_id].append(field_id)
+                    if processed.get(obj_id)[0] != "delete":
+                        object_id, _ = processed.get(obj_id)[0]
+                        processed[obj_id][0] = (object_id, cascade_option)
                 continue
 
-            processed[obj_id] = [field_id]
-            # CASE UPDATE
-            if replace:
-                pipeline = [
-                    {
-                        "$lookup": {
-                            "from": obj_id,
-                            "localField": "_id",
-                            "foreignField": f"{field_id}.ref_to",
-                            "as": "records",
-                        }
-                    },
-                    {
-                        "$match": {
-                            "_id": id
-                        }
-                    },
-                    {
-                        "$project": {
-                            "records._id": 1,
-                        }
+            # processed[obj_id] = [(object_id, cascade_option), field_id]
+            pipeline = [
+                {
+                    "$lookup": {
+                        "from": obj_id,
+                        "localField": "_id",
+                        "foreignField": f"{field_id}.ref_to",
+                        "as": "records",
                     }
-                ]
+                },
+                {
+                    "$match": {
+                        "_id": id
+                    }
+                },
+                {
+                    "$project": {
+                        "records._id": 1,
+                    }
+                }
+            ]
 
-            else:
-                # CASE DELETE
-                # just use delete_many({field_id.ref_to: object_id})
-                pass
+            # else:
+            #     # CASE DELETE
+            #     # just use delete_many({field_id.ref_to: object_id})
+            #     pass
 
             # current record with records field as records of an object reffering to itself
-            ref_records[obj_id] = (await self.record_coll.aggregate(pipeline).to_list(length=None))[0].get("records")
+            records = (await self.record_coll.aggregate(pipeline).to_list(length=None))[0].get("records")
+            if records:
+                processed[obj_id] = [(object_id, cascade_option), field_id]                    
+                ref_records[obj_id] = records
 
-        if replace:
-            result = await self.update_many(ref_records, processed)
-        else:
-            result = None
+        for key in processed:
+            # field_ids = obj_field_ids.get(key)
+            fields_obj = processed.get(key)
+            object_id, option = fields_obj[0]
+            if option == "replace":
+                filter = [{"_id": record.get("_id")} for record in ref_records.get(key)]
+                new_value = {}
+                for field in fields_obj[1:]:
+                    new_value[field_id] = None
+                update = {"$set": new_value}
+                result = await self.update_many(filter, update, key)
+            else:
+                from RecordObject.services import RecordObjectService
+                record_services = RecordObjectService(self.db_str, key, object_id)
+                if not ref_records.get(key):
+                    raise HTTPBadRequest("NOOOOOOO")
+                result = [await record_services.delete_one_record(record.get("_id"), scope) for record in ref_records.get(key)]
 
         return (await self.record_coll.delete_one({"_id": id})).deleted_count
