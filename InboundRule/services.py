@@ -161,7 +161,7 @@ class InboundRule(IInboundRule):
         
         inserted_idx = df["idx"]
         removed_df = init_df.loc[lambda df_: (~df_["idx"].isin(inserted_idx))]
-        removed_idx = list(removed_df["idx"])
+        # removed_idx = list(removed_df["idx"]) ##### to get the idx of the removed records
         df.drop(["idx"], axis=1, inplace=True)
 
         field_id, prefix = field_id_detail.get("field_id"), field_id_detail.get("prefix")
@@ -185,7 +185,7 @@ class InboundRule(IInboundRule):
         end_time = time.time()
         execution_time = end_time - start_time
         print(f"Execution time: {execution_time} seconds")
-        return len(results), removed_idx
+        return len(results), len(removed_df)
     
     def check_text(field_value, field_detail):
         length = field_detail.get("length")
