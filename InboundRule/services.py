@@ -227,11 +227,10 @@ class InboundRule(IInboundRule):
     
     def check_date(field_value, field_detail):
         format = field_detail.get("format")
-        separator = field_detail.get("separtor")
+        separator = field_detail.get("separator")
+        # print(field_value)
         if separator not in field_value:
-            raise RecordException(
-                f"separtor of date {field_value} is not valid."
-            )
+            return False
 
         date_regex = {
             "DD MM YYYY": "^\d{2} \d{2} \d{4}$",
