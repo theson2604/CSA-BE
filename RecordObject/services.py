@@ -119,7 +119,7 @@ class RecordObjectService(IRecordObjectService):
                 separator = field_detail.get("separator")
                 if separator not in field_value:
                     raise RecordException(
-                        f"separtor of date {field_value} is not valid."
+                        f"separator of date {field_value} is not valid."
                     )
 
                 date_regex = {

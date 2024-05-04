@@ -157,7 +157,7 @@ class InboundRule(IInboundRule):
         
         # avoid inserting empty record to db
         if len(df) == 0:
-            return 0, list(init_df["idx"])
+            return 0, len(init_df)
         
         inserted_idx = df["idx"]
         removed_df = init_df.loc[lambda df_: (~df_["idx"].isin(inserted_idx))]
