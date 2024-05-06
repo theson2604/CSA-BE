@@ -15,34 +15,9 @@ from Object.schemas import ObjectSchema, ObjectWithFieldSchema
 from app.common.enums import StatusCodeException
 from app.common.errors import HTTPBadRequest
 from app.common.utils import generate_object_id
-
-class IObjectService(ABC):
-    @abstractmethod
-    async def create_object_only(self, obj: ObjectSchema, current_user_id: str) -> str:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def create_object_with_fields(self, obj: ObjectWithFieldSchema, current_user_id: str) -> str:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def get_all_objects_with_field_details(self) -> List[dict]:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def get_object_detail_by_id(self, id: str) -> dict:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def delete_one_object_by_id(self, object_id: str) -> bool:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def delete_all_objects_by_group_id(self, group_obj_id: str) -> bool:
-        raise NotImplementedError
     
     
-class ObjectService(IObjectService):
+class ObjectService:
     def __init__(self, db_str: str):
         # Repo
         self.repo = ObjectRepository(db_str)

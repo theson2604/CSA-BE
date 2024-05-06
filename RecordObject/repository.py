@@ -9,64 +9,7 @@ from RootAdministrator.constants import HIDDEN_METADATA_INFO
 from app.common.db_connector import DBCollections, client
 from app.common.enums import FieldObjectType
 
-
-class IRecordObjectRepository(ABC):
-    @abstractmethod
-    async def insert_one(self, record: RecordObjectModel) -> str:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def insert_many(self, record: List[RecordObjectModel]) -> str:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_parsing_ref_detail_pipeline(self, object_id: str) -> List[dict]:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_all_with_parsing_ref_detail(
-        self, object_id: str, page: int = 1, page_size: int = 100
-    ) -> list:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_one_by_id_with_parsing_ref_detail(
-        self, record_id: str, object_id: str
-    ) -> list:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_many_by_ids_with_parsing_ref_detail(
-        self, list_ids: List[str], object_id: str
-    ) -> list:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def find_one_by_id(
-        self, id: str, projection: dict = None
-    ) -> RecordObjectModel:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def find_all(self, projection: dict = None) -> List[RecordObjectModel]:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def create_indexing(self, fields: List[tuple]) -> RecordObjectModel:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def count_all(self, query: dict = {}) -> int:
-        raise NotImplementedError
-
-    # @abstractmethod
-    # async def delete_one_by_id(self, id: str) -> bool:
-    #     raise NotImplementedError
-
-    async def update_one_by_id(self, id: str, record: dict) -> int:
-        raise NotImplementedError
-
-class RecordObjectRepository(IRecordObjectRepository):
+class RecordObjectRepository:
     def __init__(self, db_str: str, coll: str):
         global client
         self.db = client.get_database(db_str)
