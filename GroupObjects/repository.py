@@ -6,39 +6,7 @@ from GroupObjects.models import GroupObjectModel
 from app.common.db_connector import DBCollections
 
 
-class IGroupObjectRepository(ABC):
-    @abstractmethod
-    async def insert_one(self, group: GroupObjectModel) -> str:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def update_one_by_id(self, id: str, group: dict):
-        raise NotImplementedError
-
-    @abstractmethod
-    async def update_many(self, groups: List[dict]) -> bool:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def find_one_by_id(
-        self, id: str, projection: dict = None
-    ) -> GroupObjectModel:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_all_groups_with_details(self) -> List[dict]:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def count_all(self, query: dict = {}) -> int:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def delete_one_by_id(self, id: str) -> bool:
-        raise NotImplementedError
-
-
-class GroupObjectRepository(IGroupObjectRepository):
+class GroupObjectRepository:
     def __init__(self, db_str: str, coll: str = DBCollections.GROUP_OBJECTS.value):
         global client
         self.db_str = db_str

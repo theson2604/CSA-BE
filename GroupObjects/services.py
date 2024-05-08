@@ -11,33 +11,7 @@ from RootAdministrator.repository import RootAdministratorRepository
 from app.common.errors import HTTPBadRequest
 from app.common.utils import get_current_hcm_datetime
 
-class IGroupObjectServices(ABC):
-    @abstractmethod
-    async def create_group(self, group: GroupObjectSchema) -> str:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def update_many_groups(self, groups: List[UpdateGroupObjectSchema]):
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def update_one_group(self, group: UpdateGroupObjectSchema):
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def get_detail_group_by_id(self, id: str) -> dict:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def get_all_groups_with_details(self) -> List[dict]:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def get_all_user_groups(self, user_id: str) -> List[GroupObjectModel]:
-        raise NotImplementedError
-    
-
-class GroupObjectServices(IGroupObjectServices):
+class GroupObjectServices:
     def __init__(self, db_str: str):
         self.repo = GroupObjectRepository(db_str)
         self.users_repo = RootAdministratorRepository()
