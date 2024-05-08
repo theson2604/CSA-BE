@@ -1,11 +1,9 @@
 from typing import List
 from GroupObjects.models import GroupObjectModel
 from GroupObjects.schemas import GroupObjectSchema, UpdateGroupObjectSchema
-from GroupObjects.repository import GroupObjectRepository, IGroupObjectRepository
-from Object.repository import ObjectRepository
+from GroupObjects.repository import GroupObjectRepository
 from Object.services import ObjectService
 from bson import ObjectId
-from abc import ABC, abstractmethod
 from RootAdministrator.constants import HIDDEN_SYSTEM_USER_INFO
 from RootAdministrator.repository import RootAdministratorRepository
 from app.common.errors import HTTPBadRequest

@@ -95,30 +95,29 @@ class InboundRule(IInboundRule):
         field_ids = []
         field_details = {}
         ref_obj_records = {}
+        list_details = await self.field_obj_repo.find_many_by_field_id_str(object_id, list(mapping.values()))
 
-        for key in mapping:
+        for index, key in enumerate(mapping):
             if key not in df.columns:
                 raise HTTPBadRequest(f"Can not find column ${key} in file")
             cols.append(key)
             field_id = mapping[key]
             field_ids.append(field_id)
+
             # store all field_details to avoid redundant query
-            if not field_details.get(field_id):
-                field_detail = await self.field_obj_repo.find_one_by_field_id(
-                                    object_id, field_id
-                                )
-                field_details[field_id] = field_detail
-                field_type = field_detail.get("field_type")
-                if field_type == FieldObjectType.REFERENCE_OBJECT:
-                    ref_obj_id = field_detail.get("ref_obj_id")  # obj_<name>_<id>
-                    if not ref_obj_records.get(ref_obj_id):
-                        ref_record_repo = RecordObjectRepository(self.db_str, ref_obj_id)
-                        ref_record_ids = await ref_record_repo.find_all(projection={"_id": 1})
-                        ref_obj_records[ref_obj_id] = [id.get("_id") for id in ref_record_ids]
-                        print(ref_obj_records[ref_obj_id][:5])
-                    obj_detail = await self.obj_repo.find_one_by_object_id(ref_obj_id)
-                    self.ref_record_repo = ref_record_repo
-                    field_details[field_id]["field_ids"] = await self.field_obj_repo.get_all_by_field_types(obj_detail.get("_id"), [FieldObjectType.ID.value])
+            field_detail = list_details[index]
+            field_details[field_id] = field_detail
+            field_type = field_detail.get("field_type")
+            if field_type == FieldObjectType.REFERENCE_OBJECT:
+                ref_obj_id = field_detail.get("ref_obj_id")  # obj_<name>_<id>
+                if not ref_obj_records.get(ref_obj_id):
+                    ref_record_repo = RecordObjectRepository(self.db_str, ref_obj_id)
+                    ref_record_ids = await ref_record_repo.find_all(projection={"_id": 1})
+                    ref_obj_records[ref_obj_id] = [id.get("_id") for id in ref_record_ids]
+                    print(ref_obj_records[ref_obj_id][:5])
+                obj_detail = await self.obj_repo.find_one_by_object_id(ref_obj_id)
+                self.ref_record_repo = ref_record_repo
+                field_details[field_id]["field_ids"] = await self.field_obj_repo.get_all_by_field_types(obj_detail.get("_id"), [FieldObjectType.ID.value])
                     
         cols.append("idx")
         df.insert(len(df.axes[1]), "idx", range(0, len(df)))
