@@ -1,3 +1,4 @@
+from datetime import datetime
 import re
 from bson import ObjectId
 from fastapi import File, UploadFile
@@ -122,6 +123,7 @@ class InboundRule(IInboundRule):
         cols.append("idx")
         df.insert(len(df.axes[1]), "idx", range(0, len(df)))
         init_df = df
+        df = df.dropna()
         df = df[cols]
         df = df.rename(columns=mapping)
 
@@ -135,8 +137,10 @@ class InboundRule(IInboundRule):
             new_field_value = {}
             field_detail = field_details.get(fd_id)
             fd_type = field_detail.get("field_type") 
-            if fd_type in [FieldObjectType.TEXT]:
+            if fd_type == FieldObjectType.TEXT:
                 df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_text(x, field_detail)))]
+            elif fd_type == FieldObjectType.FLOAT:
+                df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_float(x, field_detail)))]
             elif fd_type == FieldObjectType.EMAIL:
                 df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_email(x)))]
             elif fd_type == FieldObjectType.PHONE_NUMBER:
@@ -189,6 +193,12 @@ class InboundRule(IInboundRule):
             return False
         return True
     
+    def check_float(field_value, field_detail):
+        step = field_detail.get("step")
+        if field_value % float(step) != 0:
+            return False
+        return True
+    
     def check_email(field_value):
         email_regex = (
             "^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*@[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*$"
@@ -210,6 +220,35 @@ class InboundRule(IInboundRule):
     def check_select(field_value, field_detail):
         options = field_detail.get("options")
         if field_value not in options:
+            return False
+        return True
+    
+    def check_date(field_value, field_detail):
+        format = field_detail.get("format")
+        separator = field_detail.get("separtor")
+        if separator not in field_value:
+            raise RecordException(
+                f"separtor of date {field_value} is not valid."
+            )
+
+        date_regex = {
+            "DD MM YYYY": "^\d{2} \d{2} \d{4}$",
+            "MM DD YYYY": "^\d{2} \d{2} \d{4}$",
+            "YYYY MM DD": "^\d{4} \d{2} \d{2}$"
+        }
+        if not re.match(date_regex.get(format).replace(" ", separator), field_value):
+            raise RecordException(
+                f"date {field_value} format is not valid."
+            )
+
+        try:
+            if format == "DD MM YYYY":
+                bool(datetime.strptime(field_value, f"%d{separator}%m{separator}%Y"))
+            elif format == "MM DD YYYY":
+                bool(datetime.strptime(field_value, f"%m{separator}%d{separator}%Y"))
+            else:
+                bool(datetime.strptime(field_value, f"%Y{separator}%m{separator}%d"))
+        except ValueError:
             return False
         return True
     

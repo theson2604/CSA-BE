@@ -13,6 +13,7 @@ class FieldObjectType(str, Enum):
     EMAIL = 'email'
     SELECT = 'select'
     PHONE_NUMBER = 'phonenumber'
+    DATE = 'date'
     REFERENCE_OBJECT = 'ref_obj'
     REFERENCE_FIELD_OBJECT = 'ref_field_obj'
     
