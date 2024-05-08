@@ -20,43 +20,7 @@ from app.common.utils import generate_next_record_id, get_current_hcm_datetime
 class RecordException(Exception):
     pass
 
-
-class IRecordObjectService(ABC):
-    @abstractmethod
-    async def process_fields(
-        self, fields: dict, record: dict, obj_id: str
-    ) -> dict:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def create_record(
-        self, record: RecordObjectSchema, current_user_id: str
-    ) -> str:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_all_records_with_detail(
-        self, object_id: str, page: int = 1, page_size: int = 100
-    ) -> List[RecordObjectModel]:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def get_one_record_by_id_with_detail(
-        self, record_id: str, object_id: str
-    ) -> RecordObjectModel:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def create_record_from_file(
-        self, current_user_id: str, row, field_ids: List[str], field_details: dict
-    ) -> RecordObjectModel:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def update_one_record(self, record: RecordObjectSchema) -> bool:
-        raise NotImplementedError
-
-class RecordObjectService(IRecordObjectService):
+class RecordObjectService:
     def __init__(self, db_str: str, obj_id_str: str, obj_id: str):
         """
         :Parameters:
@@ -226,6 +190,11 @@ class RecordObjectService(IRecordObjectService):
         for field_id in fd_ids:
             field_value = row[field_id]
             field_detail = field_details.get(field_id)
+            if field_detail == None:
+                field_detail = await self.field_obj_repo.find_one_by_field_id_str(
+                    obj_id, field_id
+                )
+                field_details[field_id] = field_detail
             field_type = field_detail.get("field_type")
             
             if field_type == FieldObjectType.TEXT:

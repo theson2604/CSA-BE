@@ -7,44 +7,7 @@ from RootAdministrator.constants import HIDDEN_METADATA_INFO
 from app.common.db_connector import DBCollections, client
 from app.common.enums import FieldObjectType
 
-
-class IObjectRepository(ABC):
-    @abstractmethod
-    async def create_indexing(self, objects: List[tuple]):
-        raise NotImplementedError
-        
-    @abstractmethod
-    async def insert_one(self, obj: ObjectModel) -> str:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def find_one_by_id(self, id: str, projection: dict = None) -> ObjectModel:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def find_one_by_object_id(
-        self, obj_id: str, projection: dict = None
-    ) -> ObjectModel:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_object_with_all_fields(self, obj_id: str) -> dict:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_all_objects_with_field_details(self, obj_id: str) -> dict:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def count_all(self, query: dict = {}) -> int:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def delete_one_by_id(self, id: str) -> bool:
-        raise NotImplementedError
-
-
-class ObjectRepository(IObjectRepository):
+class ObjectRepository:
     def __init__(self, db_str: str, coll: str = DBCollections.OBJECT):
         global client
         self.db_str = db_str

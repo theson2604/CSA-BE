@@ -84,3 +84,22 @@ async def delete_one_field(
             raise e
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
+        
+@router.get("/test")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def test(
+    obj_id: str,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        field_service = FieldObjectService(CURRENT_USER.get("db"))
+        await field_service.get_all_fields_by_obj_id(obj_id)
+
+        return "Field has been deleted"
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))

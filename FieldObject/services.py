@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from typing import List, Union
 from bson import ObjectId
 import re
@@ -6,6 +5,7 @@ from FieldObject.models import FieldEmail, FieldFloat, FieldId, FieldPhoneNumber
 
 from FieldObject.repository import FieldObjectRepository
 from FieldObject.schemas import FieldObjectSchema, UpdateFieldObjectSchema
+from FieldObject.utils import check_loop
 from Object.repository import ObjectRepository
 from app.common.enums import FIELD_ID, FieldObjectType
 from app.common.errors import HTTPBadRequest
@@ -14,32 +14,8 @@ from app.common.utils import generate_field_id
 class FieldObjectServiceException(Exception):
     pass
 
-class IFieldObjectService(ABC):
-    @abstractmethod
-    async def validate_and_get_all_field_models(self, object_id: str, fields: List[FieldObjectSchema]) -> List[FieldObjectBase]:
-        raise NotImplementedError
     
-    @abstractmethod
-    async def create_many_fields_object(self, object_id: str, fields: List[FieldObjectSchema]) -> List[str]:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def update_one_field(self, field: UpdateFieldObjectSchema) -> int:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def update_sorting(self, fields: List[str]):
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def create_one_field(self, field: FieldObjectSchema) -> str:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def get_all_fields_by_obj_id(self, object_id: str) -> List[Union[FieldObjectBase]]:
-        raise NotImplementedError
-    
-class FieldObjectService(IFieldObjectService):
+class FieldObjectService:
     def __init__(self, db_str: str):
         self.repo = FieldObjectRepository(db_str)
         self.object_repo = ObjectRepository(db_str)
@@ -121,16 +97,21 @@ class FieldObjectService(IFieldObjectService):
                     # obj_contact_431.fd_email_286
                     source_id = field.get("src")
                     split_source_id = source_id.split(".")
-                    obj_id, fld_id = split_source_id[0], split_source_id[1]
-                    ref_obj = await self.object_repo.find_one_by_object_id(obj_id)
+                    obj_id_str, fld_id_str = split_source_id[0], split_source_id[1]
+                    ref_obj = await self.object_repo.find_one_by_object_id(obj_id_str)
                     if not ref_obj:
-                        raise HTTPBadRequest(f"Not found ref_obj {obj_id}.")
+                        raise HTTPBadRequest(f"Not found ref_obj {obj_id_str}.")
                     
                     ref_obj_id_value = ref_obj.get("_id")
-                    ref_field = await self.repo.find_one_by_field_id(ref_obj_id_value, fld_id)
+                    ref_field = await self.repo.find_one_by_field_id_str(ref_obj_id_value, fld_id_str)
                     if not ref_field:
-                        raise HTTPBadRequest(f"Not found ref_field '{fld_id}' in ref_obj '{obj_id}'")
-
+                        raise HTTPBadRequest(f"Not found ref_field '{fld_id_str}' in ref_obj '{obj_id_str}'")
+                    
+                    # Infinite field loop checking
+                    new_path = [object_id, ref_obj_id_value]  # [from, to]
+                    if (await self.infinite_loop_checking(new_path, target_ref_field_id=ref_field.get("_id"), target_obj_id=ref_obj_id_value)):
+                        raise FieldObjectServiceException("Infinite field loop")
+                    
                     display_value = f'{ref_obj.get("obj_name")}.{ref_field.get("field_name")}'
                     field_base.update({
                         "display_value": display_value,
@@ -144,6 +125,27 @@ class FieldObjectService(IFieldObjectService):
         
         except Exception as e:
             raise FieldObjectServiceException(e)
+        
+        
+    async def get_field_ref_path_deeply(self, target_ref_field_id, target_obj_id):
+        """ Get the ref path deeply of the target ref field"""
+        # Get all field refs with parsing deeply from reference obj
+        all_field_refs_source_obj = await self.repo.get_all_field_refs_deeply(target_obj_id)
+        # {C, linking_fields: {B * ref_obj_id_value(C), A, D}} C -> B -> A -> D
+        path = []
+        for field_ref_detail in all_field_refs_source_obj:
+            if field_ref_detail.get("_id") == target_ref_field_id:
+                print(field_ref_detail)
+                path.append(field_ref_detail.get("object_id"))
+                for linking_field in field_ref_detail.get("linking_fields", []):
+                    path.append(linking_field.get("object_id"))
+        
+        return path
+    
+    async def infinite_loop_checking(self, new_path: List[str], target_ref_field_id: str, target_obj_id: str) -> bool:
+        ref_path_seq = await self.get_field_ref_path_deeply(target_ref_field_id, target_obj_id)
+        return check_loop(ref_path_seq, new_path)
+        
         
     async def create_many_fields_object(self, object_id: str, fields: List[FieldObjectSchema]) -> List[str]:
         field_models = await self.validate_and_get_all_field_models(object_id, fields)
