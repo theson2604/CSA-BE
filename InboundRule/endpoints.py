@@ -1,12 +1,31 @@
-from fastapi import APIRouter, Form, HTTPException, UploadFile, File
+from celery.result import AsyncResult
+from fastapi import APIRouter, Body, Form, HTTPException, UploadFile, File
+from fastapi.responses import JSONResponse
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from InboundRule.services import InboundRule
 from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
+from app.common.worker import create_task
 from app.dependencies.authentication import protected_route
 
 router = APIRouter()
+
+@router.post("/tasks", status_code=201)
+def run_task(payload = Body(...)):
+    task_type = payload["type"]
+    task = create_task.delay(int(task_type))
+    return JSONResponse({"task_id": task.id})
+
+@router.get("/tasks/{task_id}")
+def get_status(task_id):
+    task_result = AsyncResult(task_id)
+    result = {
+        "task_id": task_id,
+        "task_status": task_result.status,
+        "task_result": task_result.result
+    }
+    return JSONResponse(result)
 
 @router.post("/inbound-file")
 @protected_route([SystemUserRole.ADMINISTRATOR])
