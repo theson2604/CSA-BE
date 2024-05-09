@@ -189,7 +189,7 @@ async def delete_record(
             raise HTTPBadRequest(f"Not found {obj_id} object by _id")
         
         record_service = RecordObjectService(db_str, obj.get("obj_id"), obj_id)
-        return await record_service.delete_one_record(delete.get("record_id"), [])
+        return await record_service.delete_one_record(delete.get("record_id"))
     
     except Exception as e:
         if isinstance(e, HTTPException):

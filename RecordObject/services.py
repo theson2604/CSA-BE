@@ -335,14 +335,8 @@ class RecordObjectService:
 
         return await self.record_repo.update_one_by_id(record_id, updated_record)
 
-    async def delete_one_record(self, id: str, scope: List[str]):
-        print("DELETEEEEE: ", id, scope)
-        if id in scope:
-            print("PASSED: ", id)
-            return 0
-        
+    async def delete_one_record(self, id: str):
         if not await self.record_repo.find_one_by_id(id):
             raise HTTPBadRequest(f"Can not find Record by id {id}")
 
-        scope.append(id)
-        return await self.record_repo.delete_one_by_id(id, scope)
+        return await self.record_repo.delete_one_by_id(id)
