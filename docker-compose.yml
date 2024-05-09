@@ -1,6 +1,15 @@
 version: "3"
 
 services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis:/usr/share/redis/data
+    networks:
+      - csa
+
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
@@ -42,6 +51,8 @@ services:
       interval: 1s
       timeout: 5s
       retries: 120
+    networks:
+      - csa
 
   es01:
     depends_on:
@@ -84,6 +95,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+    networks:
+      - csa
 
   kibana:
     depends_on:
@@ -111,6 +124,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+    networks:
+      - csa
 
 volumes:
   certs:
@@ -119,3 +134,9 @@ volumes:
     driver: local
   kibanadata:
     driver: local
+  redis:
+    driver: local
+
+networks:
+  csa:
+    driver: bridge
