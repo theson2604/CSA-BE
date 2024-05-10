@@ -80,11 +80,12 @@ class InboundRule(IInboundRule):
             if default == 'lines':
                 df = pd.read_json(file.file, lines=True)
             else:
+                print(file.file, type(file.file))
                 data = json.load(file.file)
                 df = pd.DataFrame(data)
         else:
             raise HTTPBadRequest(f"Invalid file type {file_extension}.")
-
+        
         # map column names to field_ids
         config = file_inbound.get("config")
         mapping = config.get("map")
@@ -202,7 +203,7 @@ class InboundRule(IInboundRule):
     
     def check_email(field_value):
         email_regex = (
-            "^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*@[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*$"
+            r"^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*@[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*$"
         )
         match = re.search(email_regex, field_value)
         if not match:
@@ -232,9 +233,9 @@ class InboundRule(IInboundRule):
             return False
 
         date_regex = {
-            "DD MM YYYY": "^\d{2} \d{2} \d{4}$",
-            "MM DD YYYY": "^\d{2} \d{2} \d{4}$",
-            "YYYY MM DD": "^\d{4} \d{2} \d{2}$"
+            "DD MM YYYY": r"^\d{2} \d{2} \d{4}$",
+            "MM DD YYYY": r"^\d{2} \d{2} \d{4}$",
+            "YYYY MM DD": r"^\d{4} \d{2} \d{2}$"
         }
         if not re.match(date_regex.get(format).replace(" ", separator), field_value):
             raise RecordException(

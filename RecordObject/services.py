@@ -32,13 +32,13 @@ class RecordObjectService:
         self.record_repo = RecordObjectRepository(db_str, coll=obj_id_str)
         self.field_obj_repo = FieldObjectRepository(db_str)
         self.object_repo = ObjectRepository(db_str) 
-        self.elastic_service = ElasticsearchRecord(db_str, obj_id_str, obj_id)
+        # self.elastic_service = ElasticsearchRecord(db_str, obj_id_str, obj_id)
 
     async def process_fields(
         self, fields: dict, record: dict, obj_id: str
     ) -> dict:
         for field_id, field_value in fields.items():
-            field_detail = await self.field_obj_repo.find_one_by_field_id(
+            field_detail = await self.field_obj_repo.find_one_by_field_id_str(
                 obj_id, field_id
             )
             field_type = field_detail.get("field_type")
@@ -59,7 +59,7 @@ class RecordObjectService:
 
             elif field_type == FieldObjectType.EMAIL:
                 email_regex = (
-                    "^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*@[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*$"
+                    r"^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*@[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*$"
                 )
                 match = re.search(email_regex, field_value)
                 if not match:
@@ -93,9 +93,9 @@ class RecordObjectService:
                     )
 
                 date_regex = {
-                    "DD MM YYYY": "^\d{2} \d{2} \d{4}$",
-                    "MM DD YYYY": "^\d{2} \d{2} \d{4}$",
-                    "YYYY MM DD": "^\d{4} \d{2} \d{2}$"
+                    "DD MM YYYY": r"^\d{2} \d{2} \d{4}$",
+                    "MM DD YYYY": r"^\d{2} \d{2} \d{4}$",
+                    "YYYY MM DD": r"^\d{4} \d{2} \d{2}$"
                 }
                 if not re.match(date_regex.get(format), field_value.replace(separator, " ")):
                     raise RecordException(
@@ -183,7 +183,7 @@ class RecordObjectService:
         )
         
         cpy_record = inserted_record.copy()
-        self.elastic_service.index_doc(record_id=cpy_record.pop("_id"), doc=cpy_record)
+        # self.elastic_service.index_doc(record_id=cpy_record.pop("_id"), doc=cpy_record)
         
         return await self.record_repo.insert_one(
             RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True)
@@ -242,7 +242,7 @@ class RecordObjectService:
 
             elif field_type == FieldObjectType.EMAIL:
                 email_regex = (
-                    "^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*@[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*$"
+                    r"^[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*@[a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)*$"
                 )
                 if not re.match(email_regex, field_value):
                     return None
