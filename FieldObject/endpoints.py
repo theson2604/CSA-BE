@@ -6,6 +6,10 @@ from FieldObject.services import FieldObjectService
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
 from app.dependencies.authentication import protected_route
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 router = APIRouter()
 
@@ -96,7 +100,7 @@ async def test(
         # field_service = FieldObjectService(CURRENT_USER.get("db"))
         # await field_service.get_all_fields_by_obj_id(obj_id)
 
-        return "Field has been test ne"
+        return os.environ.get("ELASTIC_PASSWORD")
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

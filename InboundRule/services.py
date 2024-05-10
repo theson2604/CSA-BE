@@ -21,20 +21,8 @@ import json
 import pandas as pd 
 import time
 
-class IInboundRule(ABC):
-    @abstractmethod
-    def process_data(data, mapping):
-        raise NotImplementedError
 
-    @abstractmethod
-    async def inbound_file(self, file_inbound: dict, user_id: str):
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def inbound_file_with_new_obj(self, config: FileObjectSchema, file: UploadFile = File(...)):
-        raise NotImplementedError
-
-class InboundRule(IInboundRule):
+class InboundRule:
     def __init__(self, db, obj_id: str = None, obj_id_str: str = None):
         self.field_obj_repo = FieldObjectRepository(db)
         self.obj_repo = ObjectRepository(db)

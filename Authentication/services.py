@@ -7,7 +7,10 @@ from abc import ABC, abstractmethod
 import jwt
 from app.common.constants import ROOT_CSA_DB
 from app.common.errors import HTTPBadRequest
-from app.settings.config import SECRET_SALT, JWT_ALGORITHM
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 class IAuthenticationServices(ABC):
     @abstractmethod
@@ -30,15 +33,16 @@ class IAuthenticationServices(ABC):
     async def get_user_by_token(self, access_token: str) -> dict:
         raise NotImplementedError
 
+
 class AuthenticationServices:
     def __init__(self, repo: IRootAdministratorRepository = Depends(lambda: RootAdministratorRepository(ROOT_CSA_DB))):
         self.repo = repo
     
     def encode_jwt(self, obj: dict) -> str:
-        return jwt.encode(obj, SECRET_SALT, algorithm=JWT_ALGORITHM)
+        return jwt.encode(obj, os.environ.get("SECRET_SALT"), algorithm=os.environ.get("JWT_ALGORITHM"))
        
     def decode_jwt(self, encoded_jwt: str) -> dict:
-        return jwt.decode(encoded_jwt, SECRET_SALT, algorithms=[JWT_ALGORITHM])
+        return jwt.decode(encoded_jwt, os.environ.get("SECRET_SALT"), algorithms=[os.environ.get("JWT_ALGORITHM")])
     
     def is_valid_password(self, raw_pwd: str, hashed_pwd: str) -> bool:
         encoded_raw_pwd, encoded_hashed_pwd = raw_pwd.encode("utf-8"), hashed_pwd.encode("utf-8")

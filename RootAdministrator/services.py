@@ -52,7 +52,7 @@ class IRootAdministratorServices(ABC):
     async def search_company_users_by_email_fullname(self, db: str, query: str) -> List[dict]:
         raise NotImplementedError
 
-class RootAdministratorServices:
+class RootAdministratorServices(IRootAdministratorServices):
     def __init__(self, repo: IRootAdministratorRepository = Depends(lambda: RootAdministratorRepository(ROOT_CSA_DB, RootCollections.USERS.value))):
         self.repo = repo
             

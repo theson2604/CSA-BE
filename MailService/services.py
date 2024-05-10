@@ -5,7 +5,6 @@ from MailService.schemas import *
 from abc import ABC, abstractmethod
 from app.common.db_connector import DBCollections
 from app.common.errors import HTTPBadRequest
-from app.settings.config import KEY_BYTES
 # from fastapi import Depends
 from bson import ObjectId
 from Object.repository import ObjectRepository
@@ -17,45 +16,12 @@ from Crypto import Random
 from email.mime.text import MIMEText
 import binascii
 import smtplib
+from dotenv import load_dotenv
+import os
 
-class IMailServices(ABC):
-    @abstractmethod
-    def encrypt_aes(self, pwd: str):
-        raise NotImplementedError
-    
-    @abstractmethod
-    def decrypt_aes(self, key: str, iv: bytes, pwd: str):
-        raise NotImplementedError
-    
-    @abstractmethod
-    def get_field_id(self, src):
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def create_email(self, email: EmailSchema) -> bool:
-        raise NotImplementedError
+load_dotenv()
 
-    @abstractmethod
-    async def send_one(self, mail: SendMailSchema) -> str:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def get_mail_pwd(self, email: str, admin_id: str) -> str:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def create_template(self, template: TemplateSchema) -> str:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def get_all_templates(self) -> List:
-        raise NotImplementedError
-    
-    @abstractmethod
-    async def get_templates_by_object_id(self, object_id) -> List:
-        raise NotImplementedError
-
-class MailServices(IMailServices):
+class MailServices:
     def __init__(self, db, coll: str = None):
         self.repo = MailServiceRepository()
         self.template_repo = MailServiceRepository(db, DBCollections.EMAIL_TEMPLATE)
@@ -68,7 +34,7 @@ class MailServices(IMailServices):
 
     def encrypt_aes(self, pwd: str):
         try:
-            key = Random.new().read(KEY_BYTES)
+            key = Random.new().read(os.environ.get("KEY_BYTES"))
             iv = Random.new().read(AES.block_size)
                                 
             iv_int = int(binascii.hexlify(iv), 16)
