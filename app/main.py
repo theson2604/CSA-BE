@@ -2,7 +2,6 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.responses import RedirectResponse
-from app.settings.config import ServerConfig
 import RootAdministrator.endpoints
 import Authentication.endpoints
 import GroupObjects.endpoints
@@ -11,6 +10,10 @@ import RecordObject.endpoints
 import FieldObject.endpoints
 import MailService.endpoints
 import InboundRule.endpoints
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -48,7 +51,7 @@ app.add_middleware(
 
 @app.get("/", include_in_schema=False)
 def redirect_to_docs():
-    return RedirectResponse(url=ServerConfig.DOCS_ROUTE)
+    return RedirectResponse(url=os.environ.get("DOCS_ROUTE"))
 
 # Include Routers
 app.include_router(Authentication.endpoints.router, prefix="/api/authen", tags=["Authentication"])

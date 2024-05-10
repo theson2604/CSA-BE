@@ -12,11 +12,12 @@ services:
       - .:/app/csa_be
     depends_on:
       - redis
-    expose:
-      - "8000"
+    restart: always
     networks:
       - csa
-
+    expose:
+      - "8000"
+    
   redis:
     image: redis:latest
     container_name: redis
@@ -24,11 +25,12 @@ services:
       - "6379:6379"
     volumes:
       - redis:/usr/share/redis/data
+    restart: always
     networks:
       - csa
     expose:
       - "6379"
-
+    
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     container_name: els-setup

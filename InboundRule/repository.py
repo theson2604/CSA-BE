@@ -5,29 +5,8 @@ from app.common.constants import ROOT_CSA_DB
 from app.common.db_connector import client, RootCollections
 from MailService.models import EmailModel, TemplateModel
 # from app.common.db_connector import DBCollections
-
-class IMailServiceRepository(ABC):
-    @abstractmethod
-    async def insert_email(self, email: EmailModel):
-        raise NotImplementedError
-
-    @abstractmethod 
-    async def find_email(self, query: dict, projection: dict = None):
-        raise NotImplementedError
     
-    @abstractmethod
-    async def find_email_by_name(self, name: str, projection: dict = None):
-        raise NotImplementedError
-    
-    @abstractmethod 
-    async def insert_template(self, template: TemplateModel, projection: dict = None):
-        raise NotImplementedError
-    
-    @abstractmethod 
-    async def find_template_by_id(self, id: str, projection: dict = None):
-        raise NotImplementedError
-    
-class MailServiceRepository(IMailServiceRepository):
+class MailServiceRepository:
     def __init__(self, db_str: str = ROOT_CSA_DB, coll: str = RootCollections.EMAILS.value):
         global client
         self.db_str = db_str
