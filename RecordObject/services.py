@@ -200,8 +200,8 @@ class RecordObjectService:
         if records and isinstance(records, list) and len(records) == 1:
             records = records[0]
             if isinstance(records, dict):
-                total = records.get("total_records", [{"total": 0}])
-                records.update({"total_records": total[0].get("total")})
+                total = records.get("total_records")
+                records.update({"total_records": total[0].get("total") if total else 0})
                 return records
 
         return []
