@@ -3,18 +3,18 @@ from fastapi import APIRouter, Body, Form, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from InboundRule.services import InboundRule
+from InboundRule.tasks import create_task
 from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
-from app.common.worker import create_task
 from app.dependencies.authentication import protected_route
 
 router = APIRouter()
 
 @router.post("/tasks", status_code=201)
 def run_task(payload = Body(...)):
-    task_type = payload["type"]
-    task = create_task.delay(int(task_type))
+    value = payload["value"]
+    task = create_task.delay(value)
     return JSONResponse({"task_id": task.id})
 
 @router.get("/tasks/{task_id}")
