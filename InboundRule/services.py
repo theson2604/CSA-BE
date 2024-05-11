@@ -103,10 +103,20 @@ class InboundRule:
                     ref_record_repo = RecordObjectRepository(self.db_str, ref_obj_id)
                     ref_record_ids = await ref_record_repo.find_all(projection={"_id": 1})
                     ref_obj_records[ref_obj_id] = [id.get("_id") for id in ref_record_ids]
-                    print(ref_obj_records[ref_obj_id][:5])
                 obj_detail = await self.obj_repo.find_one_by_object_id(ref_obj_id)
                 self.ref_record_repo = ref_record_repo
                 field_details[field_id]["field_ids"] = await self.field_obj_repo.get_all_by_field_types(obj_detail.get("_id"), [FieldObjectType.ID.value])
+            elif field_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
+                ref_field_obj_id = field_detail.get(
+                    "ref_field_obj_id"
+                )
+                splitted = ref_field_obj_id.split(".")
+                ref_obj_id = splitted[0]
+                if not ref_obj_records.get(ref_obj_id):
+                    ref_record_repo = RecordObjectRepository(self.db_str, ref_obj_id)
+                    ref_record_ids = await ref_record_repo.find_all(projection={"_id": 1})
+                    ref_obj_records[ref_obj_id] = [id.get("_id") for id in ref_record_ids]
+                
                     
         cols.append("idx")
         df.insert(len(df.axes[1]), "idx", range(0, len(df)))
@@ -141,7 +151,9 @@ class InboundRule:
                 ref_obj_id = field_detail.get("ref_obj_id")
                 df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_ref_obj(x, field_detail, ref_obj_records.get(ref_obj_id), new_field_value)))]
                 df.replace({fd_id: new_field_value}, inplace=True)
-            # elif fd_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
+            elif fd_type == FieldObjectType.REFERENCE_FIELD_OBJECT:
+                df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_ref_field(x, field_detail, ref_obj_records, new_field_value)))]
+                df.replace({fd_id: new_field_value}, inplace=True)
         
         # avoid inserting empty record to db
         if len(df) == 0:
@@ -250,22 +262,15 @@ class InboundRule:
             new_field_value[field_value] = {"ref_to": field_value, "field_value": field_ids[0].get("field_id")}
         return True
     
-    # def check_ref_field(field_value, field_detail):
-    #     ref_field_obj_id = field_detail.get("ref_field_obj_id")  # obj_<name>_<id>.fd_<name>_<id>
-    #     splitted = ref_field_obj_id.split(".")
-    #     ref_obj_id, ref_fld_id = splitted[0], splitted[1]
-    #     # obj_id's record repo
-    #     ref_record_repo = RecordObjectRepository(self.db_str, ref_obj_id)
-    #     ref_record = await ref_record_repo.find_one_by_id(field_value)
-    #     if not ref_record:
-    #         raise RecordException(
-    #             f"Not found ref record '{field_value} in {ref_obj_id}"
-    #         )
+    def check_ref_field(field_value, field_detail, ref_obj_records, new_field_value):
+        ref_field_obj_id = field_detail.get("ref_field_obj_id")  # obj_<name>_<id>.fd_<name>_<id>
+        splitted = ref_field_obj_id.split(".")
+        ref_obj_id, ref_fld_id = splitted[0], splitted[1]
+        if field_value not in ref_obj_records.get(ref_obj_id):
+            return False
 
-    #     field_value = {
-    #         "ref_to": ref_record.get("_id"),
-    #         "field_value": ref_fld_id,
-    #     }
+        new_field_value[field_value] = {"ref_to": field_value, "field_value": ref_fld_id}
+        return True
     
     async def inbound_file_with_new_obj(self, current_user_id: str, config: FileObjectSchema, file: UploadFile = File(...)):
         mapping = json.loads(config.pop("map"))
