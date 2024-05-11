@@ -3,7 +3,7 @@ from fastapi import APIRouter, Body, Form, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from InboundRule.services import InboundRule
-from InboundRule.tasks import create_task
+from app.tasks import create_task
 from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
