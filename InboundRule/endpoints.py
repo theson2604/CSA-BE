@@ -15,6 +15,7 @@ router = APIRouter()
 def run_task(payload = Body(...)):
     value = payload["value"]
     task = create_task.delay(value)
+    print(task.id)
     return JSONResponse({"task_id": task.id})
 
 @router.get("/tasks/{task_id}")
