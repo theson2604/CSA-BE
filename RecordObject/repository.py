@@ -201,6 +201,9 @@ class RecordObjectRepository:
         pipeline = one_record_pipeline + parsing_ref_pipeline + scoring_order_pipeline
         return await self.record_coll.aggregate(pipeline).to_list(length=None)
 
+    async def find_one(self, query: dict = None, projection = None):
+        return await self.record_coll.find_one(query, projection)
+
     async def find_one_by_id(
         self, id: str, projection: dict = None
     ) -> RecordObjectModel:

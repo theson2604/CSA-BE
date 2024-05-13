@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field, validator, EmailStr
+from pydantic import BaseModel, Field, field_validator, EmailStr, model_validator
 
 class EmailSchema(BaseModel):
     email: EmailStr
@@ -8,27 +8,37 @@ class EmailSchema(BaseModel):
     mail_server: str = ""
     protocol: str = ""
 
-class SendMailSchema(BaseModel):
-    record: str = Field(..., alias="record_id")
+class MailSchema(BaseModel):
     template: str = Field(..., alias="template_id")
     object: str = Field(..., alias="object_id")
-    send_from: str = Field(..., max_length=100)
-    send_to: List[str] = Field(..., max_length=100)
+    email: str = Field(..., max_length=100)
 
-    @validator("send_to")
+    @field_validator("email")
     def validate_send_to(cls, v):
         if not v:
             raise ValueError("send_to cannot be empty")
-        for email in v:
-            if not email:
-                raise ValueError("email address cannot be empty")
+        # for email in v:
+        #     if not email:
+        #         raise ValueError("email address cannot be empty")
         return v
-    
-    # subject: str = Field(...)
-    # body: str = Field(...)
-    
+
+class SendMailSchema(MailSchema):
+    record: str = Field(..., alias="record_id")
+    send_to: List[str] = Field(..., max_length=100)
+
 class TemplateSchema(BaseModel):
     name: str = Field(..., max_length=100)
     object: str = Field(..., alias="object_id")
-    subject: str = Field(..., max_length=100)
+    subject: str = None
     body: str = Field(...)
+    type: str = Field(..., alias="type")
+
+    @model_validator("after")
+    def validate_type(self):
+        schema = self.model_dump()
+        template_type = schema.get("type")
+        if template_type not in ["send", "scan"]:
+            raise ValueError(f"type must be either 'send' or 'scan' not '{template_type}'")
+        elif template_type == "send" and not schema.get("subject"):
+            raise ValueError(f"missing email subject for template type '{template_type}'")
+        return self

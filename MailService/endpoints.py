@@ -2,7 +2,7 @@ from typing import List
 from typing_extensions import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
-from MailService.schemas import SendMailSchema, EmailSchema, TemplateSchema
+from MailService.schemas import SendMailSchema, EmailSchema, SendTemplateSchema, TemplateSchema
 from MailService.services import MailServices
 from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole

@@ -77,6 +77,11 @@ class FieldObjectRepository:
         )
 
         return await cursor.to_list(length=None)
+    
+    async def find_one_by_field_type(
+        self, obj_id: str, field_type: str
+    ) -> Union[FieldObjectBase]:
+        return await self.field_object_coll.find_one({"object_id": obj_id, })
 
     async def find_all(self, query: dict = {}) -> List[Union[FieldObjectBase]]:
         return await self.field_object_coll.find(query).to_list(length=None)
