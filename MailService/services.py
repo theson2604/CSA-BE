@@ -1,4 +1,5 @@
 import re
+from FieldObject.repository import FieldObjectRepository
 from MailService.models import EmailModel, TemplateModel
 from MailService.repository import MailServiceRepository
 from MailService.schemas import *
@@ -14,10 +15,13 @@ from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from Crypto import Random
 from email.mime.text import MIMEText
+from imap_tools import MailBox, AND
 import binascii
 import smtplib
 from dotenv import load_dotenv
 import os
+
+from app.common.utils import get_current_hcm_date
 
 load_dotenv()
 
@@ -27,6 +31,7 @@ class MailServices:
         self.template_repo = MailServiceRepository(db, DBCollections.EMAIL_TEMPLATE)
         self.root_repo = RootAdministratorRepository()
         self.obj_repo = ObjectRepository(db)
+        self.field_obj_repo = FieldObjectRepository(db)
         if coll != None:
             self.record_repo = RecordObjectRepository(db, coll)
 
@@ -73,7 +78,6 @@ class MailServices:
             idx = i
         return field_ids, positions
     
-    @staticmethod
     def field_id_to_field_value(mail_body, field_ids, record):
         for i in range(0, len(field_ids)):
             print("REPLACE")
@@ -151,22 +155,25 @@ class MailServices:
             raise HTTPBadRequest("Cannot find email")
         return self.decrypt_aes(result.get("key"), result.get("iv"), result.get("pwd"))
 
-    async def create_template(self, template: TemplateSchema) -> str:
+    async def create_template(self, template) -> str:
         template = template.model_dump()
         object_id = template.get("object")
         ref_obj = await self.obj_repo.find_one_by_id(object_id)
         if not ref_obj:
             raise HTTPBadRequest(f"Not found ref_obj {object_id}.")
 
-        record = TemplateModel(
-            _id = str(ObjectId()),
-            name = template.get("name"),
-            object_id = object_id,
-            subject = template.get("subject"),
-            body = template.get("body")
-        )
-        
-        await self.template_repo.insert_template(record.model_dump(by_alias=True))
+        type = template.get("type")
+        record = {
+            "_id": str(ObjectId()),
+            "name": template.get("name"),
+            "object_id": object_id,
+            "body": template.get("body"),
+            "type": type
+        }
+        if type == "send":
+            record["subject"] = template.get("subject")
+
+        await self.template_repo.insert_template(TemplateModel.model_validate(record).model_dump(by_alias=True))
         return True
     
     async def get_all_templates(self) -> List:
@@ -174,3 +181,41 @@ class MailServices:
     
     async def get_templates_by_object_id(self, object_id) -> List:
         return await self.template_repo.get_templates_by_object_id(object_id)
+    
+    async def scan_email(self, mail: MailSchema, admin_id: str):
+        mail = mail.model_dump()
+        email = mail.get("send_from")
+        mail_pwd = await self.get_mail_pwd(email, admin_id)
+
+        template = await self.template_repo.find_template_by_id(mail.get("template"))
+        if not template:
+            raise HTTPBadRequest(f"Can not find template")
+        
+        # object_id = mail.get("object_id") # object to 
+        # fd_email = self.field_obj_repo.find_one
+        
+        with MailBox("imap.gmail.com").login(email, mail_pwd, 'INBOX') as mailbox:
+            for msg in mailbox.fetch(AND(date_gte=get_current_hcm_date(), subject=r"re\*", seen=False)):
+                # create new record if mail body match template
+                if MailServices.match_template(template.get("body"), msg.txt):
+                    subject = msg.subject
+                    meta_data = subject[subject.index("[")+1 : subject.index("]")]
+                    obj_id, prefix_id = meta_data.split(".")
+                    ref_record_repo = RecordObjectRepository(self.db_str, obj_id)
+                    field_ids = list((await ref_record_repo.find_one()).keys())
+                    regex = r"fd_id_\d{3}"
+                    fd_id = None
+                    for field_id in field_ids:
+                        if re.match(regex, field_id):
+                            fd_id = field_id
+                    ref_record_id = (await ref_record_repo.find_one({fd_id: prefix_id})).get("_id")
+
+                    
+
+                    pass
+                print("SUBJECT: ", msg.subject)
+                print("BODY: ", msg.text)
+        return
+    
+    def match_template(template_body: str, mail_body: str) -> bool:
+        return True

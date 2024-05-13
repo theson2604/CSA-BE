@@ -201,6 +201,9 @@ class RecordObjectRepository:
         pipeline = one_record_pipeline + parsing_ref_pipeline + scoring_order_pipeline
         return await self.record_coll.aggregate(pipeline).to_list(length=None)
 
+    async def find_one(self, query: dict = None, projection = None):
+        return await self.record_coll.find_one(query, projection)
+
     async def find_one_by_id(
         self, id: str, projection: dict = None
     ) -> RecordObjectModel:
@@ -229,7 +232,7 @@ class RecordObjectRepository:
             result = await record_coll.update_many({"$or": id}, update)
         return result.matched_count
 
-    async def delete_one_by_id(self, id: str, scope: List[str]):
+    async def delete_one_by_id(self, id: str):
         # self.record_coll.find_one({"_id": id})
 
         pipeline = [
@@ -316,10 +319,8 @@ class RecordObjectRepository:
                 update = {"$set": new_value}
                 result = await self.update_many(filter, update, key)
             else:
-                from RecordObject.services import RecordObjectService
-                record_services = RecordObjectService(self.db_str, key, object_id)
                 if not ref_records.get(key):
                     raise HTTPBadRequest("NOOOOOOO")
-                result = [await record_services.delete_one_record(record.get("_id"), scope) for record in ref_records.get(key)]
+                result = [await self.delete_one_by_id(record.get("_id")) for record in ref_records.get(key)]
 
         return (await self.record_coll.delete_one({"_id": id})).deleted_count
