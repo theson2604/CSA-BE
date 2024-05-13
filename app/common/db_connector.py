@@ -2,9 +2,12 @@ from enum import Enum
 from typing_extensions import Annotated
 import motor.motor_asyncio
 from pydantic import BeforeValidator
-from app.settings.config import MongoConfig
+from dotenv import load_dotenv
+import os
 
-client = motor.motor_asyncio.AsyncIOMotorClient(MongoConfig.MONGO_URI)
+load_dotenv()
+
+client = motor.motor_asyncio.AsyncIOMotorClient(os.environ.get("MONGO_URI"))
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
