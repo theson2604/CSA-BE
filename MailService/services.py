@@ -41,7 +41,7 @@ class MailServices:
 
     def encrypt_aes(self, pwd: str):
         try:
-            key = Random.new().read(os.environ.get("KEY_BYTES"))
+            key = Random.new().read(int(os.environ.get("KEY_BYTES")))
             iv = Random.new().read(AES.block_size)
                                 
             iv_int = int(binascii.hexlify(iv), 16)

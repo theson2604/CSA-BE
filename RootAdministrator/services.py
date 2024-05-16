@@ -13,10 +13,6 @@ from abc import ABC, abstractmethod
 
 class IRootAdministratorServices(ABC):
     @abstractmethod
-    async def create_system_root(self, root: RootSchema):
-        raise NotImplementedError
-    
-    @abstractmethod
     async def create_system_admin(self, admin: AdminSchema) -> bool:
         raise NotImplementedError
     
