@@ -3,6 +3,7 @@ from bson import ObjectId
 
 from fastapi import HTTPException
 import pymongo
+from Action.repository import ActionRepository
 from Action.services import ActionService, ActionServiceException
 from FieldObject.repository import FieldObjectRepository
 from FieldObject.services import FieldObjectServiceException, FieldObjectService
@@ -21,6 +22,7 @@ class WorkflowService:
         # Repo
         self.repo = WorkflowRepository(db_str)
         self.obj_repo = ObjectRepository(db_str)
+        self.action_repo = ActionRepository(db_str)
         # Services
         self.action_service = ActionService(db_str)
         # self.field_obj_service = FieldObjectService(db_str)
@@ -58,6 +60,13 @@ class WorkflowService:
             if new_workflow_id:
                 await self.repo.delete_one_by_id(new_workflow_id)
             return HTTPBadRequest(str(e))
+        
+    async def delete_workflow_and_actions_by_id(self, id: str):
+        workflow = self.repo.find_one_by_id(id)
+        if not workflow:
+            raise HTTPBadRequest(f"Can not find Workflow by id {id}")
+        
+        return self.repo.delete_one_by_id(id), self.action_repo.delete_many_by_workflow_id(id)
 
     # async def get_all_objects_with_field_details(self) -> List[dict]:
     #     """

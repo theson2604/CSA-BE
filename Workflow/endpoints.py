@@ -47,6 +47,24 @@ async def create_workflow_with_actions(
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
         
+@router.delete("/delete-workflow-and-actions")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def delete_workflow_and_actions(
+    id: str,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        workflow_service = WorkflowService(db_str)
+        return await workflow_service.delete_workflow_and_actions_by_id(id)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
 # @router.post("/create-object-with-fields")
 # @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
 # async def create_object_with_fields(

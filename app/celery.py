@@ -10,8 +10,3 @@ celery.conf.result_backend = os.environ.get("CELERY_RESULT_BACKEND")
 #     "app.tasks.*": {"queue": "default"},
 #     "app.celery.*": {"queue": "default"},
 # }
-
-def get_active():
-    inspector = celery.control.inspect()
-    active_tasks = inspector.active()
-    return active_tasks

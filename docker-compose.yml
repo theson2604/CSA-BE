@@ -12,7 +12,7 @@ services:
       - .:/app/csa_be
     depends_on:
       - redis
-    restart: always
+    restart: always 
     networks:
       - csa
     expose:
@@ -21,7 +21,7 @@ services:
   celery_worker:
     container_name: celery-worker
     build: .
-    command: celery -A app.celery.celery worker --loglevel=INFO --concurrency=4
+    command: celery -A app.celery.celery worker -P gevent --loglevel=INFO --concurrency=1
     volumes:
       - .:/app/csa_be
     environment:

@@ -116,11 +116,12 @@ class ActionService:
             action_model.update({"sorting_id": action_dump.get("sorting_id")})
             return await self.repo.insert_one(action_model)
     
-    # async def get_all_fields_by_obj_id(self, object_id: str) -> List[Union[FieldObjectBase]]:
-    #     return await self.repo.find_all({"object_id": object_id})
+    async def delete_one_action_by_id(self, id: str) -> bool:
+        action = self.repo.find_one_by_id(id)
+        if not action:
+            raise HTTPBadRequest(f"Can not find Action by id {id}")
 
-    # async def delete_one_field_by_id(self, field_id: str) -> bool:
-    #     return await self.repo.delete_one_by_id(field_id)
+        return await self.repo.delete_one_by_id(id)
 
     # async def delete_all_fields_by_obj_id(self, object_id: str) -> bool:
     #     object = await self.obj_repo.find_one_by_id(object_id)

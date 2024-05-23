@@ -31,14 +31,19 @@ class ActionRepository:
     async def update_one_by_id(self, id: str, field: dict) -> int:
         result = await self.action_coll.update_one({"_id": id}, {"$set": field})
         return result.modified_count
+    
+    async def delete_one_by_id(self, id: str) -> bool:
+        return await self.action_coll.delete_one({"_id": id})
+    
+    async def find_one_by_id(self, id: str) -> Union[ActionBase]:
+        return await self.action_coll.find_one({"_id": id})
+    
+    async def delete_many_by_workflow_id(self, workflow_id: str):
+        return await self.action_coll.delete_many({"workflow_id": workflow_id})
 
     # async def update_many(self, fields: List[dict]):
     #     for field in fields:
     #         await self.update_one_by_id(field.pop("_id"), field)  # Have to check more
-
-    # async def find_one_by_id(self, id: str) -> Union[FieldObjectBase]:
-    #     # self.field_object_coll.
-    #     return await self.field_object_coll.find_one({"_id": id})
 
     # async def find_one_by_field_id_str(
     #     self, obj_id: str, fld_id: str

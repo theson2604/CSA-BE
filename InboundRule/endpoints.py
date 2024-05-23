@@ -6,12 +6,12 @@ from fastapi.responses import JSONResponse
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from InboundRule.services import InboundRule
 from MailService.schemas import MailSchema
-from app.tasks import create_task, add, division, test_scan_mail
+from app.tasks import create_task, add, division, test_query, test_scan_mail, test_call
 from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
 from app.dependencies.authentication import protected_route
-from app.celery import celery, get_active
+from app.celery import celery
 
 router = APIRouter()
 
@@ -58,13 +58,32 @@ async def send_mail(
             raise e
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
+        
+@router.post("/tasks/query")
+@protected_route([SystemUserRole.ADMINISTRATOR])
+async def send_mail(
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    payload = Body(...),
+    CURRENT_USER = None
+):
+    try:
+        db = CURRENT_USER.get("db")
+        obj = payload["obj"]
+        test_query.apply_async(args=(db, obj))
+        return True
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
 
 @router.post("/tasks/chain")
 def test_chain(payload = Body(...)):
     num = payload["num"]
-    task = group(create_task.s(7, 27), add.s(num, 11), create_task.s(3, 17), division.s(9, 0)).apply_async()
-    print("CHAIN: ", task)
-    return task.id
+    task_id = test_call(num)
+    print("CHAIN: ", task_id)
+    return task_id
 
 @router.post("/tasks")
 def run_task(payload = Body(...)):

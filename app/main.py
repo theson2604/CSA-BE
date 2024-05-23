@@ -17,9 +17,14 @@ import InboundRule.endpoints
 import Workflow.endpoints
 import Action.endpoints
 import os
+import platform
 from dotenv import load_dotenv
 
 load_dotenv()
+
+if platform.system() == 'Windows':
+    print("TRUE")
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 async def monitor_tasks():
     while True:
