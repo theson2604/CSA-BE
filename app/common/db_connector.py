@@ -18,6 +18,8 @@ class DBCollections(str, Enum):
     FIELD_OBJECT = "FieldObject"
     OBJECT = "Object"
     EMAIL_TEMPLATE = "EmailTemplate"
+    WORKFLOW = "Workflow"
+    ACTION = "Action"
 
 # Root Collections
 class RootCollections(str, Enum):

@@ -187,8 +187,14 @@ class MailServices:
         if not system_admin:
             raise HTTPBadRequest("Cannot find system admin by admin_id")
 
-        key, iv, ciphertext = self.encrypt_aes(email_obj.get("pwd"))
-
+        password = email_obj.get("pwd")
+        try:
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp_server:
+                smtp_server.login(address, password)
+        except smtplib.SMTPAuthenticationError:
+            raise HTTPBadRequest("Invalid email or password")
+        
+        key, iv, ciphertext = self.encrypt_aes(password)
         record = EmailModel(
             _id = str(ObjectId()),
             email = address,
