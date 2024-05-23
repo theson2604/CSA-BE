@@ -21,6 +21,9 @@ class FieldId(FieldObjectBase):
 class FieldText(FieldObjectBase):
     length: int = Field(..., gt=0, alias="length")
     
+class FieldFloat(FieldObjectBase):
+    step: float = Field(..., alias="step")
+    
 class FieldTextArea(FieldObjectBase):
     pass
     
@@ -32,6 +35,10 @@ class FieldSelect(FieldObjectBase):
     
 class FieldPhoneNumber(FieldObjectBase):
     country_code: str = Field(..., alias="country_code")
+
+class FieldDate(FieldObjectBase):
+    format: str = Field(..., alias="format")
+    separator: str = Field(..., alilas="separtor")
     
 class FieldReferenceObject(FieldObjectBase):
     display_value: str = Field(..., alias="display_value")

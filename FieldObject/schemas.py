@@ -13,6 +13,9 @@ class FieldObjectSchema(BaseModel):
     # Id
     prefix: Optional[str] = None
     
+    # Float
+    step: Optional[float] = None
+    
     # Text
     length: Optional[int] = None
     
@@ -21,6 +24,10 @@ class FieldObjectSchema(BaseModel):
     
     # Phone Number
     country_code: Optional[str] = None
+
+    # Date
+    format: Optional[str] = None
+    separator: Optional[str] = None
     
     # Reference Object / Field Object
     src: Optional[str] = None
@@ -36,6 +43,10 @@ class FieldObjectSchema(BaseModel):
         elif field_type == FieldObjectType.TEXT:
             if not schema.get("length"):
                 raise ValueError(f"missing required key 'length' for field_type {FieldObjectType.TEXT}.")
+            
+        elif field_type == FieldObjectType.FLOAT:
+            if not schema.get("step"):
+                raise ValueError(f"missing required key 'step' for field_type {FieldObjectType.FLOAT}.")
             
         elif field_type == FieldObjectType.EMAIL:
             pass
@@ -56,6 +67,17 @@ class FieldObjectSchema(BaseModel):
             match = re.search(regex_str, country_code)
             if not match:
                 raise ValueError(f"invalid 'country_code' {country_code}. It must be {regex_str}.")
+            
+        elif field_type == FieldObjectType.DATE:
+            separator = schema.get("separator")
+            format = schema.get("format")
+            format = format.replace(separator, " ")
+            if separator not in ["-", "/", " "]:
+                raise ValueError(f"Separator must be '-' or '/' or ' ' not {separator}") 
+            
+            base_formats = ["YYYY MM DD", "DD MM YYYY", "MM DD YYYY"]
+            if format not in base_formats:
+                raise ValueError(f"Format be must be one of {base_formats}")
         
         elif field_type == FieldObjectType.REFERENCE_OBJECT:
             src = schema.get("src")

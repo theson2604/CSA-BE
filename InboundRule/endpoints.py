@@ -1,15 +1,31 @@
-from typing import List
-from typing_extensions import Annotated
-from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, File, Body
+from celery.result import AsyncResult
+from fastapi import APIRouter, Body, Form, HTTPException, UploadFile, File
+from fastapi.responses import JSONResponse
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
-from InboundRule.schemas import FileObjectSchema
 from InboundRule.services import InboundRule
+from app.tasks import create_task
 from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
 from app.dependencies.authentication import protected_route
 
 router = APIRouter()
+
+@router.post("/tasks", status_code=201)
+def run_task(payload = Body(...)):
+    value = payload["value"]
+    task = create_task.delay(value)
+    return JSONResponse({"task_id": task.id})
+
+@router.get("/tasks/{task_id}")
+def get_status(task_id):
+    task_result = AsyncResult(task_id)
+    result = {
+        "task_id": task_id,
+        "task_status": task_result.status,
+        "task_result": task_result.result
+    }
+    return JSONResponse(result)
 
 @router.post("/inbound-file")
 @protected_route([SystemUserRole.ADMINISTRATOR])
@@ -42,7 +58,11 @@ async def inbound_file(
 async def inbound_file(
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
-    config: FileObjectSchema = Depends(),
+    # config: FileObjectSchema = Depends(),
+    obj_name: str = Form(),
+    group_obj_id: str = Form(),
+    fields: str = Form(),
+    map: str = Form(),
     file: UploadFile = File(...),
     CURRENT_USER = None
 ):
@@ -50,6 +70,12 @@ async def inbound_file(
         db, user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
         inbound_rule_service = InboundRule(db)
         # inbound_rule_service = InboundRule(db, object_id)
+        config = {
+            "obj_name": obj_name,
+            "group_obj_id": group_obj_id,
+            "fields": fields,
+            "map": map
+        }
         return await inbound_rule_service.inbound_file_with_new_obj(user_id, config, file)
     except Exception as e:
         if isinstance(e, HTTPException):

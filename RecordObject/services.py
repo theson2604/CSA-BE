@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import List
 import asyncio
 import re
@@ -50,6 +51,11 @@ class RecordObjectService:
                     )
                 if len(field_value) > length:
                     raise RecordException(f"len(field_value) must be < {length}")
+                
+            elif field_type == FieldObjectType.FLOAT:
+                step = field_detail.get("step")
+                if field_value % float(step) != 0:
+                    raise RecordException(f"field_value must be divisible by step.")
 
             elif field_type == FieldObjectType.EMAIL:
                 email_regex = (
@@ -76,6 +82,36 @@ class RecordObjectService:
                 if field_value not in options:
                     raise RecordException(
                         f"field_value '{field_value}' of type {field_type} must exist in options {options}"
+                    )
+                
+            elif field_type == FieldObjectType.DATE:
+                format = field_detail.get("format")
+                separator = field_detail.get("separator")
+                if separator not in field_value:
+                    raise RecordException(
+                        f"separtor of date {field_value} is not valid."
+                    )
+
+                date_regex = {
+                    "DD MM YYYY": "^\d{2} \d{2} \d{4}$",
+                    "MM DD YYYY": "^\d{2} \d{2} \d{4}$",
+                    "YYYY MM DD": "^\d{4} \d{2} \d{2}$"
+                }
+                if not re.match(date_regex.get(format), field_value.replace(separator, " ")):
+                    raise RecordException(
+                        f"date {field_value} format is not valid."
+                    )
+
+                try:
+                    if format == "DD MM YYYY":
+                        bool(datetime.strptime(field_value, f"%d{separator}%m{separator}%Y"))
+                    elif format == "MM DD YYYY":
+                        bool(datetime.strptime(field_value, f"%m{separator}%d{separator}%Y"))
+                    else:
+                        bool(datetime.strptime(field_value, f"%Y{separator}%m{separator}%d"))
+                except ValueError:
+                    raise RecordException(
+                        f"date {field_value} is not valid with format {format}."
                     )
 
             elif field_type == FieldObjectType.REFERENCE_OBJECT:
@@ -116,6 +152,7 @@ class RecordObjectService:
             record.update({field_id: field_value})
 
         return record
+    
 
     async def create_record(
         self, record: RecordObjectSchema, current_user_id: str
@@ -163,8 +200,8 @@ class RecordObjectService:
         if records and isinstance(records, list) and len(records) == 1:
             records = records[0]
             if isinstance(records, dict):
-                total = records.get("total_records", [{"total": 0}])
-                records.update({"total_records": total[0].get("total")})
+                total = records.get("total_records")
+                records.update({"total_records": total[0].get("total") if total else 0})
                 return records
 
         return []
@@ -180,20 +217,15 @@ class RecordObjectService:
         return await self.record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id)
 
     async def create_record_from_file(
-        self, current_user_id: str, row, field_ids: List[str], field_details: dict, field_id_detail: dict
+        self, current_user_id: str, row, fd_ids: List[str], field_details: dict, field_id_detail: dict
     ) -> RecordObjectModel:
 
         obj_id = row["object_id"]
         inserted_record = {"object_id": obj_id}
         
-        for field_id in field_ids:
+        for field_id in fd_ids:
             field_value = row[field_id]
             field_detail = field_details.get(field_id)
-            if field_detail == None:
-                field_detail = await self.field_obj_repo.find_one_by_field_id_str(
-                    obj_id, field_id
-                )
-                field_details[field_id] = field_detail
             field_type = field_detail.get("field_type")
             
             if field_type == FieldObjectType.TEXT:
@@ -201,6 +233,11 @@ class RecordObjectService:
                 if not isinstance(field_value, str):
                     return None
                 if len(field_value) > length:
+                    return None
+                
+            elif field_type == FieldObjectType.FLOAT:
+                step = field_detail.get("step")
+                if field_value % float(step) != 0:
                     return None
 
             elif field_type == FieldObjectType.EMAIL:
@@ -256,8 +293,8 @@ class RecordObjectService:
             inserted_record[field_id] = field_value
         
         field_id, prefix, counter = field_id_detail.get("field_id"), field_id_detail.get("prefix"), field_id_detail.get("counter")
-        id = counter.get("seq") + 1
-        field_id_detail["counter"]["seq"] = id
+        seq = await generate_next_record_id(self.db_str, obj_id)
+        id = seq.get("seq")
         concat_prefix_id = f"{prefix}{id}"
         
         await self.record_repo.create_indexing([(field_id, pymongo.ASCENDING, True)])
@@ -272,8 +309,12 @@ class RecordObjectService:
                 "modified_by": current_user_id,
             }
         )
-        
-        return RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True)
+
+        asyncio.create_task(self.insert_record(inserted_record))
+        return True
+    
+    async def insert_record(self, inserted_record):
+        await self.record_repo.insert_one(RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True))
 
     async def update_one_record(self, record: dict, current_user_id: str) -> bool:
         record_id = record.pop("record_id")
@@ -293,3 +334,7 @@ class RecordObjectService:
         })
 
         return await self.record_repo.update_one_by_id(record_id, updated_record)
+    
+
+    async def delete_one_record(self):
+        pass

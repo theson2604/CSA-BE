@@ -33,6 +33,8 @@ class ObjectService:
             raise HTTPBadRequest(f"Cannot found Group Object by {group_obj_id}")
         
         obj_name = obj.get("obj_name")
+        # Check Object's has alread existed
+        # -------------------HERE-------------------
         group_obj_id = group.get("_id") if group.get("_id") else group.get("id")
         last_index_in_group = await self.repo.count_all({"group_obj_id": group_obj_id})
         
@@ -48,7 +50,7 @@ class ObjectService:
             created_by = current_user_id
         )
         
-        asyncio.create_task(self.repo.create_indexing([(obj_id, pymongo.ASCENDING, True)]))
+        asyncio.create_task(self.repo.create_indexing([("obj_id", pymongo.ASCENDING, True)]))
         
         return await self.repo.insert_one(obj_model.model_dump(by_alias=True))
 

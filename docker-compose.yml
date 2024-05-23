@@ -1,8 +1,74 @@
 version: "3"
 
 services:
+  be:
+    build: .
+    image: csa-be:latest
+    container_name: csa-be-servc
+    command: sh -c "uvicorn app.main:app --reload --port=8000 --host=0.0.0.0"
+    ports:
+      - 8000:8000
+    volumes:
+      - .:/app/csa_be
+    depends_on:
+      - redis
+    restart: always
+    networks:
+      - csa
+    expose:
+      - "8000"
+  
+  celery_worker:
+    container_name: celery-worker
+    build: .
+    command: celery -A app.celery.celery worker --loglevel=INFO --concurrency=4
+    volumes:
+      - .:/app/csa_be
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+    depends_on:
+      - be
+      - redis
+    restart: always
+    networks:
+      - csa
+  
+  flower:
+    container_name: flower
+    build: .
+    command: celery -A app.celery.celery flower --port=5555
+    ports:
+      - 5556:5555
+    volumes:
+      - .:/app/csa_be
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+    depends_on:
+      - be
+      - redis
+      - celery_worker
+    restart: always
+    networks:
+      - csa
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis:/usr/share/redis/data
+    restart: always
+    networks:
+      - csa
+    expose:
+      - "6379"
+    
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    container_name: els-setup
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
     user: "0"
@@ -42,12 +108,15 @@ services:
       interval: 1s
       timeout: 5s
       retries: 120
+    networks:
+      - csa
 
   es01:
     depends_on:
       setup:
         condition: service_healthy
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    container_name: els-es01
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - esdata01:/usr/share/elasticsearch/data
@@ -84,38 +153,49 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+    networks:
+      - csa
 
-  kibana:
-    depends_on:
-      es01:
-        condition: service_healthy
-    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
-    volumes:
-      - certs:/usr/share/kibana/config/certs
-      - kibanadata:/usr/share/kibana/data
-    ports:
-      - ${KIBANA_PORT}:5601
-    environment:
-      - SERVERNAME=kibana
-      - ELASTICSEARCH_HOSTS=https://es01:9200
-      - ELASTICSEARCH_USERNAME=kibana_system
-      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
-      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
-    mem_limit: ${MEM_LIMIT}
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
-        ]
-      interval: 10s
-      timeout: 10s
-      retries: 120
+  # kibana:
+  #   depends_on:
+  #     es01:
+  #       condition: service_healthy
+  #   image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+  #   container_name: els-kibana
+  #   volumes:
+  #     - certs:/usr/share/kibana/config/certs
+  #     - kibanadata:/usr/share/kibana/data
+  #   ports:
+  #     - ${KIBANA_PORT}:5601
+  #   environment:
+  #     - SERVERNAME=kibana
+  #     - ELASTICSEARCH_HOSTS=https://es01:9200
+  #     - ELASTICSEARCH_USERNAME=kibana_system
+  #     - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+  #     - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+  #   mem_limit: ${MEM_LIMIT}
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD-SHELL",
+  #         "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+  #       ]
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 120
+  #   networks:
+  #     - csa
 
 volumes:
   certs:
     driver: local
   esdata01:
     driver: local
-  kibanadata:
+  # kibanadata:
+  #   driver: local
+  redis:
     driver: local
+
+networks:
+  csa:
+    driver: bridge
