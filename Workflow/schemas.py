@@ -15,7 +15,7 @@ class WorkflowSchema(BaseModel):
     def validate_workflow_schema(self):
         schema = self.model_dump()
         trigger = schema.get("trigger")
-        if trigger not in ["create", "update", "manual"]:
+        if trigger not in ["create", "update", "manual", "scan"]:
             raise ValueError(f"trigger must be either 'create' or 'update' or 'manual' not '{trigger}'")
         if trigger in ["create", "update"] and not schema.get("conditions") :
             raise ValueError(f"conditions can not be empty with trigger type '{trigger}'")

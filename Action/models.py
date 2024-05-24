@@ -18,7 +18,7 @@ class ActionBase(BaseModel):
 
 class ActionSend(ActionBase):
     from_: str = Field(..., alias="from")
-    to: str = Field(..., alias="to")
+    to: List[str] = Field(..., alias="to")
     template_id: str = Field(..., alias="template_id")
     
 class ActionScan(ActionBase):
@@ -26,7 +26,8 @@ class ActionScan(ActionBase):
     template_id: str = Field(..., alias="template_id")
     
 class ActionRecord(ActionBase):
-    option: str = Field(..., alias="options")
+    option: str = Field(..., alias="option")
+    field_contents: List[str] = Field(..., alias="field_contents")
     field_configs: List[Dict[str, str]]
     
 # class ActionUpdate(ActionBase):

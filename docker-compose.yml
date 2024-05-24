@@ -21,7 +21,7 @@ services:
   celery_worker:
     container_name: celery-worker
     build: .
-    command: celery -A app.celery.celery worker -P gevent --loglevel=INFO --concurrency=1
+    command: celery -A app.celery.celery worker --loglevel=INFO --concurrency=4
     volumes:
       - .:/app/csa_be
     environment:

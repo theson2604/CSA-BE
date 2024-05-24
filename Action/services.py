@@ -31,7 +31,7 @@ class ActionService:
             raise HTTPBadRequest(f"System Email {from_} is not registered")
         
         if email.get("admin_id") != current_user_id:
-            raise HTTPBadRequest(f"System Email {from_} can not be used")
+            raise HTTPBadRequest(f"System Email {from_} can not be used by current credential")
 
     async def validate_and_get_all_action_models(self, workflow_id: str, actions: List[ActionSchema], current_user_id: str) -> List[ActionBase]:
         try:
@@ -59,6 +59,10 @@ class ActionService:
                 action_type = action.get("type")
                 if action_type is ActionType.SEND:
                     from_ = action.get("from_")
+                    to = action.get("to")
+                    if len(to) == 0:
+                        raise HTTPBadRequest(f"field 'to' of action type '{action_type}' can not be empty.")
+
                     self.validate_email(from_, current_user_id)
                     action_base.update({
                         "from_": from_,
@@ -120,8 +124,12 @@ class ActionService:
         action = self.repo.find_one_by_id(id)
         if not action:
             raise HTTPBadRequest(f"Can not find Action by id {id}")
-
+        
         return await self.repo.delete_one_by_id(id)
+    
+
+    def activate_send():
+        pass
 
     # async def delete_all_fields_by_obj_id(self, object_id: str) -> bool:
     #     object = await self.obj_repo.find_one_by_id(object_id)

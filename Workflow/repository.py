@@ -62,31 +62,37 @@ class WorkflowRepository:
         
     #     return await self.obj_coll.aggregate(pipeline).to_list(length=None)
 
-    # async def get_object_with_all_fields(self, obj_id: str) -> Optional[dict]:
-    #     """
-    #     :Params:
-    #     - obj_id: _id
-    #     """
-    #     pipeline = [
-    #         {"$match": {"_id": obj_id}},
-    #         {
-    #             "$lookup": {
-    #                 "from": DBCollections.FIELD_OBJECT.value,
-    #                 "localField": "_id",
-    #                 "foreignField": "object_id",
-    #                 "as": "fields",
-    #             }
-    #         },
-    #         {
-    #             "$set": {
-    #                 "fields": {
-    #                     "$sortArray": {"input": "$fields", "sortBy": {"sorting_id": 1}}
-    #                 }
-    #             }
-    #         },
-    #     ]
-    #     async for doc in self.obj_coll.aggregate(pipeline):
-    #         return doc
+    async def get_workflow_with_all_actions(self, workflow_id: str) -> Optional[dict]:
+        """
+        :Params:
+        - obj_id: _id
+        """
+        pipeline = [
+            {"$match": {"_id": workflow_id}},
+            {
+                "$lookup": {
+                    "from": DBCollections.ACTION.value,
+                    "localField": "_id",
+                    "foreignField": "workflow_id",
+                    "as": "actions",
+                }
+            },
+            {
+                "$set": {
+                    "actions": {
+                        "$sortArray": {"input": "$actions", "sortBy": {"sorting_id": 1}}
+                    }
+                }
+            },
+            {
+                "$project": {
+                    "_id": 1,
+                    "actions": 1
+                }
+            }
+        ]
+        async for doc in self.workflow_coll.aggregate(pipeline):
+            return doc
 
     # async def count_all(self, query: dict = {}) -> int:
     #     return await self.obj_coll.count_documents(query)

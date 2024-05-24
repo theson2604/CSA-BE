@@ -14,7 +14,7 @@ class ActionSchema(BaseModel):
     sorting_id: Optional[int] = None
     
     # Send
-    to: Optional[str] = None
+    to: Optional[List[str]] = None
     
     # Scan
     time: Optional[str] = None
@@ -25,6 +25,7 @@ class ActionSchema(BaseModel):
     
     # Create/Update
     option: Optional[str] = None # True if use scan else False
+    field_contents: Optional[List[str]] = None
     field_configs: Optional[List[Dict[str, str]]] = None
 
     @model_validator(mode='after')
