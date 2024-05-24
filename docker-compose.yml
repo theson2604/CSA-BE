@@ -10,49 +10,18 @@ services:
       - 8000:8000
     volumes:
       - .:/app/csa_be
+      - certs:/usr/share/elasticsearch/config/certs
+    environment:
+      - CERT_FILE=/usr/share/elasticsearch/config/certs/ca/ca.crt
     depends_on:
       - redis
-    restart: always 
+      - es01
+    restart: always
     networks:
       - csa
     expose:
       - "8000"
   
-  celery_worker:
-    container_name: celery-worker
-    build: .
-    command: celery -A app.celery.celery worker --loglevel=INFO --concurrency=4
-    volumes:
-      - .:/app/csa_be
-    environment:
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
-    depends_on:
-      - be
-      - redis
-    restart: always
-    networks:
-      - csa
-  
-  flower:
-    container_name: flower
-    build: .
-    command: celery -A app.celery.celery flower --port=5555
-    ports:
-      - 5556:5555
-    volumes:
-      - .:/app/csa_be
-    environment:
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
-    depends_on:
-      - be
-      - redis
-      - celery_worker
-    restart: always
-    networks:
-      - csa
-
   redis:
     image: redis:latest
     container_name: redis
@@ -156,6 +125,41 @@ services:
     networks:
       - csa
 
+  celery_worker:
+    container_name: celery-worker
+    build: .
+    command: celery -A app.celery.celery worker --loglevel=INFO --concurrency=4
+    volumes:
+      - .:/app/csa_be
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+    depends_on:
+      - be
+      - redis
+    restart: always
+    networks:
+      - csa
+  
+  flower:
+    container_name: flower
+    build: .
+    command: celery -A app.celery.celery flower --port=5555
+    ports:
+      - 5556:5555
+    volumes:
+      - .:/app/csa_be
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+    depends_on:
+      - be
+      - redis
+      - celery_worker
+    restart: always
+    networks:
+      - csa
+
   # kibana:
   #   depends_on:
   #     es01:
@@ -191,8 +195,8 @@ volumes:
     driver: local
   esdata01:
     driver: local
-  kibanadata:
-    driver: local
+  # kibanadata:
+  #   driver: local
   redis:
     driver: local
 
