@@ -169,10 +169,12 @@ class MailServices:
         return contents
     
     def get_new_body_gmail(msg):
-        matching_string_obj = re.search(r"\w+\s+\w+[,]\s+\w+\s+\d+[,]\s+\d+\s+\w+\s+\d+[:]\d+\s+\w+.*", msg)
+        matching_string_obj = re.search(r"\w+\s+\w+[,]\s+\w+\s+\d+[,]\s+\d+\s+\w+\s+\d+[:]\d+.*", msg)
         if matching_string_obj:
             body_list = msg.split(matching_string_obj.group())
             body = body_list[0] # index 0 is new body, index 1 is old body
+        if not body:
+            raise HTTPBadRequest("FAIL TO GET NEW BODY")
         return body
 
     async def create_email(self, email: EmailSchema):
@@ -207,8 +209,8 @@ class MailServices:
         await self.repo.insert_email(record.model_dump(by_alias=True))
         return True
     
-    async def send_one(self, mail: SendMailSchema, admin_id: str) -> str:
-        mail = mail.model_dump()
+    async def send_one(self, mail: SendMailSchema, admin_id: str, record: dict) -> str:
+        # mail = mail.model_dump()
         email = mail.get("email")
         mail_pwd = await self.get_mail_pwd(email, admin_id)
 
@@ -224,7 +226,7 @@ class MailServices:
             raise HTTPBadRequest(f"Can not find object")
             
         obj_id = object.get("obj_id")
-        record = (await self.record_repo.get_one_by_id_with_parsing_ref_detail(mail.get("record"), object_id))[0]
+        # record = (await self.record_repo.get_one_by_id_with_parsing_ref_detail(mail.get("record"), object_id))[0]
         fd_id = (await self.field_obj_repo.find_one_by_field_type(object_id, "id")).get("field_id")
 
         """
@@ -288,6 +290,7 @@ class MailServices:
         return await self.template_repo.get_templates_by_object_id(object_id)
     
     async def scan_email(self, mail: MailSchema, admin_id: str):
+        print("START SCAN")
         # mail = mail.model_dump()
         email = mail.get("email")
         mail_pwd = await self.get_mail_pwd(email, admin_id)
@@ -301,6 +304,7 @@ class MailServices:
         # bodies = MailServices.get_bodies(template.get("body"))
         with MailBox("imap.gmail.com").login(email, mail_pwd, 'INBOX') as mailbox:
             for msg in mailbox.fetch(AND(date_gte=get_current_hcm_date(), subject=r"re\*", seen=False), mark_seen=False):
+                print("GOT MESS", msg.text)
                 content = {}
                 text = MailServices.get_new_body_gmail(msg.text)
                 content["from"] = msg.from_

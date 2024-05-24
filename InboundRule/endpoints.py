@@ -6,7 +6,8 @@ from fastapi.responses import JSONResponse
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from InboundRule.services import InboundRule
 from MailService.schemas import MailSchema
-from app.tasks import create_task, add, division, test_query, test_scan_mail, test_call
+from Workflow.repository import WorkflowRepository
+from app.tasks import activate_create, activate_send, call_send, create_task, add, division, test_query, test_scan_mail, test_call
 from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
@@ -14,6 +15,42 @@ from app.dependencies.authentication import protected_route
 from app.celery import celery
 
 router = APIRouter()
+
+@router.post("/tasks/workflow")
+@protected_route([SystemUserRole.ADMINISTRATOR])
+async def activate_workflow(
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    workflow = Body(...),
+    CURRENT_USER = None
+):
+    try:
+        id = workflow["id"]
+        db, admin_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        workflow_repo = WorkflowRepository(db)
+        workflow = workflow_repo.find_one_by_id(id)
+        if not workflow:
+            raise HTTPBadRequest(f"Can not find workflow by id {id}")
+        
+        workflow_with_actions = await workflow_repo.get_workflow_with_all_actions(id)
+        action = workflow_with_actions.get("actions")[0]
+
+        type = action.get("type")
+        if type == "send":
+            task = activate_send.delay(db, action, admin_id)
+        elif type == "create":
+            task =  activate_create.delay(db, action, admin_id, [])
+        # obj_repo = ObjectRepository(db)
+        # obj = await obj_repo.find_one_by_id(object_id)
+        # if not obj:
+        #     raise HTTPBadRequest(f"Not found {object_id} object by _id")
+
+        return task.id
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
 
 @router.post("/tasks/get-task-ids")
 def get_ids():

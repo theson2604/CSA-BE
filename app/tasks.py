@@ -1,7 +1,10 @@
 import asyncio
+from typing import List
+from Action.repository import ActionRepository
 from MailService.schemas import MailSchema
 from MailService.services import MailServices
 from Object.repository import ObjectRepository
+from RecordObject.services import RecordObjectService
 from app.common.db_connector import DBCollections, client
 from celery import chain, group, shared_task, Celery
 from RecordObject.repository import RecordObjectRepository
@@ -36,17 +39,18 @@ def add(self, a, t):
 def test_scan_mail(db: str, mail: dict, obj_id: str, admin_id: str):
     mail_service = MailServices(db, obj_id)
     # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
-    result = async_to_sync(mail_service.scan_email)(mail, admin_id)
+    result = asyncio.get_event_loop().run_until_complete(mail_service.scan_email(mail, admin_id))
 
     return result
 
 
 @clr.task()
 def test_query(db: str, obj_id: str):
+    time.sleep(5)
     record_repo = RecordObjectRepository(db, obj_id)
     # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
-    async_find_one_by_id = async_to_sync(record_repo.find_one_by_id)
-    result = async_find_one_by_id(id="6621547dd478411eb0ad46a6")
+    result = asyncio.get_event_loop().run_until_complete(record_repo.find_one_by_id(id="6621547dd478411eb0ad46a6"))
+    # result = async_find_one_by_id(id="6621547dd478411eb0ad46a6")
 
     return result
 
@@ -65,29 +69,79 @@ def activate_workflow(self, a, t):
     time.sleep(t)
     return a+1
 
-@clr.task()
-def activate_send(db: str, mail: dict, obj_id: str, admin_id: str):
-    mail_service = MailServices(db, obj_id)
-    # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
-    result = async_to_sync(mail_service.scan_email)(mail, admin_id)
 
+# DONE SEND
 @clr.task()
-def activate_scan(db: str, mail: dict, obj_id: str, admin_id: str):
-    mail_service = MailServices(db, obj_id)
-    # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
-    result = async_to_sync(mail_service.scan_email)(mail, admin_id)
+def activate_send(db: str, action: dict, admin_id: str):
+    # action_repo = ActionRepository(db)
+    # action = asyncio.get_event_loop().run_until_complete(action_repo.find_one_by_id(action_id))
+    object_id = action.get("object_id")
+    obj_repo = ObjectRepository(db)
+    obj = asyncio.get_event_loop().run_until_complete(obj_repo.find_one_by_id(object_id))
+    obj_id = obj.get("obj_id")
 
-@clr.task()
-def activate_create(db: str, mail: dict, obj_id: str, admin_id: str):
+    record_repo = RecordObjectRepository(db, obj_id)
+    records = asyncio.get_event_loop().run_until_complete(record_repo.get_all_records())
     mail_service = MailServices(db, obj_id)
-    # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
-    result = async_to_sync(mail_service.scan_email)(mail, admin_id)
+    field_email = action.get("to")
+    mail = {
+        "email": action.get("from"),
+        "template": action.get("template_id"),
+        "object": action.get("object_id")
+    }
+    results = []
 
+    for record in records:
+        mail["send_to"] = record.get(field_email)
+
+        # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
+        result = asyncio.get_event_loop().run_until_complete(mail_service.send_one(mail, admin_id, record))
+        results.append(result)
+
+    return len(results)
+
+
+# LATER
+# @clr.task()
+# def activate_scan(db: str, mail: dict, obj_id: str, admin_id: str):
+#     mail_service = MailServices(db, obj_id)
+#     # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
+#     result = async_to_sync(mail_service.scan_email)(mail, admin_id)
+
+
+# TODO
 @clr.task()
-def activate_update(db: str, mail: dict, obj_id: str, admin_id: str):
+def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
+    object_id = action.get("object_id")
+    obj_repo = ObjectRepository(db)
+    obj = asyncio.get_event_loop().run_until_complete(obj_repo.find_one_by_id(object_id))
+    obj_id = obj.get("obj_id")
+    record = {
+        "object_id": object_id
+    }
+    for field_config in action.get("field_configs"):
+        record.update(field_config)
+    record_service = RecordObjectService(db, obj_id, object_id)
+
+    results = []
+    if action.get("option") == "no":
+        results = asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))
+    else:
+        for content in contents:
+            for field in action.get("field_contents"):
+                record[field] = content
+
+            result = asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))
+            results.append(result)
+
+    return len(results)
+
+
+# TODO
+@clr.task()
+def activate_update(db: str, mail: dict, obj_id: str, user_id: str):
     mail_service = MailServices(db, obj_id)
-    # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
-    result = async_to_sync(mail_service.scan_email)(mail, admin_id)
+    result = async_to_sync(mail_service.scan_email)(mail, user_id)
 
 async def test_queyr():
     # db = client.get_database(db_str)
@@ -104,7 +158,12 @@ def test_call(num: int):
 
     return task.id
 
-def call_(num: int):
+def call_workflow(num: int, workflow_id: str):
     task = group(create_task.s(7, 27), add.s(num, 11), create_task.s(3, 17), division.s(9, 0)).apply_async()
+
+    return task.id
+
+def call_send(db: str, action: dict, admin_id: str):
+    task = activate_send.delay(db, action, admin_id)
 
     return task.id

@@ -213,6 +213,13 @@ class RecordObjectRepository:
         self, query: dict = {}, projection: dict = None
     ) -> List[RecordObjectModel]:
         return await self.record_coll.find(query, projection).to_list(length=None)
+    
+    async def get_all_records(self) -> List[RecordObjectModel]:
+        cursor = self.record_coll.find({})
+        records = []
+        async for record in cursor:
+            records.append(record)
+        return records
 
     async def count_all(self, query: dict = {}) -> int:
         return await self.record_coll.count_documents(query)
