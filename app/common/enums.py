@@ -4,6 +4,7 @@ class SystemUserRole(str, Enum):
     ROOT = 'root'
     ADMINISTRATOR = 'admin'
     USER = 'user'
+    DATASCIENTIST = 'data_scientist'
 
 class FieldObjectType(str, Enum):
     ID = 'id'
