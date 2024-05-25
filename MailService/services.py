@@ -83,8 +83,9 @@ class MailServices:
             field_id = field_ids[i]
             if field_id[0] != "f":
                 content = (await self.template_repo.find_template_by_id(field_id)).get("body")
-                print(content)
+                # print(content)
             else: content = record.get(field_id)
+            if not content: content = ""
             mail_body = mail_body.replace(f"@{field_id}", content)
         return mail_body
     

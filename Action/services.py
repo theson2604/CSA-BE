@@ -6,7 +6,6 @@ from Action.schemas import ActionSchema
 from Action.models import *
 
 from FieldObject.schemas import FieldObjectSchema, UpdateFieldObjectSchema
-from InboundRule.repository import MailServiceRepository
 from Object.repository import ObjectRepository
 from Workflow.repository import WorkflowRepository
 from app.common.enums import ActionType
@@ -20,13 +19,15 @@ class ActionService:
     def __init__(self, db_str: str):
         self.repo = ActionRepository(db_str)
         self.object_repo = ObjectRepository(db_str)
-        self.mail_repo = MailServiceRepository(db_str)
+        # self.mail_repo = MailServiceRepository(db_str)
         self.workflow_repo = WorkflowRepository(db_str)
 
         self.db_str = db_str
 
     async def validate_email(self, from_: str, current_user_id: str):
-        email = self.mail_repo.find_email({"email": from_})
+        from InboundRule.repository import MailServiceRepository
+        mail_repo = MailServiceRepository(self.db_str)
+        email = mail_repo.find_email({"email": from_})
         if not email:
             raise HTTPBadRequest(f"System Email {from_} is not registered")
         
@@ -84,7 +85,7 @@ class ActionService:
                 elif action_type in [ActionType.CREATE, ActionType.UPDATE]:
                     action_base.update({
                         "option": action.get("option"),
-                        "field_contents": action.get("field_contents"),
+                        "field_contents": action.get("field_contents") if  action.get("field_contents") else [],
                         "field_configs": action.get("field_configs")
                     })
                     list_actions.append(ActionRecord.model_validate(action_base).model_dump(by_alias=True))

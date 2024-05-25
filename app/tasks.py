@@ -152,6 +152,10 @@ def activate_update(db: str, action: dict, user_id: str, contents: List[str], re
     result = asyncio.get_event_loop().run_until_complete(record_service.update_one_record(record, user_id))
     return result
 
+@clr.task()
+def activate_inbound():
+    pass
+
 
 def test_call(num: int):
     task = group(create_task.s(7, 27), add.s(num, 11), create_task.s(3, 17), division.s(9, 0)).apply_async()

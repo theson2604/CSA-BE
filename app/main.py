@@ -29,7 +29,6 @@ if platform.system() == 'Windows':
 async def monitor_tasks():
     while True:
         tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
-        # print("TASKKSSSSSS",tasks_info)
         await asyncio.sleep(1)
         for task_id in tasks_info[list(tasks_info.keys())[0]]:
             result = AsyncResult(task_id["id"])
