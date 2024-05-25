@@ -4,16 +4,13 @@ from Action.repository import ActionRepository
 from MailService.schemas import MailSchema
 from MailService.services import MailServices
 from Object.repository import ObjectRepository
-from RecordObject.services import RecordObjectService
 from app.common.db_connector import DBCollections, client
 from celery import chain, group, shared_task, Celery
 from RecordObject.repository import RecordObjectRepository
-from asgiref.sync import async_to_sync
+from RecordObject.services import RecordObjectService
 from app.celery import celery as clr
 import time
-import celery
 
-from app.decorator import async_task
 
 def print_info(self):
     print(f"{self.name} has parent with task id {self.request.parent_id}")
@@ -70,7 +67,7 @@ def activate_workflow(self, a, t):
     return a+1
 
 
-# DONE SEND
+# DONE
 @clr.task()
 def activate_send(db: str, action: dict, admin_id: str):
     # action_repo = ActionRepository(db)
@@ -100,16 +97,7 @@ def activate_send(db: str, action: dict, admin_id: str):
 
     return len(results)
 
-
-# LATER
-# @clr.task()
-# def activate_scan(db: str, mail: dict, obj_id: str, admin_id: str):
-#     mail_service = MailServices(db, obj_id)
-#     # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
-#     result = async_to_sync(mail_service.scan_email)(mail, admin_id)
-
-
-# TODO
+# DONE
 @clr.task()
 def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
     object_id = action.get("object_id")
@@ -121,6 +109,7 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
     }
     for field_config in action.get("field_configs"):
         record.update(field_config)
+
     record_service = RecordObjectService(db, obj_id, object_id)
 
     results = []
@@ -128,8 +117,9 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
         results = asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))
     else:
         for content in contents:
-            for field in action.get("field_contents"):
-                record[field] = content
+            if action.get("field_contents"):      
+                for field in action.get("field_contents"):
+                    record[field] = content
 
             result = asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))
             results.append(result)
@@ -137,33 +127,33 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
     return len(results)
 
 
-# TODO
+# DONE
 @clr.task()
-def activate_update(db: str, mail: dict, obj_id: str, user_id: str):
-    mail_service = MailServices(db, obj_id)
-    result = async_to_sync(mail_service.scan_email)(mail, user_id)
+def activate_update(db: str, action: dict, user_id: str, contents: List[str], record_id: str):
+    object_id = action.get("object_id")
+    obj_repo = ObjectRepository(db)
+    obj = asyncio.get_event_loop().run_until_complete(obj_repo.find_one_by_id(object_id))
+    obj_id = obj.get("obj_id")
 
-async def test_queyr():
-    # db = client.get_database(db_str)
-    # record_coll = db.get_collection(coll)
+    record = {
+        "record_id": record_id,
+        "object_id": object_id
+    }
+    for field_config in action.get("field_configs"):
+        record.update(field_config)
 
-    # return await record_coll.find_one({"_id": "6621547dd478411eb0ad46a6"})
+    record_service = RecordObjectService(db, obj_id, object_id)
 
-    await asyncio.sleep(1)
-    return 'hello'
+    if action.get("option") == "yes":
+        if action.get("field_contents"):      
+            for field in action.get("field_contents"):
+                record[field] = contents[0]
+
+    result = asyncio.get_event_loop().run_until_complete(record_service.update_one_record(record, user_id))
+    return result
 
 
 def test_call(num: int):
     task = group(create_task.s(7, 27), add.s(num, 11), create_task.s(3, 17), division.s(9, 0)).apply_async()
-
-    return task.id
-
-def call_workflow(num: int, workflow_id: str):
-    task = group(create_task.s(7, 27), add.s(num, 11), create_task.s(3, 17), division.s(9, 0)).apply_async()
-
-    return task.id
-
-def call_send(db: str, action: dict, admin_id: str):
-    task = activate_send.delay(db, action, admin_id)
 
     return task.id

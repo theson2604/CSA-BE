@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.common.utils import get_current_hcm_datetime
@@ -9,7 +9,7 @@ class WorkflowModel(BaseModel):
     name: str = Field(..., alias="name", max_length=100)
     description: str = Field(..., alias="description", max_length=200)
     trigger: str = Field(..., alias="trigger")
-    conditions: List[str] = Field(..., alias="conditions")
+    conditions: List[Dict[str, str]] = Field(..., alias="conditions")
 
     # created_at: str = Field(..., alias="created_at", default_factory=get_current_hcm_datetime)
     # modified_at: str = Field(..., alias="modified_at", default_factory=get_current_hcm_datetime)

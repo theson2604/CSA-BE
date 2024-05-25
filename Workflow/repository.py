@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 
 from Object.models import ObjectModel
-from RootAdministrator.constants import HIDDEN_METADATA_INFO
 
 from Workflow.models import WorkflowModel
 from app.common.db_connector import DBCollections, client
@@ -40,6 +39,14 @@ class WorkflowRepository:
     
     async def find_one_by_name(self, name: str, projection: dict = None):
         return await self.find_one({"_id": id}, projection)
+        
+    async def find_many(self, query: dict, projection: dict = None):
+        cursor = await self.workflow_coll.find(query, projection)
+        workflows = []
+        for workflow in cursor:
+            workflows.append(workflow)
+
+        return workflows
 
     # async def get_all_objects_with_field_details(self) -> Optional[list]:
     #     pipeline = [

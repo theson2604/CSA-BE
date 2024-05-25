@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List
 
+from pymongo import ReturnDocument
+
 from FieldObject.repository import FieldObjectRepository
 from Object.repository import ObjectRepository
 from RecordObject.models import RecordObjectModel
@@ -230,6 +232,10 @@ class RecordObjectRepository:
     async def update_one_by_id(self, id: str, record: dict) -> int:
         result = await self.record_coll.update_one({"_id": id}, {"$set": record})
         return result.modified_count
+    
+    async def update_and_get_one_by_id(self, id: str, record: dict):
+        result = await self.record_coll.find_one_and_update({"_id": id}, {"$set": record}, return_document=ReturnDocument.AFTER)
+        return result
     
     async def update_many(self, filter, update: dict, coll = None) -> int:
         record_coll = self.db.get_collection(coll) if coll else self.record_coll

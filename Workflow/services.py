@@ -1,20 +1,20 @@
+import os
 from typing import List
 from bson import ObjectId
 
+from dotenv import load_dotenv
 from fastapi import HTTPException
 import pymongo
 from Action.repository import ActionRepository
 from Action.services import ActionService, ActionServiceException
-from FieldObject.repository import FieldObjectRepository
-from FieldObject.services import FieldObjectServiceException, FieldObjectService
-from Object.models import ObjectModel
 from Object.repository import ObjectRepository
-from Object.schemas import ObjectSchema, ObjectWithFieldSchema
 from Workflow.models import WorkflowModel
 from Workflow.repository import WorkflowRepository
 from Workflow.schemas import WorkflowSchema, WorkflowWithActionSchema
-from app.common.enums import StatusCodeException
 from app.common.errors import HTTPBadRequest
+from app.tasks import activate_create, activate_send, activate_update
+
+load_dotenv()
 
 
 class WorkflowService:
@@ -68,27 +68,21 @@ class WorkflowService:
         
         return self.repo.delete_one_by_id(id), self.action_repo.delete_many_by_workflow_id(id)
 
-    # async def get_all_objects_with_field_details(self) -> List[dict]:
-    #     """
-    #         Include parsing Fields
-    #     """
-    #     return await self.repo.get_all_objects_with_field_details()
-    
-    # async def get_object_detail_by_id(self, id: str) -> dict:
-    #     return await self.repo.get_object_with_all_fields(id)
-    
-    # async def delete_one_object_by_id(self, object_id: str) -> bool:
-    #     await self.field_obj_service.delete_all_fields_by_obj_id(object_id)
-
-    #     return await self.repo.delete_one_by_id(object_id)
-
-    # async def delete_all_objects_by_group_id(self, group_obj_id: str) -> bool:
-    #     group = await self.group_obj_repo.find_one_by_id(group_obj_id)
-    #     if not group:
-    #         raise HTTPBadRequest("Cannot find Group Object by group_obj_id")
+    async def activate_workflow(self, workflow_id: str, current_user_id: str, record_id: str = None):
+        db = os.environ.get("MONGO_URI")
+        workflow = self.repo.find_one_by_id(workflow_id)
+        if not workflow:
+            raise HTTPBadRequest(f"Can not find workflow by id {workflow_id}")
         
-    #     list_obj = await self.repo.find_all({"group_obj_id": group_obj_id})
-    #     for obj in list_obj:
-    #         await self.field_obj_service.delete_all_fields_by_obj_id(obj.get('_id'))
-        
-    #     return await self.repo.delete_many({"group_obj_id": group_obj_id})
+        workflow_with_actions = await self.repo.get_workflow_with_all_actions(workflow_id)
+        action = workflow_with_actions.get("actions")[0] # for action in actions
+
+        type = action.get("type")
+        if type == "send":
+            task = activate_send.delay(db, action, current_user_id)
+        elif type == "create":
+            task =  activate_create.delay(db, action, current_user_id, [])
+        elif type == "update":
+            task = activate_update.delay(db, action, current_user_id, [], record_id)
+
+        return task.id

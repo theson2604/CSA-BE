@@ -13,6 +13,8 @@ from RecordObject.models import RecordObjectModel
 from RecordObject.repository import RecordObjectRepository
 from RecordObject.schemas import RecordObjectSchema, UpdateRecordSchema
 from RecordObject.search import ElasticsearchRecord
+from RecordObject.utils import use_operator
+from Workflow.repository import WorkflowRepository
 from app.common.enums import FieldObjectType
 from app.common.errors import HTTPBadRequest
 from app.common.utils import generate_next_record_id, get_current_hcm_datetime
@@ -32,7 +34,11 @@ class RecordObjectService:
         self.record_repo = RecordObjectRepository(db_str, coll=obj_id_str)
         self.field_obj_repo = FieldObjectRepository(db_str)
         self.object_repo = ObjectRepository(db_str) 
+        self.workflow_repo = WorkflowRepository(db_str)
+
+        # service
         self.elastic_service = ElasticsearchRecord(db_str, obj_id_str, obj_id)
+        # self.workflow_service = WorkflowService(db_str)
 
     async def process_fields(
         self, fields: dict, record: dict, obj_id: str
@@ -153,6 +159,28 @@ class RecordObjectService:
 
         return record
     
+    async def check_conditions(self, record: dict, current_user_id: str):
+        obj_id = record.get("object_id")
+        record_id = record.get("_id")
+        workflows = await self.workflow_repo.find_many({"object_id": obj_id}, {"_id": 1, "conditions": 1})
+        task_ids = []
+        for workflow in workflows:
+            conditions = workflow.get("conditions")
+            for index, condition in enumerate(conditions):
+                field_name, field_value, field_op = condition.get("field_name"), condition.get("field_value"), condition.get("field_op")
+                if index == 0 or len(conditions) == 1:
+                    base = use_operator(record.get(field_name), field_value, field_op)
+                else:
+                    base = use_operator(use_operator(record.get(field_name), field_value, field_op), base, conditions[index-1].get("op"))
+                
+            if base:
+                from Workflow.services import WorkflowService
+                workflow_service = WorkflowService(self.db_str)
+                # activate current workflow
+                task_id = workflow_service.activate_workflow(workflow.get("id"), current_user_id, record_id)
+                task_ids.append(task_id)
+
+        return task_ids
 
     async def create_record(
         self, record: RecordObjectSchema, current_user_id: str
@@ -185,9 +213,12 @@ class RecordObjectService:
         cpy_record = inserted_record.copy()
         self.elastic_service.index_doc(record_id=cpy_record.pop("_id"), doc=cpy_record)
         
-        return await self.record_repo.insert_one(
+        result = await self.record_repo.insert_one(
             RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True)
         )
+
+        self.check_conditions(record, current_user_id)
+        return result
 
     async def get_all_records_with_detail(
         self, object_id: str, page: int = 1, page_size: int = 100
@@ -233,7 +264,10 @@ class RecordObjectService:
             "modified_by": current_user_id
         })
 
-        return await self.record_repo.update_one_by_id(record_id, updated_record)
+        result = await self.record_repo.update_and_get_one_by_id(record_id, updated_record)
+        self.check_conditions(result, current_user_id)
+
+        return result
 
     async def delete_one_record(self, id: str):
         if not await self.record_repo.find_one_by_id(id):

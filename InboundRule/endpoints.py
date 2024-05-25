@@ -7,7 +7,7 @@ from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from InboundRule.services import InboundRule
 from MailService.schemas import MailSchema
 from Workflow.repository import WorkflowRepository
-from app.tasks import activate_create, activate_send, call_send, create_task, add, division, test_query, test_scan_mail, test_call
+from app.tasks import activate_create, activate_send, activate_update, create_task, add, division, test_query, test_scan_mail, test_call
 from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
@@ -26,6 +26,7 @@ async def activate_workflow(
 ):
     try:
         id = workflow["id"]
+        record_id = workflow.get("record_id")
         db, admin_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
         workflow_repo = WorkflowRepository(db)
         workflow = workflow_repo.find_one_by_id(id)
@@ -40,10 +41,9 @@ async def activate_workflow(
             task = activate_send.delay(db, action, admin_id)
         elif type == "create":
             task =  activate_create.delay(db, action, admin_id, [])
-        # obj_repo = ObjectRepository(db)
-        # obj = await obj_repo.find_one_by_id(object_id)
-        # if not obj:
-        #     raise HTTPBadRequest(f"Not found {object_id} object by _id")
+        elif type == "update":
+            print("HEHE")
+            task = activate_update.delay(db, action, admin_id, [], record_id)
 
         return task.id
     except Exception as e:

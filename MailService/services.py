@@ -3,9 +3,6 @@ from FieldObject.repository import FieldObjectRepository
 from MailService.models import EmailModel, TemplateModel
 from MailService.repository import MailServiceRepository
 from MailService.schemas import *
-from abc import ABC, abstractmethod
-from RecordObject.models import RecordObjectModel
-from RecordObject.services import RecordObjectService
 from app.common.db_connector import DBCollections
 from app.common.errors import HTTPBadRequest
 # from fastapi import Depends
