@@ -41,12 +41,8 @@ class WorkflowRepository:
         return await self.find_one({"_id": id}, projection)
         
     async def find_many(self, query: dict, projection: dict = None):
-        cursor = await self.workflow_coll.find(query, projection)
-        workflows = []
-        for workflow in cursor:
-            workflows.append(workflow)
-
-        return workflows
+        cursor = self.workflow_coll.find(query, projection)
+        return await cursor.to_list(length=None)
 
     # async def get_all_objects_with_field_details(self) -> Optional[list]:
     #     pipeline = [

@@ -25,8 +25,9 @@ class WorkflowService:
         self.action_repo = ActionRepository(db_str)
         # Services
         self.action_service = ActionService(db_str)
-        # self.field_obj_service = FieldObjectService(db_str)
         
+        self.db_str = db_str
+
     async def create_workflow(self, workflow: WorkflowSchema, current_user_id: str) -> str:
         workflow = workflow.model_dump()
         object_id = workflow.get("object_id")
@@ -69,20 +70,19 @@ class WorkflowService:
         return self.repo.delete_one_by_id(id), self.action_repo.delete_many_by_workflow_id(id)
 
     async def activate_workflow(self, workflow_id: str, current_user_id: str, record_id: str = None):
-        db = os.environ.get("MONGO_URI")
+        db = self.db_str
         workflow = self.repo.find_one_by_id(workflow_id)
         if not workflow:
             raise HTTPBadRequest(f"Can not find workflow by id {workflow_id}")
         
         workflow_with_actions = await self.repo.get_workflow_with_all_actions(workflow_id)
-        action = workflow_with_actions.get("actions")[0] # for action in actions
-
-        type = action.get("type")
-        if type == "send":
-            task = activate_send.delay(db, action, current_user_id)
-        elif type == "create":
-            task =  activate_create.delay(db, action, current_user_id, [])
-        elif type == "update":
-            task = activate_update.delay(db, action, current_user_id, [], record_id)
+        for action in workflow_with_actions.get("actions"): # for action in actions
+            type = action.get("type")
+            if type == "send":
+                task = activate_send.delay(db, action, current_user_id)
+            elif type == "create":
+                task =  activate_create.delay(db, action, current_user_id, [])
+            elif type == "update":
+                task = activate_update.delay(db, action, current_user_id, [], record_id)
 
         return task.id

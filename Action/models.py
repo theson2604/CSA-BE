@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.common.enums import ActionType
@@ -27,8 +27,8 @@ class ActionScan(ActionBase):
     
 class ActionRecord(ActionBase):
     option: str = Field(..., alias="option")
-    field_contents: List[str] = Field(..., alias="field_contents")
-    field_configs: List[Dict[str, str]]
+    field_contents: List[str]
+    field_configs: List[Dict[str, Any]]
     
 # class ActionUpdate(ActionBase):
 #     country_code: str = Field(..., alias="country_code")

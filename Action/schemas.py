@@ -1,5 +1,5 @@
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field, model_validator  
 
 from app.common.enums import ActionType 
@@ -26,7 +26,7 @@ class ActionSchema(BaseModel):
     # Create/Update
     option: Optional[str] = None # True if use scan else False
     field_contents: Optional[List[str]] = None
-    field_configs: Optional[List[Dict[str, str]]] = None
+    field_configs: Optional[List[Dict[str, Any]]] = None
 
     @model_validator(mode='after')
     def validate_field_obj_schema(self):

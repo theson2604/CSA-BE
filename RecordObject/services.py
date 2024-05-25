@@ -159,12 +159,16 @@ class RecordObjectService:
 
         return record
     
-    async def check_conditions(self, record: dict, current_user_id: str):
+    async def check_conditions(self, record: dict, trigger: str, current_user_id: str):
         obj_id = record.get("object_id")
         record_id = record.get("_id")
-        workflows = await self.workflow_repo.find_many({"object_id": obj_id}, {"_id": 1, "conditions": 1})
+        workflows = await self.workflow_repo.find_many({"object_id": obj_id}, {"_id": 1, "trigger": 1, "conditions": 1})
+        print("WORKFLOWS: ", workflows)
         task_ids = []
         for workflow in workflows:
+            if workflow.get("trigger") != trigger:
+                continue
+
             conditions = workflow.get("conditions")
             for index, condition in enumerate(conditions):
                 field_name, field_value, field_op = condition.get("field_name"), condition.get("field_value"), condition.get("field_op")
@@ -177,7 +181,7 @@ class RecordObjectService:
                 from Workflow.services import WorkflowService
                 workflow_service = WorkflowService(self.db_str)
                 # activate current workflow
-                task_id = workflow_service.activate_workflow(workflow.get("id"), current_user_id, record_id)
+                task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, record_id)
                 task_ids.append(task_id)
 
         return task_ids
@@ -211,13 +215,13 @@ class RecordObjectService:
         )
         
         cpy_record = inserted_record.copy()
-        self.elastic_service.index_doc(record_id=cpy_record.pop("_id"), doc=cpy_record)
+        await self.elastic_service.index_doc(record_id=cpy_record.pop("_id"), doc=cpy_record)
         
         result = await self.record_repo.insert_one(
             RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True)
         )
 
-        self.check_conditions(record, current_user_id)
+        await self.check_conditions(inserted_record, "create", current_user_id)
         return result
 
     async def get_all_records_with_detail(
@@ -265,7 +269,7 @@ class RecordObjectService:
         })
 
         result = await self.record_repo.update_and_get_one_by_id(record_id, updated_record)
-        self.check_conditions(result, current_user_id)
+        await self.check_conditions(result, "update", current_user_id)
 
         return result
 
