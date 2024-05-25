@@ -131,12 +131,15 @@ services:
     command: celery -A app.celery.celery worker --loglevel=INFO --concurrency=4
     volumes:
       - .:/app/csa_be
+      - certs:/usr/share/elasticsearch/config/certs
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - CERT_FILE=/usr/share/elasticsearch/config/certs/ca/ca.crt
     depends_on:
       - be
       - redis
+      - es01
     restart: always
     networks:
       - csa
