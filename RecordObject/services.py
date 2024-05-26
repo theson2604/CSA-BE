@@ -189,6 +189,7 @@ class RecordObjectService:
             RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True)
         )
 
+
     async def get_all_records_with_detail(
         self, object_id: str, page: int = 1, page_size: int = 100
     ) -> List[RecordObjectModel]:
@@ -206,6 +207,7 @@ class RecordObjectService:
 
         return []
 
+
     async def get_one_record_by_id_with_detail(
         self, record_id: str, object_id: str
     ) -> RecordObjectModel:
@@ -215,6 +217,7 @@ class RecordObjectService:
         - object_id: Object's _id
         """
         return await self.record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id)
+
 
     async def create_record_from_file(
         self, current_user_id: str, row, fd_ids: List[str], field_details: dict, field_id_detail: dict
@@ -313,8 +316,10 @@ class RecordObjectService:
         asyncio.create_task(self.insert_record(inserted_record))
         return True
     
+    
     async def insert_record(self, inserted_record):
         await self.record_repo.insert_one(RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True))
+
 
     async def update_one_record(self, record: dict, current_user_id: str) -> bool:
         record_id = record.pop("record_id")

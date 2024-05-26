@@ -122,7 +122,7 @@ class RecordObjectRepository:
             parsing_ref_pipeline += [
                 {
                     "$project": {
-                        "created_at": 0,
+                        # "created_at": 0, # Keep for timeline display
                         "modified_at": 0,
                         "created_by": 0,
                         "modified_by": 0,
