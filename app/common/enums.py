@@ -24,6 +24,18 @@ class ActionType(str, Enum):
     CREATE  = 'create'
     UPDATE =  'update'
     
+class CustomViewRecordType(str, Enum):
+    MAIN = 'main'
+    RELATED = 'related'
+    SEND_EMAIL = 'send_email'
+    MAILBOX = 'mailbox'
+    
+class DisplayCustomViewRecordType(str, Enum):
+    TABLE = 'table'
+    TIMELINE = 'timeline'
+    SEND_EMAIL = 'send_email'
+    MAILBOX = 'mailbox'
+    
 class StatusCodeException(int, Enum):
     BAD_REQUEST = 400
 
