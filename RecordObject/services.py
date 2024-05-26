@@ -241,6 +241,7 @@ class RecordObjectService:
 
         return []
 
+
     async def get_one_record_by_id_with_detail(
         self, record_id: str, object_id: str
     ) -> RecordObjectModel:
