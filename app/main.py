@@ -1,7 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from celery.result import AsyncResult
-from app.celery import celery as clr
+import json
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -20,30 +19,20 @@ import os
 import platform
 from dotenv import load_dotenv
 
+from app.tasks import monitor_tasks
+
 load_dotenv()
 
 if platform.system() == 'Windows':
     print("TRUE")
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-async def monitor_tasks():
-    while True:
-        tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
-        await asyncio.sleep(1)
-        for task_id in tasks_info[list(tasks_info.keys())[0]]:
-            result = AsyncResult(task_id["id"])
-            if result.ready():
-                notification = {"task_id": task_id["id"], "status": result.status, "result": result.result}
-                print("NOTIFICATION: ", notification)
-                for client in clients:
-                    await client.send_json(notification)
-            else:
-                print("NOT READY")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run at startup
-    asyncio.create_task(monitor_tasks())
+    asyncio.create_task(monitor_tasks(clients))
     yield
     print('Shutting down...')
 

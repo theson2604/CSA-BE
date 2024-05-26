@@ -23,6 +23,10 @@ class ActionType(str, Enum):
     SCAN = 'scan'
     CREATE  = 'create'
     UPDATE =  'update'
+
+class TaskStatus(str, Enum):
+    SUCCESS = 'SUCCESS'
+    FAILURE = 'FAILURE'
     
 class StatusCodeException(int, Enum):
     BAD_REQUEST = 400

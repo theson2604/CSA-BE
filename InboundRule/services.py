@@ -2,6 +2,7 @@ from datetime import datetime
 import re
 from bson import ObjectId
 from fastapi import File, UploadFile
+import pandas as pd
 from FieldObject.repository import FieldObjectRepository
 from FieldObject.schemas import FieldObjectSchema
 from FieldObject.services import FieldObjectService
@@ -18,7 +19,6 @@ from app.common.utils import generate_next_record_id, get_current_hcm_datetime, 
 from RecordObject.services import RecordException, RecordObjectService
 from RecordObject.repository import RecordObjectRepository
 import json
-import pandas as pd 
 import time
 
 
@@ -35,7 +35,6 @@ class InboundRule:
         self.field_obj_services = FieldObjectService(db)
         self.db_str = db
 
-    @staticmethod
     def process_data(df, config: dict):
         mapping = json.loads(config.get("map"))
         cols = []
@@ -53,26 +52,8 @@ class InboundRule:
     
     async def inbound_file(self, file_inbound: dict, user_id: str) -> Tuple[int, int]:
         start_time = time.time()
-        file = file_inbound.get("file")
-        file_extension = file.filename.split(".")[-1]
-        if file_extension.lower() == "csv":
-            df = pd.read_csv(file.file)
-        elif file_extension.lower() == "json":
-            default = 'lines'
-            file.file.seek(0)
-            first_char = await file.read(1)
-            file.file.seek(0)
-            if first_char == b'[':
-                default = 'array'
-
-            if default == 'lines':
-                df = pd.read_json(file.file, lines=True)
-            else:
-                print(file.file, type(file.file))
-                data = json.load(file.file)
-                df = pd.DataFrame(data)
-        else:
-            raise HTTPBadRequest(f"Invalid file type {file_extension}.")
+        json_df = file_inbound.get("file")
+        df = pd.read_json(json_df, orient="records")
         
         # map column names to field_ids
         config = file_inbound.get("config")
@@ -85,6 +66,7 @@ class InboundRule:
         field_details = {}
         ref_obj_records = {}
         list_details = await self.field_obj_repo.find_many_by_field_id_str(object_id, list(mapping.values()))
+        print("LIST_DETAILS: ", list_details)
 
         for index, key in enumerate(mapping):
             if key not in df.columns:
@@ -180,12 +162,19 @@ class InboundRule:
         dict_records = df.to_dict(orient="records")
         records = [RecordObjectModel.model_validate(record).model_dump(by_alias=True) for record in dict_records]
 
-        results = await self.record_repo.insert_many(records) if len(records) > 1 else await self.record_repo.insert_one(records[0])
+        results = []
+        batch_size = 10000
+        if len(records) > batch_size:
+            for i in range(0, len(records), batch_size):
+                batch = records[i:i + batch_size]
+                results = results + (await self.record_repo.insert_many(batch) if len(batch) > 1 else [await self.record_repo.insert_one(batch[0])])
+        else:
+            results = await self.record_repo.insert_many(records) if len(records) > 1 else await self.record_repo.insert_one(records[0])
         await update_record_id(self.db_str, object_id, seq+len(results)-1)
         end_time = time.time()
         execution_time = end_time - start_time
         print(f"Execution time: {execution_time} seconds")
-        return len(results), len(removed_df)
+        return object_id, len(results), len(removed_df)
     
     def check_text(field_value, field_detail):
         length = field_detail.get("length")
@@ -272,7 +261,7 @@ class InboundRule:
         new_field_value[field_value] = {"ref_to": field_value, "field_value": ref_fld_id}
         return True
     
-    async def inbound_file_with_new_obj(self, current_user_id: str, config: FileObjectSchema, file: UploadFile = File(...)):
+    async def inbound_file_with_new_obj(self, current_user_id: str, config: FileObjectSchema, df: str):
         mapping = json.loads(config.pop("map"))
         # mapping = json.loads(mapping)
         fields_mapping = json.loads(config.get("fields"))
@@ -296,4 +285,4 @@ class InboundRule:
         
         self.record_repo = RecordObjectRepository(self.db_str, obj.get("obj_id"))
         self.record_services = RecordObjectService(self.db_str, obj.get("obj_id"), new_obj_id)
-        return await self.inbound_file({"file": file, "config": {"map": mapping, "object": new_obj_id}}, current_user_id)
+        return await self.inbound_file({"file": df, "config": {"map": mapping, "object": new_obj_id}}, current_user_id)
