@@ -44,8 +44,10 @@ class FieldReferenceObject(FieldObjectBase):
     display_value: str = Field(..., alias="display_value")
     ref_obj_id: str = Field(..., alias="ref_obj_id")
     ref_obj_id_value: str = Field(..., alias="ref_obj_id_value")
+    cascade_option: str = Field(..., alias="cascade_option")
     
 class FieldReferenceFieldObject(FieldObjectBase):
     display_value: str = Field(..., alias="display_value")
     ref_field_obj_id: str = Field(..., alias="ref_field_obj_id")
     ref_obj_id_value: str = Field(..., alias="ref_obj_id_value")
+    cascade_option: str = Field(..., alias="cascade_option")

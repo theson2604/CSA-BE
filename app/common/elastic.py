@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 class ElasticsearchBase:
     def __init__(self):
+        # root_dir = os.environ.get("ROOT_DIR")
         self.es = AsyncElasticsearch(
             [os.environ.get("ELASTIC_HOST")],
             basic_auth=(

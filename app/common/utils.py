@@ -14,6 +14,13 @@ def get_current_hcm_datetime() -> str:
     now = datetime.now(timezone)
     return now.strftime("%Y-%m-%d %H:%M:%S")
 
+def get_current_hcm_date() -> datetime.date:
+    """
+    Get the current Ho Chi Minh's date with format '2024-01-09'
+    """
+    timezone = pytz.timezone("Asia/Ho_Chi_Minh")
+    return datetime.now(timezone).date()
+
 
 def convert_str(name: str = "") -> str:
     """
