@@ -113,9 +113,6 @@ def activate_send(db: str, action: dict, admin_id: str, record_id: str):
     record = asyncio.get_event_loop().run_until_complete(record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id))
     mail_service = MailServices(db, obj_id)
     field_email = action.get("to")
-    if field_email[0] != 0:
-        ref_obj, fd_email = field_email.split(".")
-
     mail = {
         "email": action.get("from"),
         "template": action.get("template_id"),
@@ -123,8 +120,10 @@ def activate_send(db: str, action: dict, admin_id: str, record_id: str):
     }
     results = []
 
-    # for record in records:
-    mail["send_to"] = record.get(field_email)
+    if field_email[0] != 0:
+        ref_obj, fd_email = field_email.split(".")
+    else:
+        mail["send_to"] = record.get(field_email)
 
     # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
     result = asyncio.get_event_loop().run_until_complete(mail_service.send_one(mail, admin_id, record))
