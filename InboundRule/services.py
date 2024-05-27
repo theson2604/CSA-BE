@@ -185,7 +185,8 @@ class InboundRule:
         return True
     
     def check_float(field_value, field_detail):
-        if not isinstance(field_value, float):
+        print("FLOATTTTT", field_value)
+        if not isinstance(field_value, int) and not isinstance(field_value, float):
             return False
         return True
     
