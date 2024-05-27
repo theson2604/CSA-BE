@@ -62,6 +62,26 @@ class FieldObjectRepository:
         return await self.field_object_coll.find_one(
             {"object_id": obj_id, "field_id": fld_id}
         )
+    
+    async def find_many_by_field_id_str(
+        self, obj_id: str, fld_ids: List[str]
+    ) -> Union[FieldObjectBase]:
+        """
+        Find Field Object by field_id fd_<name>_id \n
+        :Params:
+            - obj_id: _id
+            - fld_id: fd_<name>_<id>
+        """
+        cursor = self.field_object_coll.find(
+            {"object_id": obj_id, "field_id": {"$in": fld_ids}}
+        )
+
+        return await cursor.to_list(length=None)
+    
+    async def find_one_by_field_type(
+        self, obj_id: str, field_type: str
+    ) -> Union[FieldObjectBase]:
+        return await self.field_object_coll.find_one({"object_id": obj_id, })
 
     async def find_all(self, query: dict = {}) -> List[Union[FieldObjectBase]]:
         return await self.field_object_coll.find(query).to_list(length=None)

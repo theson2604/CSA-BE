@@ -2,7 +2,7 @@ from typing import List
 from typing_extensions import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
-from MailService.schemas import SendMailSchema, EmailSchema, TemplateSchema
+from MailService.schemas import MailSchema, SendMailSchema, EmailSchema, TemplateSchema
 from MailService.services import MailServices
 from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
@@ -56,6 +56,33 @@ async def send_mail(
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
         
+@router.post("/scan-email")
+@protected_route([SystemUserRole.ADMINISTRATOR])
+async def send_mail(
+    mail: MailSchema,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        mail_obj = mail.model_dump()
+        db = CURRENT_USER.get("db")
+        admin_id = CURRENT_USER.get("_id")
+        object_id = mail_obj.get("object")
+
+        obj_repo = ObjectRepository(db)
+        obj = await obj_repo.find_one_by_id(object_id)
+        if not obj:
+            raise HTTPBadRequest(f"Not found {object_id} object by _id")
+            
+        mail_service = MailServices(db, obj.get("obj_id"))
+        return await mail_service.scan_email(mail, admin_id)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+    
 @router.post("/create-template")
 @protected_route([SystemUserRole.ADMINISTRATOR])
 async def create_template(
@@ -108,3 +135,4 @@ async def get_templates_by_object_id(
             raise e
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
+        

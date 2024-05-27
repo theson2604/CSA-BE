@@ -19,3 +19,8 @@ class RecordObjectSchema(BaseModel, extra='allow'):
 class UpdateRecordSchema(RecordObjectSchema):
 
     record_id: str = Field(..., alias="record_id")
+
+class DeleteRecordSchema(BaseModel):
+
+    object_id: str = Field(..., alias="object_id")
+    record_id: str = Field(..., alias="record_id")

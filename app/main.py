@@ -1,4 +1,8 @@
-from fastapi import FastAPI, HTTPException, Request
+import asyncio
+from contextlib import asynccontextmanager
+from celery.result import AsyncResult
+from app.celery import celery as clr
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.responses import RedirectResponse
@@ -11,12 +15,40 @@ import FieldObject.endpoints
 import MailService.endpoints
 import InboundRule.endpoints
 import DatasetAI.endpoints
+import Workflow.endpoints
+import Action.endpoints
 import os
+import platform
 from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI()
+if platform.system() == 'Windows':
+    print("TRUE")
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+async def monitor_tasks():
+    while True:
+        tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
+        await asyncio.sleep(1)
+        for task_id in tasks_info[list(tasks_info.keys())[0]]:
+            result = AsyncResult(task_id["id"])
+            if result.ready():
+                notification = {"task_id": task_id["id"], "status": result.status, "result": result.result}
+                print("NOTIFICATION: ", notification)
+                for client in clients:
+                    await client.send_json(notification)
+            else:
+                print("NOT READY")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Run at startup
+    asyncio.create_task(monitor_tasks())
+    yield
+    print('Shutting down...')
+
+app = FastAPI(lifespan=lifespan)
 
 origins = [
     'http://localhost:3000',
@@ -50,9 +82,21 @@ app.add_middleware(
 
 # app.add_exception_handler(HTTPException, http_error_handler)
 
+clients = []
+
 @app.get("/", include_in_schema=False)
 def redirect_to_docs():
     return RedirectResponse(url=os.environ.get("DOCS_ROUTE"))
+
+@app.websocket("/ws") # ws://127.0.0.1:8000/ws
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    clients.append(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        clients.remove(websocket)
 
 # Include Routers
 app.include_router(Authentication.endpoints.router, prefix="/api/authen", tags=["Authentication"])
@@ -63,4 +107,6 @@ app.include_router(RecordObject.endpoints.router, prefix="/api/record", tags=["R
 app.include_router(FieldObject.endpoints.router, prefix="/api/field-object", tags=["Field Object"])
 app.include_router(MailService.endpoints.router, prefix="/api/mail", tags=["Mail"])
 app.include_router(InboundRule.endpoints.router, prefix="/api/inbound-rule", tags=["Inbound Rule"])
+app.include_router(Workflow.endpoints.router, prefix="/api/workflow", tags=["Workflow"])
+app.include_router(Action.endpoints.router, prefix="/api/action", tags=["Action"])
 app.include_router(DatasetAI.endpoints.router, prefix="/api/ai-dataset", tags=["AI Dataset"])

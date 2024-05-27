@@ -18,6 +18,12 @@ class FieldObjectType(str, Enum):
     REFERENCE_OBJECT = 'ref_obj'
     REFERENCE_FIELD_OBJECT = 'ref_field_obj'
     DATASET = 'dataset'
+
+class ActionType(str, Enum):
+    SEND = 'send'
+    SCAN = 'scan'
+    CREATE  = 'create'
+    UPDATE =  'update'
     
 class CustomViewRecordType(str, Enum):
     MAIN = 'main'

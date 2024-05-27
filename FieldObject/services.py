@@ -87,11 +87,13 @@ class FieldObjectService:
                     
                     ref_obj_id_value = ref_obj.get("_id")
                     display_value = ref_obj.get("obj_name")
+                    cascade_option = field.get("cascade_option")
                     
                     field_base.update({
                         "display_value": display_value,
                         "ref_obj_id": source_id,
-                        "ref_obj_id_value": ref_obj_id_value
+                        "ref_obj_id_value": ref_obj_id_value,
+                        "cascade_option": cascade_option
                     })
                     
                     list_fields.append(FieldReferenceObject.model_validate(field_base).model_dump(by_alias=True))
@@ -116,10 +118,13 @@ class FieldObjectService:
                         raise FieldObjectServiceException("Infinite field loop")
                     
                     display_value = f'{ref_obj.get("obj_name")}.{ref_field.get("field_name")}'
+                    cascade_option = field.get("cascade_option")
+
                     field_base.update({
                         "display_value": display_value,
                         "ref_field_obj_id": source_id,
-                        "ref_obj_id_value": ref_obj_id_value
+                        "ref_obj_id_value": ref_obj_id_value,
+                        "cascade_option": cascade_option
                     })
                     
                     list_fields.append(FieldReferenceFieldObject.model_validate(field_base).model_dump(by_alias=True))

@@ -22,8 +22,9 @@ class TemplateModel(BaseModel):
     id: str = Field(..., alias="_id")
     name: str = Field(..., alias="name")
     object: str = Field(..., alias="object_id")
-    subject: str = Field(..., alias="subject")
+    subject: str = None
     body: str = Field(..., alias="body")
+    type: str = Field(..., alias="type")
 
     created_at: str = Field(..., alias="created_at", default_factory=get_current_hcm_datetime)
     modified_at: str = Field(..., alias="modified_at", default_factory=get_current_hcm_datetime)
