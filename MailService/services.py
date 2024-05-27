@@ -82,6 +82,9 @@ class MailServices:
             print("REPLACE")
             field_id = field_ids[i]
             if field_id[0] != "f":
+                # obj_id, fd_id = field_id.split(".")
+                # ref_record_repo = RecordObjectRepository(self.db_str, obj_id)
+                # ref_record_repo.find_one
                 content = (await self.template_repo.find_template_by_id(field_id)).get("body")
                 # print(content)
             else: content = record.get(field_id)

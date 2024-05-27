@@ -13,9 +13,22 @@ from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
 from app.dependencies.authentication import protected_route
-from app.celery import celery
+from app.celery import celery as clr, trigger_task
+from celery.schedules import crontab, schedule
 
 router = APIRouter()
+
+@router.post("/start-schedule/")
+async def start_schedule(task_name: str):
+    # Generate a unique task id or use a predefined one
+
+    try:
+        trigger_task(task_name)
+        # clr.conf.beat_schedule_filename = 'celerybeat-schedule'
+        # clr.control.broadcast('add_consumer', arguments={'queue': 'celery'})
+        return {"message": "Scheduled task successfully"}
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Failed to schedule task: {str(e)}")
 
 @router.post("/inbound-file")
 @protected_route([SystemUserRole.ADMINISTRATOR])
@@ -71,7 +84,7 @@ async def inbound_file(
             "map": map
         }
         df = (await read_file(file)).to_json(orient="records")
-        task = activate_inbound_with_new_obj.delay(db, user_id, config, df)
+        task = activate_inbound_with_new_obj.delay(db, config, user_id, df)
         task_metadata = {
             "type": "inbound_file_obj",
         }

@@ -2,6 +2,7 @@ import asyncio
 import json
 import re
 from celery.result import AsyncResult
+from celery.schedules import crontab, schedule
 from typing import List
 
 from fastapi import WebSocket
@@ -17,6 +18,7 @@ from app.celery import celery as clr, redis_client
 import time
 
 from app.common.enums import ActionType, TaskStatus
+from app.common.utils import get_current_hcm_datetime
 
 async def monitor_tasks(clients: List[WebSocket]):
     while True:
@@ -89,10 +91,16 @@ def activate_workflow(self, a, t):
     time.sleep(t)
     return a+1
 
+@clr.task()
+def print_num():
+    print(get_current_hcm_datetime())
+
+    return "BEAT"
+
 
 # DONE
 @clr.task(name = "send_email")
-def activate_send(db: str, action: dict, admin_id: str):
+def activate_send(db: str, action: dict, admin_id: str, record_id: str):
     # action_repo = ActionRepository(db)
     # action = asyncio.get_event_loop().run_until_complete(action_repo.find_one_by_id(action_id))
     object_id = action.get("object_id")
@@ -101,9 +109,13 @@ def activate_send(db: str, action: dict, admin_id: str):
     obj_id = obj.get("obj_id")
 
     record_repo = RecordObjectRepository(db, obj_id)
-    records = asyncio.get_event_loop().run_until_complete(record_repo.get_all_records())
+    # records = asyncio.get_event_loop().run_until_complete(record_repo.get_all_records())
+    record = asyncio.get_event_loop().run_until_complete(record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id))
     mail_service = MailServices(db, obj_id)
     field_email = action.get("to")
+    if field_email[0] != 0:
+        ref_obj, fd_email = field_email.split(".")
+
     mail = {
         "email": action.get("from"),
         "template": action.get("template_id"),
@@ -111,12 +123,12 @@ def activate_send(db: str, action: dict, admin_id: str):
     }
     results = []
 
-    for record in records:
-        mail["send_to"] = record.get(field_email)
+    # for record in records:
+    mail["send_to"] = record.get(field_email)
 
-        # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
-        result = asyncio.get_event_loop().run_until_complete(mail_service.send_one(mail, admin_id, record))
-        results.append(result)
+    # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
+    result = asyncio.get_event_loop().run_until_complete(mail_service.send_one(mail, admin_id, record))
+    results.append(result)
 
     return len(results)
 
@@ -200,3 +212,20 @@ def test_call(num: int):
     task = group(create_task.s(7, 27), add.s(num, 11), create_task.s(3, 17), division.s(9, 0)).apply_async()
 
     return task.id
+
+def trigger_task(task_name):
+    periodic_task_id = f'{task_name}_periodic_task'
+    # clr.conf.beat_schedule = {'print_num_periodic_task': {
+    #         'task': 'app.tasks.print_num',
+    #         'schedule': 5.0,  # Run every 10 seconds
+    #         },
+    #     }
+    clr.conf.update(
+        # timezone="Asia/Bangkok",
+        # enable_utc=False,
+        # beat_schedule={}
+        beat_schedule={'print_num_periodic_task': {
+                'task': 'app.tasks.print_num',
+                'schedule': 10.0,  # Run every 10 seconds
+            },}
+    )
