@@ -59,9 +59,8 @@ class RecordObjectService:
                     raise RecordException(f"len(field_value) must be < {length}")
                 
             elif field_type == FieldObjectType.FLOAT:
-                step = field_detail.get("step")
-                if field_value % float(step) != 0:
-                    raise RecordException(f"field_value must be divisible by step.")
+                if not isinstance(field_value, float):
+                    raise RecordException(f"field_value '{field_value}' of type {field_type} must be float.")
 
             elif field_type == FieldObjectType.EMAIL:
                 email_regex = (

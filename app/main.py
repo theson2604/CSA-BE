@@ -13,6 +13,7 @@ import RecordObject.endpoints
 import FieldObject.endpoints
 import MailService.endpoints
 import InboundRule.endpoints
+import DatasetAI.endpoints
 import Workflow.endpoints
 import Action.endpoints
 import os
@@ -97,3 +98,4 @@ app.include_router(MailService.endpoints.router, prefix="/api/mail", tags=["Mail
 app.include_router(InboundRule.endpoints.router, prefix="/api/inbound-rule", tags=["Inbound Rule"])
 app.include_router(Workflow.endpoints.router, prefix="/api/workflow", tags=["Workflow"])
 app.include_router(Action.endpoints.router, prefix="/api/action", tags=["Action"])
+app.include_router(DatasetAI.endpoints.router, prefix="/api/ai-dataset", tags=["AI Dataset"])

@@ -185,8 +185,7 @@ class InboundRule:
         return True
     
     def check_float(field_value, field_detail):
-        step = field_detail.get("step")
-        if field_value % float(step) != 0:
+        if not isinstance(field_value, float):
             return False
         return True
     

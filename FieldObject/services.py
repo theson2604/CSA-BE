@@ -50,9 +50,6 @@ class FieldObjectService:
                     list_fields.append(FieldText.model_validate(field_base).model_dump(by_alias=True))
                     
                 elif field.get("field_type") is FieldObjectType.FLOAT:
-                    field_base.update({
-                        "step": field.get("step")
-                    })
                     list_fields.append(FieldFloat.model_validate(field_base).model_dump(by_alias=True))
                 
                 elif field.get("field_type") is FieldObjectType.TEXTAREA:
@@ -153,6 +150,7 @@ class FieldObjectService:
         
         return path
     
+    
     async def infinite_loop_checking(self, new_path: List[str], target_ref_field_id: str, target_obj_id: str) -> bool:
         ref_path_seq = await self.get_field_ref_path_deeply(target_ref_field_id, target_obj_id)
         return check_loop(ref_path_seq, new_path)
@@ -162,6 +160,7 @@ class FieldObjectService:
         field_models = await self.validate_and_get_all_field_models(object_id, fields)
         return await self.repo.insert_many(field_models)
     
+    
     async def update_one_field(self, field: UpdateFieldObjectSchema) -> int:
         field_dump = field.model_dump()
         field_models = await self.validate_and_get_all_field_models(field_dump.get("object_id"), [field])
@@ -170,12 +169,14 @@ class FieldObjectService:
             field_model.update({"sorting_id": field_dump.get("sorting_id")})
             return await self.repo.update_one_by_id(field_model.pop("_id"), field_model)
         
+        
     async def update_sorting(self, fields: List[str]):
         sorted_list = []
         for index, field_id in enumerate(fields):
             sorted_list += [{"_id": field_id, "sorting_id": index}]
         
         await self.repo.update_many(sorted_list)
+        
         
     async def create_one_field(self, field: FieldObjectSchema) -> str:
         field_dump = field.model_dump()
@@ -185,11 +186,14 @@ class FieldObjectService:
             field_model.update({"sorting_id": field_dump.get("sorting_id")})
             return await self.repo.insert_one(field_model)
     
+    
     async def get_all_fields_by_obj_id(self, object_id: str) -> List[Union[FieldObjectBase]]:
         return await self.repo.find_all({"object_id": object_id})
-
+    
+    
     async def delete_one_field_by_id(self, field_id: str) -> bool:
         return await self.repo.delete_one_by_id(field_id)
+
 
     async def delete_all_fields_by_obj_id(self, object_id: str) -> bool:
         object = await self.obj_repo.find_one_by_id(object_id)

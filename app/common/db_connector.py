@@ -20,6 +20,7 @@ class DBCollections(str, Enum):
     EMAIL_TEMPLATE = "EmailTemplate"
     WORKFLOW = "Workflow"
     ACTION = "Action"
+    AI_DATASET = "AIDataset"
 
 # Root Collections
 class RootCollections(str, Enum):
