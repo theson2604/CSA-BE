@@ -8,6 +8,7 @@ from bson import ObjectId
 from abc import ABC, abstractmethod
 from RootAdministrator.constants import HIDDEN_SYSTEM_USER_INFO
 from RootAdministrator.repository import RootAdministratorRepository
+from app.common.enums import GroupObjectType
 from app.common.errors import HTTPBadRequest
 from app.common.utils import get_current_hcm_datetime
 
@@ -30,7 +31,8 @@ class GroupObjectServices:
             id = str(ObjectId()),
             name = group.get("name"),
             manager_id = system_user.get("_id"),
-            sorting_id = new_index
+            sorting_id = new_index,
+            type = GroupObjectType.OBJECT
         )
         await self.users_repo.update_one_by_id(system_user.get("_id"), {"is_manager": True})
         
@@ -49,6 +51,7 @@ class GroupObjectServices:
                 "id":  group.get("id"),
                 "name": group.get("name"),
                 "manager_id": group.get("manager_id"),
+                "type": group.get("type"),
                 "sorting_id": index,
                 "modified_at": get_current_hcm_datetime()
             }

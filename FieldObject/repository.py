@@ -143,3 +143,7 @@ class FieldObjectRepository:
         # elif field and field.get("field_type") is FieldObjectType.REFERENCE_OBJECT.value:
             
         return []
+    
+    
+    async def get_all_fields_detail_by_list_field_ids_str(self, ids_str: List[str], obj_id: str, projection: dict = None) -> List[Union[FieldObjectBase]]:
+        return await self.field_object_coll.find({"field_id": {"$in": ids_str}, "object_id": obj_id}, projection).to_list(length=None)

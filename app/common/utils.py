@@ -22,6 +22,12 @@ def convert_str(name: str = "") -> str:
     return unidecode(name).lower().replace(" ", "")
 
 
+def generate_model_id(name: str = "") -> str:
+    rand_num = random.randint(0, 999)
+    rand_3_digits = f"{rand_num:03}"
+    return "model_" + convert_str(name) + f"_{rand_3_digits}"
+
+
 def generate_db_company(name: str = "") -> str:
     """
     Generate unique company's db with format "db_nhuatienphong_123"

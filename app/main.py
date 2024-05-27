@@ -10,6 +10,7 @@ import RecordObject.endpoints
 import FieldObject.endpoints
 import MailService.endpoints
 import InboundRule.endpoints
+import DatasetAI.endpoints
 import os
 from dotenv import load_dotenv
 
@@ -62,3 +63,4 @@ app.include_router(RecordObject.endpoints.router, prefix="/api/record", tags=["R
 app.include_router(FieldObject.endpoints.router, prefix="/api/field-object", tags=["Field Object"])
 app.include_router(MailService.endpoints.router, prefix="/api/mail", tags=["Mail"])
 app.include_router(InboundRule.endpoints.router, prefix="/api/inbound-rule", tags=["Inbound Rule"])
+app.include_router(DatasetAI.endpoints.router, prefix="/api/ai-dataset", tags=["AI Dataset"])

@@ -4,6 +4,7 @@ from RootAdministrator.constants import HIDDEN_METADATA_INFO
 from app.common.db_connector import client
 from GroupObjects.models import GroupObjectModel
 from app.common.db_connector import DBCollections
+from app.common.enums import GroupObjectType
 
 
 class GroupObjectRepository:
@@ -69,6 +70,9 @@ class GroupObjectRepository:
         ]
         
         return await self.group_obj_coll.aggregate(pipeline).to_list(length=None)
+
+    async def get_group_by_type(self, type: GroupObjectType) -> dict:
+        return await self.group_obj_coll.find_one({"type": type})
 
     async def count_all(self, query: dict = {}) -> int:
         return await self.group_obj_coll.count_documents(query)
