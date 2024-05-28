@@ -150,7 +150,7 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
         results = [asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))]
     else:
         for content in contents:
-            if action.get("field_contents"):      
+            if action.get("field_contents"):
                 for field in action.get("field_contents"):
                     record[field] = content
 
@@ -213,17 +213,17 @@ def test_call(num: int):
 
 def trigger_task(task_name):
     periodic_task_id = f'{task_name}_periodic_task'
-    # clr.conf.beat_schedule = {'print_num_periodic_task': {
-    #         'task': 'app.tasks.print_num',
-    #         'schedule': 5.0,  # Run every 10 seconds
-    #         },
-    #     }
-    clr.conf.update(
-        # timezone="Asia/Bangkok",
-        # enable_utc=False,
-        # beat_schedule={}
-        beat_schedule={'print_num_periodic_task': {
-                'task': 'app.tasks.print_num',
-                'schedule': 10.0,  # Run every 10 seconds
-            },}
-    )
+    clr.conf.beat_schedule = {'print_num_periodic_task': {
+            'task': 'app.tasks.print_num',
+            'schedule': 5.0,  # Run every 5 seconds
+            },
+        }
+    # clr.conf.update(
+    #     # timezone="Asia/Bangkok",
+    #     # enable_utc=False,
+    #     # beat_schedule={}
+    #     beat_schedule={'print_num_periodic_task': {
+    #             'task': 'app.tasks.print_num',
+    #             'schedule': 10.0,  # Run every 10 seconds
+    #         },}
+    # )

@@ -91,6 +91,33 @@ async def get_record_detail(
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
         
+@router.get("/get-all-record-ref-to")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def get_all_record_ref_to(
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    record_id: str,
+    obj_id: str,
+    ref_obj_id: str,
+    CURRENT_USER = None,
+    
+):
+    try:
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        obj_repo = ObjectRepository(db_str)
+        obj = await obj_repo.find_one_by_id(obj_id)
+        if not obj:
+            raise HTTPBadRequest(f"Not found {obj_id} object by _id")
+        
+        record_service = RecordObjectService(db_str, obj.get("obj_id"), obj_id)
+        return await record_service.get_all_records_ref_to(record_id, ref_obj_id)
+    
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
         
 @router.post("/health-check")
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])

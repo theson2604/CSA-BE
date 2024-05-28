@@ -6,11 +6,13 @@ import redis
 celery = Celery(__name__, include=["app.tasks"])
 celery.conf.broker_url = os.environ.get("CELERY_BROKER_URL")
 celery.conf.result_backend = os.environ.get("CELERY_RESULT_BACKEND")
+celery.conf.beat_schedule_filename = 'celerybeat-schedule'
 celery.conf.update(
     timezone="Asia/Bangkok",
     enable_utc=False,
+    # beat_scheduler='redbeat.RedBeatScheduler'
     # beat_schedule={}
-    # beat_schedule={'print_num_periodic_task': {
+    # beat_schedule={'print_num_periodic_task': {   
     #         'task': 'app.tasks.print_num',
     #         'schedule': 10.0,  # Run every 10 seconds
     #     },}

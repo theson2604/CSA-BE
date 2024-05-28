@@ -80,6 +80,24 @@ async def get_detail_object_by_id(
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
         
+@router.get("/get-all-object-ref-to")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def get_all_object_ref_to(
+    id: str,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        db_str = CURRENT_USER.get("db")
+        obj_service = ObjectService(db_str)
+        return await obj_service.get_all_object_ref_to_by_id(id)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
 @router.delete("/delete-one")
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
 async def delete_one_object(

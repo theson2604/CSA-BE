@@ -5,7 +5,6 @@ from app.common.enums import CustomViewRecordType
 
 class CustomViewRecordModel(BaseModel, extra='allow'):
     id: str = Field(..., alias="_id")
-    object_id: str = Field(..., alias="object_id")
     x: float = Field(..., alias="x")
     y: float = Field(..., alias="y")
     w: float = Field(..., alias="w")
@@ -17,6 +16,11 @@ class CustomViewRecordModel(BaseModel, extra='allow'):
         populate_by_name=True
     )
     
+class CustomViewMainModel(CustomViewRecordModel):
+    object_id: str = Field(..., alias="object_id")
 
-class CustomViewRelatedObjectModel(CustomViewRecordModel):
+class CustomViewMailModel(CustomViewRecordModel):
+    main_id: str = Field(..., alias="main_id")
+
+class CustomViewRelatedObjectModel(CustomViewMailModel):
     related_obj_id: str = Field(..., alias="related_obj_id")

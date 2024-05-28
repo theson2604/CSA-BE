@@ -6,6 +6,7 @@ from pymongo import ReturnDocument
 from FieldObject.repository import FieldObjectRepository
 from Object.repository import ObjectRepository
 from RecordObject.models import RecordObjectModel
+from RecordObject.utils import extend_unique_records
 from RootAdministrator.constants import HIDDEN_METADATA_INFO
 
 from app.common.db_connector import DBCollections, client
@@ -219,6 +220,71 @@ class RecordObjectRepository:
     async def get_all_records(self) -> List[RecordObjectModel]:
         cursor = self.record_coll.find({})
         return await cursor.to_list(length=None)
+    
+    async def get_all_records_ref_to(self, id: str, ref_obj_id: str):
+        pipeline = [
+            {
+                "$lookup": {
+                    "from": "FieldObject",
+                    "localField": "object_id",
+                    "foreignField": "ref_obj_id_value",
+                    "as": "fields",
+                }
+            },
+            {
+                "$match": {
+                    "_id": id
+                }
+            },
+            {
+                "$project": {
+                    "fields": {
+                        "$filter": {
+                            "input": "$fields",
+                            "as": "field",
+                            "cond": { "$eq": ["$$field.object_id", ref_obj_id] }
+                        }
+                    }
+                }
+            }
+        ]
+
+        ref_records = []
+        fields = (await self.record_coll.aggregate(pipeline).to_list(length=None))[0].get("fields")
+        for field in fields:
+            object_id = field.get("object_id")
+            obj_id = (await self.obj_repo.find_one_by_id(object_id)).get("obj_id")
+            field_id = field.get("field_id")
+            pipeline = [
+                {
+                    "$lookup": {
+                        "from": obj_id,
+                        "localField": "_id",
+                        "foreignField": f"{field_id}.ref_to",
+                        "as": "records",
+                    }
+                },
+                {
+                    "$match": {
+                        "_id": id
+                    }
+                },
+                {
+                    "$project": {
+                        "records.object_id": 0,
+                        "records.created_by": 0,
+                        "records.modified_at": 0,
+                        "records.modified_by": 0,
+                    }
+                }
+            ]
+
+            # current record with records field as records of an object reffering to itself
+            records = (await self.record_coll.aggregate(pipeline).to_list(length=None))[0].get("records")
+            if records:
+                extend_unique_records(ref_records, records)
+
+        return ref_records
 
     async def count_all(self, query: dict = {}) -> int:
         return await self.record_coll.count_documents(query)

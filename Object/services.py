@@ -79,6 +79,9 @@ class ObjectService:
     async def get_object_detail_by_id(self, id: str) -> dict:
         return await self.repo.get_object_with_all_fields(id)
     
+    async def get_all_object_ref_to_by_id(self, id: str) -> dict:
+        return await self.repo.get_all_object_ref_to(id)
+    
     async def delete_one_object_by_id(self, object_id: str) -> bool:
         await self.field_obj_service.delete_all_fields_by_obj_id(object_id)
 

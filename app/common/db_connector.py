@@ -21,6 +21,7 @@ class DBCollections(str, Enum):
     WORKFLOW = "Workflow"
     ACTION = "Action"
     AI_DATASET = "AIDataset"
+    CUSTOM_VIEW_RECORD = "ViewRecord"
 
 # Root Collections
 class RootCollections(str, Enum):
