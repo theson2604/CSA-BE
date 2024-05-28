@@ -128,7 +128,26 @@ services:
   celery_worker:
     container_name: celery-worker
     build: .
-    command: celery -A app.celery.celery worker --loglevel=INFO --concurrency=4
+    command: celery -A app.celery.celery worker -B --loglevel=INFO --concurrency=4
+    volumes:
+      - .:/app/csa_be
+      - certs:/usr/share/elasticsearch/config/certs
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - CERT_FILE=/usr/share/elasticsearch/config/certs/ca/ca.crt
+    depends_on:
+      - be
+      - redis
+      - es01
+    restart: always
+    networks:
+      - csa
+
+  celery_beat:
+    container_name: celery-beat
+    build: .
+    command: celery -A app.celery.celery beat --loglevel=INFO
     volumes:
       - .:/app/csa_be
       - certs:/usr/share/elasticsearch/config/certs

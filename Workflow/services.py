@@ -12,7 +12,7 @@ from Workflow.models import WorkflowModel
 from Workflow.repository import WorkflowRepository
 from Workflow.schemas import WorkflowSchema, WorkflowWithActionSchema
 from app.common.errors import HTTPBadRequest
-from app.tasks import activate_create, activate_send, activate_update
+from app.tasks import activate_create, activate_send, activate_update, set_task_metadata
 
 load_dotenv()
 
@@ -79,10 +79,13 @@ class WorkflowService:
         for action in workflow_with_actions.get("actions"): # for action in actions
             type = action.get("type")
             if type == "send":
-                task = activate_send.delay(db, action, current_user_id)
+                task = activate_send.delay(db, action, current_user_id, record_id)
+                set_task_metadata(task.id, {"type": "send"})
             elif type == "create":
                 task =  activate_create.delay(db, action, current_user_id, [])
+                set_task_metadata(task.id, {"type": "create"})
             elif type == "update":
                 task = activate_update.delay(db, action, current_user_id, [], record_id)
+                set_task_metadata(task.id, {"type": "update"})
 
         return task.id

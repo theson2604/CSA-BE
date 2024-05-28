@@ -129,10 +129,6 @@ class ActionService:
         
         return await self.repo.delete_one_by_id(id)
     
-
-    def activate_send():
-        pass
-
     # async def delete_all_fields_by_obj_id(self, object_id: str) -> bool:
     #     object = await self.obj_repo.find_one_by_id(object_id)
     #     if not object:
