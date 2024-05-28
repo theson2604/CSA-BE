@@ -17,6 +17,7 @@ services:
     depends_on:
       - redis
       - es01
+      - ai-server
     restart: always
     networks:
       - csa

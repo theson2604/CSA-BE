@@ -1,3 +1,4 @@
+import aiohttp
 from fastapi import HTTPException
 from DatasetAI.repository import DatasetAIRepository
 from DatasetAI.schemas import DatasetConfigSchema
@@ -14,8 +15,12 @@ from dotenv import load_dotenv
 import os
 import copy
 from app.common.utils import generate_model_id
+import logging
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class DatasetAIServices:
     def __init__(self, db_str: str):
@@ -77,7 +82,6 @@ class DatasetAIServices:
         
         dataset_obj_detail = await self.obj_service.get_object_detail_by_id(dataset_obj_id)
         dataset_obj_id_str = dataset_obj_detail.get("obj_id")
-        dataset_obj_id = dataset_obj_detail.get("_id")
         
         # Map src record's field_id_str to new ones [new_feature_ids, new_label_id]
         field_mapping = {}
@@ -89,6 +93,7 @@ class DatasetAIServices:
                     continue
                 
         body = {
+            "dest_obj_id": dataset_obj_id,
             "dest_obj_id_str": dataset_obj_id_str,
             "src_obj_id_str": obj_id_str,
             "features": features_id_str,
@@ -98,14 +103,16 @@ class DatasetAIServices:
         }
         
         headers = {'Authorization': f'Bearer {access_token}'}
-        async with httpx.AsyncClient() as client:
-            response = await client.post(f'{os.environ.get("AI_SERVER_URL")}/preprocess', json=body, headers=headers)
-            if response.status_code != 200:
-                raise HTTPException(status_code=response.status_code, detail=response.text)
-            
-            record_service = RecordObjectService(self.db_str, dataset_obj_id_str, dataset_obj_id)
-            preprocessed_records = await record_service.get_all_records_with_detail(dataset_obj_id, page=1, page_size=10)
-            
-            histogram_labels = response.json() #{"histogram_labels", {"labels": [], "counts": []}}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f'{os.environ.get("AI_SERVER_URL")}/preprocess', json=body, headers=headers) as response:
+                if response.status != 200:
+                    error_message = await response.text()
+                    raise HTTPException(status_code=response.status, detail=error_message)
+                
+                histogram_labels = await response.json()
+                
+        record_service = RecordObjectService(self.db_str, dataset_obj_id_str, dataset_obj_id)
+        preprocessed_records = await record_service.get_all_records_with_detail(dataset_obj_id, page=1, page_size=10)
+                
             
         return {"records": preprocessed_records, **histogram_labels}
