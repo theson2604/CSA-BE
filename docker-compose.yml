@@ -4,7 +4,7 @@ services:
   be:
     build: .
     image: csa-be:latest
-    container_name: csa-be-servc
+    container_name: csa-be
     command: sh -c "uvicorn app.main:app --reload --port=8000 --host=0.0.0.0"
     ports:
       - 8000:8000
@@ -182,6 +182,29 @@ services:
     networks:
       - csa
 
+  ai-server:
+    build: ../AI
+    container_name: csa-ai
+    image: csa-ai:latest
+    ports:
+      - 8002:8002
+    environment:
+      - CUDA_HOME=/usr/local/cuda
+      - LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
+    volumes:
+      - ../AI:/app/csa_ai
+    command: ["uvicorn", "app.main:app", "--reload", "--host=0.0.0.0", "--port=8002"]
+    runtime: nvidia
+    networks:
+      - csa
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
 volumes:
   certs:
     driver: local
@@ -189,7 +212,8 @@ volumes:
     driver: local
   redis:
     driver: local
+  ai-server:
+    driver: local
 
 networks:
   csa:
-    driver: bridge

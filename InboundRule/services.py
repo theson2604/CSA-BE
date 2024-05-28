@@ -65,7 +65,7 @@ class InboundRule:
         field_ids = []
         field_details = {}
         ref_obj_records = {}
-        list_details = await self.field_obj_repo.find_many_by_field_id_str(object_id, list(mapping.values()))
+        list_details = await self.field_obj_repo.find_many_by_field_ids_str(object_id, list(mapping.values()))
         print("LIST_DETAILS: ", list_details)
 
         for index, key in enumerate(mapping):
@@ -185,7 +185,6 @@ class InboundRule:
         return True
     
     def check_float(field_value, field_detail):
-        print("FLOATTTTT", field_value)
         if not isinstance(field_value, int) and not isinstance(field_value, float):
             return False
         return True

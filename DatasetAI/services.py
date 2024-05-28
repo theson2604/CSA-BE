@@ -45,24 +45,30 @@ class DatasetAIServices:
                 {"_id": 0, "object_id": 0, "sorting_id": 0},
             )
         )
+        features = []
+        cpy_list_fields_detail = copy.deepcopy(list_fields_detail)
+        for feature in features_id_str:
+            for field in cpy_list_fields_detail:
+                if field.get("field_id") == feature:
+                    if field.get("field_type") not in [FieldObjectType.TEXT.value, FieldObjectType.TEXTAREA.value]:
+                        return HTTPBadRequest(f"feature {field.get("field_name")} field_type must be 'text' or 'textarea'")
+                    
+                    field.pop("field_id")
+                    field.update({"is_label": False})
+                    features += [field]
+                    break
         
-        features = copy.deepcopy(list_fields_detail)[:-1]
-        for feature in features:
-            if feature.get("field_type") not in [FieldObjectType.TEXT.value, FieldObjectType.TEXTAREA.value]:
-                return HTTPBadRequest(f"feature {feature.get("field_name")} field_type must be 'text' or 'textarea'")
-            
-            feature.pop("field_id")
-            
-        for feature in features:
-            feature["is_label"] = False
-            
-        label = copy.deepcopy(list_fields_detail)[-1]
-        if label.get("field_type") not in [FieldObjectType.FLOAT.value]:
-            return HTTPBadRequest(f"label {label.get("field_name")} field_type must be 'float'")
+        label = {}
+        for field in cpy_list_fields_detail:
+            if field.get("field_id") == label_id_str:
+                if field.get("field_type") not in [FieldObjectType.FLOAT.value]:
+                    return HTTPBadRequest(f"label {field.get("field_name")} field_type must be 'float'")
 
-        label.pop("field_id")
-        label.update({"is_label": True})
-        
+                field.pop("field_id")
+                field.update({"is_label": True})
+                label = field
+                break
+                
         dataset_fields_schema = [FieldObjectSchema(**x) for x in features] + [FieldObjectSchema(**label)]
         # Create new AI Dataset Object in group "AI Datasets" by default
         group_ai_datasets = await self.group_obj_repo.get_group_by_type(GroupObjectType.AI_DATASETS)
@@ -93,7 +99,7 @@ class DatasetAIServices:
         
         headers = {'Authorization': f'Bearer {access_token}'}
         async with httpx.AsyncClient() as client:
-            response = await client.post(f'{os.environ.get("AI_SERVER_URL")}/preprocess', json=body, headers=headers)
+            response = await client.post(f'{os.environ.get("AI_SERVER_URL")}/api/preprocess', json=body, headers=headers)
             if response.status_code != 200:
                 raise HTTPException(status_code=response.status_code, detail=response.text)
             

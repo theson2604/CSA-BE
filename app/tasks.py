@@ -118,7 +118,7 @@ def activate_send(db: str, action: dict, admin_id: str, record_id: str):
         "template": action.get("template_id"),
         "object": action.get("object_id")
     }
-    email_str = r"^fd_email_\d{3}$"
+    email_str = r"^fd_email_\d{9}$"
     if not re.search(email_str, field_email):
         ref_field, fd_email = field_email.split(".")
         mail["send_to"] = record.get(ref_field).get("ref_to").get(fd_email)
