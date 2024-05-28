@@ -30,36 +30,36 @@ def convert_str(name: str = "") -> str:
 
 
 def generate_model_id(name: str = "") -> str:
-    rand_num = random.randint(0, 999)
-    rand_3_digits = f"{rand_num:03}"
-    return "model_" + convert_str(name) + f"_{rand_3_digits}"
+    rand_num = random.randint(0, 999999)
+    rand_6_digits = f"{rand_num:06}"
+    return "model_" + convert_str(name) + f"_{rand_6_digits}"
 
 
 def generate_db_company(name: str = "") -> str:
     """
-    Generate unique company's db with format "db_nhuatienphong_123"
+    Generate unique company's db with format "db_nhuatienphong_123456"
     """
-    rand_num = random.randint(0, 999)
-    rand_3_digits = f"{rand_num:03}"
-    return "db_" + convert_str(name) + f"_{rand_3_digits}"
+    rand_num = random.randint(0, 999999)
+    rand_6_digits = f"{rand_num:06}"
+    return "db_" + convert_str(name) + f"_{rand_6_digits}"
 
 
 def generate_field_id(name: str = "") -> str:
     """
-    Generate unique Object's Field with format "fd_customername_123"
+    Generate unique Object's Field with format "fd_customername_123456"
     """
-    rand_num = random.randint(0, 999)
-    rand_3_digits = f"{rand_num:03}"
-    return "fd_" + convert_str(name) + f"_{rand_3_digits}"
+    rand_num = random.randint(0, 999999)
+    rand_6_digits = f"{rand_num:06}"
+    return "fd_" + convert_str(name) + f"_{rand_6_digits}"
 
 
 def generate_object_id(name: str = "") -> str:
     """
-    Generate unique Object's Field with format "obj_customercare_123"
+    Generate unique Object's Field with format "obj_customercare_123456"
     """
-    rand_num = random.randint(0, 999)
-    rand_3_digits = f"{rand_num:03}"
-    return "obj_" + convert_str(name) + f"_{rand_3_digits}"
+    rand_num = random.randint(0, 999999)
+    rand_6_digits = f"{rand_num:06}"
+    return "obj_" + convert_str(name) + f"_{rand_6_digits}"
 
 
 async def generate_next_record_id(db_str: str, obj_id: str):

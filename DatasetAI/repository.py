@@ -12,3 +12,7 @@ class DatasetAIRepository:
     async def insert_one(self, group: DatasetAIModel) -> str:
         result = await self.group_obj_coll.insert_one(group)
         return result.inserted_id
+    
+    
+    async def set_all_field_keys():
+        return
