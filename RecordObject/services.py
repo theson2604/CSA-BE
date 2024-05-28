@@ -250,6 +250,14 @@ class RecordObjectService:
         - object_id: Object's _id
         """
         return await self.record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id)
+    
+    async def get_all_records_ref_to(
+        self, record_id: str, ref_obj_id: str
+    ) -> List[RecordObjectModel]:
+        if not (await self.object_repo.find_one_by_id(ref_obj_id)):
+            raise HTTPBadRequest(f"Can not find Ref Object by id {ref_obj_id}")
+        
+        return await self.record_repo.get_all_records_ref_to(record_id, ref_obj_id)
 
     async def update_one_record(self, record: dict, current_user_id: str) -> bool:
         record_id = record.pop("record_id")
