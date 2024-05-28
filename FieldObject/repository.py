@@ -63,8 +63,8 @@ class FieldObjectRepository:
             {"object_id": obj_id, "field_id": fld_id}
         )
     
-    async def find_many_by_field_id_str(
-        self, obj_id: str, fld_ids: List[str]
+    async def find_many_by_field_ids_str(
+        self, obj_id: str, fld_ids: List[str], projection: dict = None
     ) -> Union[FieldObjectBase]:
         """
         Find Field Object by field_id fd_<name>_id \n
@@ -73,7 +73,7 @@ class FieldObjectRepository:
             - fld_id: fd_<name>_<id>
         """
         cursor = self.field_object_coll.find(
-            {"object_id": obj_id, "field_id": {"$in": fld_ids}}
+            {"object_id": obj_id, "field_id": {"$in": fld_ids}}, projection
         )
 
         return await cursor.to_list(length=None)
@@ -85,6 +85,10 @@ class FieldObjectRepository:
 
     async def find_all(self, query: dict = {}) -> List[Union[FieldObjectBase]]:
         return await self.field_object_coll.find(query).to_list(length=None)
+    
+    async def find_all_by_obj_id(self, obj_id: str, projection: dict = {}) -> List[Union[FieldObjectBase]]:
+        return await self.field_object_coll.find({"object_id": obj_id}, projection).to_list(length=None)
+    
     async def get_all_by_field_types(
         self, obj_id: str, field_types: List[FieldObjectType]
     ) -> List[Union[FieldObjectBase]]:
@@ -164,6 +168,3 @@ class FieldObjectRepository:
             
         return []
     
-    
-    async def get_all_fields_detail_by_list_field_ids_str(self, ids_str: List[str], obj_id: str, projection: dict = None) -> List[Union[FieldObjectBase]]:
-        return await self.field_object_coll.find({"field_id": {"$in": ids_str}, "object_id": obj_id}, projection).to_list(length=None)
