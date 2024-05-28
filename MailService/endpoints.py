@@ -2,9 +2,11 @@ from typing import List
 from typing_extensions import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
-from MailService.schemas import MailSchema, SendMailSchema, EmailSchema, TemplateSchema
+from MailService.repository import MailServiceRepository
+from MailService.schemas import ScanMailSchema, SendMailSchema, EmailSchema, TemplateSchema
 from MailService.services import MailServices
 from Object.repository import ObjectRepository
+from app.common.db_connector import DBCollections
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
 from app.dependencies.authentication import protected_route
@@ -20,9 +22,14 @@ async def create_email(
     CURRENT_USER = None
 ):
     try:
-        db = CURRENT_USER.get("db")
+        db, admin_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        email_dump = email.model_dump()
+        mail_repo = MailServiceRepository(db, DBCollections.EMAIL_TEMPLATE)
+        if not (await mail_repo.find_template_by_id(email_dump.get("template_id"))):
+            raise HTTPBadRequest(f"Can not find template by template_id {email_dump.get("template_id")}")
+
         mail_service = MailServices(db)
-        return await mail_service.create_email(email)
+        return await mail_service.create_email(email, admin_id)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -59,7 +66,7 @@ async def send_mail(
 @router.post("/scan-email")
 @protected_route([SystemUserRole.ADMINISTRATOR])
 async def send_mail(
-    mail: MailSchema,
+    mail: ScanMailSchema,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
     CURRENT_USER = None

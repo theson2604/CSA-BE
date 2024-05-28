@@ -6,10 +6,12 @@ from app.common.utils import get_current_hcm_datetime
 class EmailModel(BaseModel):
     id: str = Field(..., alias="_id")
     email: EmailStr = Field(..., alias="email")
-    pwd:bytes = Field(..., alias="pwd")
+    pwd: bytes = Field(..., alias="pwd")
     key: bytes = Field(..., alias="key")
     iv: bytes = Field(..., alias="iv")
-    admin: str = Field(..., alias="admin_id", description="It must be _id (str) of an Admin")
+    db: str = Field(..., alias="db_str")
+    admin_id: str = Field(..., alias="admin_id")
+    template_id: str = Field(..., alias="template_id")
 
     created_at: str = Field(..., alias="created_at", default_factory=get_current_hcm_datetime)
     modified_at: str = Field(..., alias="modified_at", default_factory=get_current_hcm_datetime)

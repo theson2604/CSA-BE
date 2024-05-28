@@ -8,6 +8,7 @@ from typing import List
 from fastapi import WebSocket
 from FieldObject.repository import FieldObjectRepository
 from InboundRule.services import InboundRule
+from MailService.repository import MailServiceRepository
 from MailService.services import MailServices
 from Notification.services import NotificationService
 from Object.repository import ObjectRepository
@@ -43,18 +44,10 @@ def print_info(self):
     print(f"self.request.id: {self.request.id}")
 
 @clr.task(bind=True)
-def create_task(self, value, t):
-    # raise HTTPBadRequest("STOP !")
-    print_info(self)
-
-    time.sleep(t)
-    return value
-
-@clr.task(bind=True)
 def add(self, a, t):
-    print_info(self)
+    # print_info(self)
 
-    time.sleep(t)
+    # time.sleep(t)
     return a+1
 
 @clr.task()
@@ -65,51 +58,45 @@ def test_scan_mail(db: str, mail: dict, obj_id: str, admin_id: str):
 
     return result
 
+@clr.task()
+def print_num(db_str: str = None, user_id: str = None):
+    if not db_str or not user_id:
+        return "EMPTY"
+    mail_service = MailServices(db_str, "ScanConfig")
+    email, result = asyncio.get_event_loop().run_until_complete(mail_service.get_config(user_id))
+    if email and result:
+        add.apply_async(args=(3,0), countdown=result)
+        return True
+
+    return False
 
 @clr.task()
-def test_query(db: str, obj_id: str):
-    time.sleep(5)
-    record_repo = RecordObjectRepository(db, obj_id)
-    # result = async_to_sync(record_repo.find_one_by_id)(id = "6621547dd478411eb0ad46a6")
-    result = asyncio.get_event_loop().run_until_complete(record_repo.find_one_by_id(id="6621547dd478411eb0ad46a6"))
-    # result = async_find_one_by_id(id="6621547dd478411eb0ad46a6")
+def scan_email():
+    mail_repo = MailServiceRepository()
+    system_emails = asyncio.get_event_loop().run_until_complete(mail_repo.find_many_email({}, {"email": 1, "db_str": 1}))
+    for system_email in system_emails:
+        db_str = system_email.get("email")
+        mail_service = MailServices(db_str)
+        scan_schema = {
+            "template": system_email.get("template_id"),
+            "email": system_email.get("email")
+        }
+        contents = asyncio.get_event_loop().run_until_complete(mail_service.scan_email(scan_schema, db_str, system_email.get("admin_id")))
+        # if len(contents) != 0:
+        #     asyncio.get_event_loop().run_until_complete(mail_service.check_condition(system_email.get("template_id")))
 
-    return result
-
-@clr.task(bind=True, max_retries=1, retry_backoff=5)
-def division(self, a, b):
-    try:
-        time.sleep(3)
-        return a/b
-    except ZeroDivisionError as e:
-        raise self.retry(exc=e)
-    
-@clr.task(bind=True)
-def activate_workflow(self, a, t):
-    print_info(self)
-
-    time.sleep(t)
-    return a+1
-
-@clr.task()
-def print_num():
-    print(get_current_hcm_datetime())
-
-    return "BEAT"
+    return contents
 
 
 # DONE
 @clr.task(name = "send_email")
-def activate_send(db: str, action: dict, admin_id: str, record_id: str):
-    # action_repo = ActionRepository(db)
-    # action = asyncio.get_event_loop().run_until_complete(action_repo.find_one_by_id(action_id))
+def activate_send(db: str, action: dict, record_id: str):
     object_id = action.get("object_id")
     obj_repo = ObjectRepository(db)
     obj = asyncio.get_event_loop().run_until_complete(obj_repo.find_one_by_id(object_id))
     obj_id = obj.get("obj_id")
 
     record_repo = RecordObjectRepository(db, obj_id)
-    # records = asyncio.get_event_loop().run_until_complete(record_repo.get_all_records())
     record = asyncio.get_event_loop().run_until_complete(record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id))[0]
     mail_service = MailServices(db, obj_id)
     field_email = action.get("to")
@@ -127,7 +114,7 @@ def activate_send(db: str, action: dict, admin_id: str, record_id: str):
 
     if not mail.get("send_to"):
         return "Failed to send email."
-    result = asyncio.get_event_loop().run_until_complete(mail_service.send_one(mail, admin_id, record))
+    result = asyncio.get_event_loop().run_until_complete(mail_service.send_one(mail, db, record))
     return result
 
 # DONE
@@ -206,11 +193,6 @@ def activate_inbound_with_new_obj(db, config: dict, user_id: str, df: str):
     return result
 
 
-def test_call(num: int):
-    task = group(create_task.s(7, 27), add.s(num, 11), create_task.s(3, 17), division.s(9, 0)).apply_async()
-
-    return task.id
-
 def trigger_task(task_name):
     periodic_task_id = f'{task_name}_periodic_task'
     clr.conf.beat_schedule = {'print_num_periodic_task': {
@@ -218,12 +200,3 @@ def trigger_task(task_name):
             'schedule': 5.0,  # Run every 5 seconds
             },
         }
-    # clr.conf.update(
-    #     # timezone="Asia/Bangkok",
-    #     # enable_utc=False,
-    #     # beat_schedule={}
-    #     beat_schedule={'print_num_periodic_task': {
-    #             'task': 'app.tasks.print_num',
-    #             'schedule': 10.0,  # Run every 10 seconds
-    #         },}
-    # )

@@ -10,12 +10,9 @@ from MailService.models import EmailModel, TemplateModel
 class MailServiceRepository:
     def __init__(self, db_str: str = ROOT_CSA_DB, coll: str = RootCollections.EMAILS.value):
         global client
-        try:
-            self.db_str = db_str
-            self.db =  client.get_database(db_str)
-            self.coll = self.db.get_collection(coll)
-        except Exception as e:
-            print("ERORR IN MONGODb: ", e)
+        self.db_str = db_str
+        self.db =  client.get_database(db_str)
+        self.coll = self.db.get_collection(coll)
         
     async def insert_email(self, email: EmailModel):
         result = await self.coll.insert_one(email)
@@ -26,6 +23,10 @@ class MailServiceRepository:
     
     async def find_email_by_name(self, name: str, projection: dict = None):
         return await self.coll.find_one({"email": name}, projection)
+    
+    async def find_many_email(self, query: dict, projection: dict = None):
+        cursor = self.coll.find(query, projection)
+        return await cursor.to_list(length=None)
     
     async def insert_template(self, template: TemplateModel, projection: dict = None):
         result = await self.coll.insert_one(template, projection)
@@ -54,3 +55,11 @@ class MailServiceRepository:
         ]
 
         return await self.coll.aggregate(pipeline).to_list(length=None)
+    
+    async def update_one_by_id(self, id, query):
+        result = await self.coll.update_one({"_id": id}, {"$set": query})
+        return result.modified_count
+    
+    async def find_one_by_id(self, id):
+        result = await self.coll.find_one({"_id": id})
+        return result.get("email"), result.get("password")

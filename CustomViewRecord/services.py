@@ -88,7 +88,7 @@ class CustomViewRecordService:
     async def update_one_by_id(self, view_record: UpdateCustomViewRecordSchema, current_user_id):
         updated_view_record = (await self.validate_and_get_all_view_record_models([view_record], current_user_id))[0]
         updated_view_record.pop("_id")
-        return await self.repo.update_one(updated_view_record.pop("view_record_id"), updated_view_record)
+        return await self.repo.update_one_by_id(updated_view_record.pop("view_record_id"), updated_view_record)
     
     async def delete_one_by_id(self, id: str) -> int:
         view_record = await self.repo.find_one_by_id(id)

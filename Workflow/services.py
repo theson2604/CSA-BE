@@ -41,9 +41,9 @@ class WorkflowService:
             object_id = object_id,
             description = workflow.get("description"),
             trigger = workflow.get("trigger"),
-            conditions = workflow.get("conditions")
-            # modified_by = current_user_id,
-            # created_by = current_user_id
+            conditions = workflow.get("conditions"),
+            modified_by = current_user_id,
+            created_by = current_user_id
         )
         
         return await self.repo.insert_one(workflow_model.model_dump(by_alias=True))
@@ -79,7 +79,7 @@ class WorkflowService:
         for action in workflow_with_actions.get("actions"): # for action in actions
             type = action.get("type")
             if type == "send":
-                task = activate_send.delay(db, action, current_user_id, record_id)
+                task = activate_send.delay(db, action, record_id)
                 set_task_metadata(task.id, {"type": "send"})
             elif type == "create":
                 task =  activate_create.delay(db, action, current_user_id, [])

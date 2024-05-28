@@ -3,6 +3,7 @@ from FieldObject.repository import FieldObjectRepository
 from MailService.models import EmailModel, TemplateModel
 from MailService.repository import MailServiceRepository
 from MailService.schemas import *
+from Workflow.repository import WorkflowRepository
 from app.common.db_connector import DBCollections
 from app.common.errors import HTTPBadRequest
 # from fastapi import Depends
@@ -31,10 +32,18 @@ class MailServices:
         self.root_repo = RootAdministratorRepository()
         self.obj_repo = ObjectRepository(db)
         self.field_obj_repo = FieldObjectRepository(db)
+        self.workflow_repo = WorkflowRepository(db)
         if coll != None:
+            self.scan_repo = MailServiceRepository(db, coll)
             self.record_repo = RecordObjectRepository(db, coll)
 
         self.db_str = db
+
+    async def change_config(self):
+        return await self.scan_repo.update_one_by_id("6655bf29be4cf0c9e2858287", {"email": "r123@gmail.com", "password": "123"})
+    
+    async def get_config(self, id):
+        return await self.scan_repo.find_one_by_id(id)
 
     def encrypt_aes(self, pwd: str):
         try:
@@ -173,17 +182,13 @@ class MailServices:
             raise HTTPBadRequest("FAIL TO GET NEW BODY")
         return body
 
-    async def create_email(self, email: EmailSchema):
+    async def create_email(self, email: EmailSchema, admin_id: str):
         email_obj = email.model_dump()
-        admin_id = email_obj.get("admin")
+        db_str = email_obj.get("db_str")
         address = email_obj.get("email")
         registered_email = await self.repo.find_email_by_name(address)
         if registered_email:
             raise HTTPBadRequest(f"Email {address} has been registed")
-
-        system_admin = await self.root_repo.find_one_by_id(admin_id, self.db_str)
-        if not system_admin:
-            raise HTTPBadRequest("Cannot find system admin by admin_id")
 
         password = email_obj.get("pwd")
         try:
@@ -196,20 +201,19 @@ class MailServices:
         record = EmailModel(
             _id = str(ObjectId()),
             email = address,
+            admin_id = admin_id,
             pwd = ciphertext,
             key = key,
             iv = iv,
-            admin = admin_id
+            db = db_str,
+            template_id = email_obj.get("template_id")
         )
 
-        await self.repo.insert_email(record.model_dump(by_alias=True))
-        return True
+        return await self.repo.insert_email(record.model_dump(by_alias=True))
     
-    async def send_one(self, mail: SendMailSchema, admin_id: str, record: dict) -> str:
+    async def send_one(self, mail: SendMailSchema, db_str: str, record: dict) -> str:
         # mail = mail.model_dump()
         email = mail.get("email")
-        mail_pwd = await self.get_mail_pwd(email, admin_id)
-
         template = await self.template_repo.find_template_by_id(mail.get("template"))
         if not template:
             raise HTTPBadRequest(f"Can not find template")
@@ -244,7 +248,7 @@ class MailServices:
         mail_model["Subject"] = mail_subject
         mail_model["From"] = email
         mail_model["To"] = ",".join(mail.get("send_to"))
-        mail_pwd = await self.get_mail_pwd(email, admin_id)
+        mail_pwd = await self.get_mail_pwd(email, db_str)
 
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp_server:
             smtp_server.login(email, mail_pwd)
@@ -252,12 +256,12 @@ class MailServices:
         return "Message sent!"
 
     
-    async def get_mail_pwd(self, email: str, admin_id: str) -> str:
-        result = await self.repo.find_email({"email": email, "admin_id": admin_id}, projection={"modified_at": 0, "created_at": 0})
+    async def get_mail_pwd(self, email: str, db_str: str) -> str:
+        result = await self.repo.find_email({"email": email, "db_str": db_str}, projection={"modified_at": 0, "created_at": 0})
         if not result:
             raise HTTPBadRequest("Cannot find email")
         return self.decrypt_aes(result.get("key"), result.get("iv"), result.get("pwd"))
-
+    
     async def create_template(self, template) -> str:
         template = template.model_dump()
         object_id = template.get("object")
@@ -285,13 +289,14 @@ class MailServices:
     async def get_templates_by_object_id(self, object_id) -> List:
         return await self.template_repo.get_templates_by_object_id(object_id)
     
-    async def scan_email(self, mail: MailSchema, admin_id: str):
+    async def scan_email(self, mail: ScanMailSchema, db_str: str, current_user_id: str):
         print("START SCAN")
         # mail = mail.model_dump()
         email = mail.get("email")
-        mail_pwd = await self.get_mail_pwd(email, admin_id)
+        mail_pwd = await self.get_mail_pwd(email, db_str)
 
-        template = await self.template_repo.find_template_by_id(mail.get("template"))
+        template_id = mail.get("template")
+        template = await self.template_repo.find_template_by_id(template_id)
         if not template:
             raise HTTPBadRequest(f"Can not find template")
         
@@ -333,5 +338,25 @@ class MailServices:
                     
                 # print("SUBJECT: ", msg.subject)
                 # print("BODY: ", msg.text)
+        if len(mail_contents) != 0:
+            await self.check_condition(template_id, current_user_id)
+        
         return mail_contents
     
+
+    async def check_condition(self, template_id: str, current_user_id: str):
+        template = self.template_repo.find_one_by_id(template_id)
+        object_id = template.get("object_id")
+        workflows = await self.workflow_repo.find_many({"object_id": object_id}, {"_id": 1, "trigger": 1})
+        task_ids = []
+        for workflow in workflows:
+            if workflow.get("trigger") != "scan":
+                continue
+
+            from Workflow.services import WorkflowService
+            workflow_service = WorkflowService(self.db_str)
+            # activate current workflow
+            task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id)
+            task_ids.append(task_id)
+
+        return task_ids
