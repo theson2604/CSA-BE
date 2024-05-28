@@ -19,13 +19,13 @@ class DatasetConfigSchema(BaseModel):
         label = schema.get("label", "")
         obj_id_str = schema.get("obj_id_str", "")
         
-        regex_obj_str = r"^obj_\w+_\d{3}$"
+        regex_obj_str = r"^obj_\w+_\d{6}$"
         # obj_id_str
         match = re.search(regex_obj_str, obj_id_str)
         if not match:
             raise ValueError(f"invalid 'obj_id_str' {obj_id_str}. It must be {regex_obj_str}.")
         
-        regex_fd_str = r"^fd_\w+_\d{3}$"
+        regex_fd_str = r"^fd_\w+_\d{6}$"
         # features
         for feature in features:
             match = re.search(regex_fd_str, feature)

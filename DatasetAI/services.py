@@ -1,3 +1,4 @@
+import aiohttp
 from fastapi import HTTPException
 from DatasetAI.repository import DatasetAIRepository
 from DatasetAI.schemas import DatasetConfigSchema
@@ -6,15 +7,20 @@ from FieldObject.schemas import FieldObjectSchema
 from GroupObjects.repository import GroupObjectRepository
 from Object.schemas import ObjectWithFieldSchema
 from Object.services import ObjectService
+from RecordObject.services import RecordObjectService
 from app.common.enums import FieldObjectType, GroupObjectType
 from app.common.errors import HTTPBadRequest
 import httpx
 from dotenv import load_dotenv
 import os
-
+import copy
 from app.common.utils import generate_model_id
+import logging
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class DatasetAIServices:
     def __init__(self, db_str: str):
@@ -38,50 +44,75 @@ class DatasetAIServices:
         list_ids = features_id_str + [label_id_str]
 
         list_fields_detail = (
-            await self.field_obj_repo.get_all_fields_detail_by_list_field_ids_str(
-                list_ids,
+            await self.field_obj_repo.find_many_by_field_ids_str(
                 obj_id,
-                {"_id": 0, "field_id": 0, "object_id": 0, "sorting_id": 0},
+                list_ids,
+                {"_id": 0, "object_id": 0, "sorting_id": 0},
             )
         )
+        features = []
+        cpy_list_fields_detail = copy.deepcopy(list_fields_detail)
+        for feature in features_id_str:
+            for field in cpy_list_fields_detail:
+                if field.get("field_id") == feature:
+                    if field.get("field_type") not in [FieldObjectType.TEXT.value, FieldObjectType.TEXTAREA.value]:
+                        return HTTPBadRequest(f"feature {field.get("field_name")} field_type must be 'text' or 'textarea'")
+                    
+                    field.pop("field_id")
+                    field.update({"is_label": False})
+                    features += [field]
+                    break
+        
+        label = {}
+        for field in cpy_list_fields_detail:
+            if field.get("field_id") == label_id_str:
+                if field.get("field_type") not in [FieldObjectType.FLOAT.value]:
+                    return HTTPBadRequest(f"label {field.get("field_name")} field_type must be 'float'")
 
-        features = list_fields_detail[:-1]
-        for feature in features:
-            if feature.get("field_type") not in [FieldObjectType.TEXT.value, FieldObjectType.TEXTAREA.value]:
-                return HTTPBadRequest(f"feature {feature.get("field_name")} field_type must be 'text' or 'textarea'")
-        
-        for feature in features:
-            feature["is_label"] = False
-            
-        label = list_fields_detail[-1]
-        if label.get("field_type") not in [FieldObjectType.FLOAT.value]:
-            return HTTPBadRequest(f"label {label.get("field_name")} field_type must be 'float'")
-        
-        label.update({"is_label": True})
-        
-        dataset_fields_schema = [FieldObjectSchema(**label)] + [FieldObjectSchema(**x) for x in features]
-        # Find AI Datasets Group by default
+                field.pop("field_id")
+                field.update({"is_label": True})
+                label = field
+                break
+                
+        dataset_fields_schema = [FieldObjectSchema(**x) for x in features] + [FieldObjectSchema(**label)]
+        # Create new AI Dataset Object in group "AI Datasets" by default
         group_ai_datasets = await self.group_obj_repo.get_group_by_type(GroupObjectType.AI_DATASETS)
         object_with_fields_schema = ObjectWithFieldSchema(obj_name=dataset_name, group_obj_id=group_ai_datasets.get("_id"), fields=dataset_fields_schema)
         dataset_obj_id = await self.obj_service.create_object_with_fields(obj_with_fields=object_with_fields_schema, current_user_id=cur_user_id)
-        # Get dataset obj_id_str
+        
         dataset_obj_detail = await self.obj_service.get_object_detail_by_id(dataset_obj_id)
         dataset_obj_id_str = dataset_obj_detail.get("obj_id")
         
+        # Map src record's field_id_str to new ones [new_feature_ids, new_label_id]
+        field_mapping = {}
+        dataset_fields_detail= await self.field_obj_repo.find_all_by_obj_id(dataset_obj_id, {"_id": 0, "field_id": 1, "field_name": 1})
+        for src_field in list_fields_detail:
+            for dataset_field in dataset_fields_detail:
+                if src_field.get("field_name") == dataset_field.get("field_name"):
+                    field_mapping.update({src_field.get("field_id"): dataset_field.get("field_id")})
+                    continue
+                
         body = {
+            "dest_obj_id": dataset_obj_id,
             "dest_obj_id_str": dataset_obj_id_str,
             "src_obj_id_str": obj_id_str,
             "features": features_id_str,
             "label": label_id_str,
-            "model_id": generate_model_id(train_model_name)
+            "field_mapping": field_mapping,
+            "train_model_id": generate_model_id(train_model_name)
         }
         
         headers = {'Authorization': f'Bearer {access_token}'}
-        async with httpx.AsyncClient() as client:
-            response = await client.post(f'{os.environ.get("AI_SERVER_URL")}/preprocess', json=body, headers=headers)
-            if response.status_code != 200:
-                raise HTTPException(status_code=response.status_code, detail=response.text)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f'{os.environ.get("AI_SERVER_URL")}/preprocess', json=body, headers=headers) as response:
+                if response.status != 200:
+                    error_message = await response.text()
+                    raise HTTPException(status_code=response.status, detail=error_message)
+                
+                histogram_labels = await response.json()
+                
+        record_service = RecordObjectService(self.db_str, dataset_obj_id_str, dataset_obj_id)
+        preprocessed_records = await record_service.get_all_records_with_detail(dataset_obj_id, page=1, page_size=10)
+                
             
-            histogram_labels = response.json().get("histogram_labels", {"labels": [], "counts": []})
-            
-        return histogram_labels
+        return {"records": preprocessed_records, **histogram_labels}

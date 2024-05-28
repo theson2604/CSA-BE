@@ -9,7 +9,7 @@ class RecordObjectSchema(BaseModel, extra='allow'):
     def validate_field_id(self):
         fields = self.model_dump(exclude=["object_id", "record_id"])
         for field_id in fields.keys():
-            regex_str = "^fd_\w+_\d{3}$"
+            regex_str = r"^fd_\w+_\d{6}$"
             match = re.search(regex_str, field_id)
             if not match:
                 raise ValueError(f"invalid 'field_id' {field_id}. It must be {regex_str}")

@@ -1,8 +1,7 @@
 from typing import List
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.common.enums import CustomViewRecordType, DisplayCustomViewRecordType, FieldObjectType
-from app.common.utils import get_current_hcm_datetime
+from app.common.enums import CustomViewRecordType
 
 class CustomViewRecordModel(BaseModel, extra='allow'):
     id: str = Field(..., alias="_id")
@@ -12,8 +11,7 @@ class CustomViewRecordModel(BaseModel, extra='allow'):
     h: float = Field(..., alias="h")
     static: bool = Field(..., alias="static")
     type: CustomViewRecordType = Field(..., alias="type")
-    display: DisplayCustomViewRecordType = Field(..., alias="display")
-
+    
     model_config = ConfigDict(
         populate_by_name=True
     )

@@ -86,7 +86,7 @@ class FieldObjectSchema(BaseModel):
             if not cascade_option:
                 raise ValueError(f"missing required setting 'cascade_option' for 'field_type' {FieldObjectType.REFERENCE_FIELD_OBJECT}.")
             
-            regex_str = r"^obj_\w+_\d{3}$"
+            regex_str = r"^obj_\w+_\d{6}$"
             match = re.search(regex_str, src)
             if not match:
                 raise ValueError(f"invalid 'src' {src}. It must be {regex_str}.")
@@ -100,7 +100,7 @@ class FieldObjectSchema(BaseModel):
             if not cascade_option:
                 raise ValueError(f"missing required setting 'cascade_option' for 'field_type' {FieldObjectType.REFERENCE_FIELD_OBJECT}.")
             
-            regex_str = r"^obj_\w+_\d{3}.fd_\w+_\d{3}$"
+            regex_str = r"^obj_\w+_\d{6}.fd_\w+_\d{6}$"
             match = re.search(regex_str, src)
             if not match:
                 raise ValueError(f"invalid 'src' {src}. It must be {regex_str}.")
