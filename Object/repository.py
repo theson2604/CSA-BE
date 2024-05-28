@@ -35,6 +35,10 @@ class ObjectRepository:
 
     async def find_one_by_id(self, id: str, projection: dict = None) -> ObjectModel:
         return await self.obj_coll.find_one({"_id": id}, projection)
+    
+    async def find_many(self, query: dict, projection: dict = None) -> List[dict]:
+        cursor = self.obj_coll.find(query, projection)
+        return await cursor.to_list(length=None)
 
     async def find_one_by_object_id(
         self, obj_id: str, projection: dict = None
@@ -90,6 +94,36 @@ class ObjectRepository:
         ]
         async for doc in self.obj_coll.aggregate(pipeline):
             return doc
+
+    async def get_all_object_ref_to(self, object_id: str) -> Optional[dict]:
+        pipeline = [
+            {
+                "$lookup": {
+                    "from": "FieldObject",
+                    "localField": "_id",
+                    "foreignField": "ref_obj_id_value",
+                    "as": "objects",
+                }
+            },
+            {
+                "$match": {
+                    "_id": f"{object_id}"
+                }
+            },
+            {
+                "$project": {
+                    "objects.object_id": 1,
+                }
+            }
+        ]
+        ref_obj_ids = []
+        fields = (await self.obj_coll.aggregate(pipeline).to_list(length=None))[0].get("objects")
+        for field in fields:
+            ref_obj_id = field.get("object_id")
+            if ref_obj_id not in ref_obj_ids:
+                ref_obj_ids.append(ref_obj_id)
+
+        return await self.find_many({"_id": {"$in": ref_obj_ids}}, {"_id": 1, "obj_name": 1})
 
     async def count_all(self, query: dict = {}) -> int:
         return await self.obj_coll.count_documents(query)
