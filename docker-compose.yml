@@ -12,6 +12,7 @@ services:
       - .:/app/csa_be
       - certs:/usr/share/elasticsearch/config/certs
     environment:
+      - AI_SERVER_URL=http://ai-server:8002/api
       - CERT_FILE=/usr/share/elasticsearch/config/certs/ca/ca.crt
     depends_on:
       - redis

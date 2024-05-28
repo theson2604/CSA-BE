@@ -99,7 +99,7 @@ class DatasetAIServices:
         
         headers = {'Authorization': f'Bearer {access_token}'}
         async with httpx.AsyncClient() as client:
-            response = await client.post(f'{os.environ.get("AI_SERVER_URL")}/api/preprocess', json=body, headers=headers)
+            response = await client.post(f'{os.environ.get("AI_SERVER_URL")}/preprocess', json=body, headers=headers)
             if response.status_code != 200:
                 raise HTTPException(status_code=response.status_code, detail=response.text)
             
