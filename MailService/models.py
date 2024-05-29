@@ -34,3 +34,16 @@ class TemplateModel(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True
     )
+
+class ReplyEmailModel(BaseModel):
+    id: str = Field(..., alias="_id")
+    from_: str = Field(..., alias="from")
+    subject: str = Field(..., alias="subject")
+    body: str = Field(..., alias="body")
+    sent_at: str = Field(..., alias="sent_at")
+
+    created_at: str = Field(..., alias="created_at", default_factory=get_current_hcm_datetime)
+    
+    model_config = ConfigDict(
+        populate_by_name=True
+    )

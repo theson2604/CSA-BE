@@ -1,9 +1,7 @@
-from abc import ABC, abstractmethod
 from typing import List
-from RootAdministrator.constants import HIDDEN_METADATA_INFO
 from app.common.constants import ROOT_CSA_DB
 from app.common.db_connector import client, RootCollections
-from MailService.models import EmailModel, TemplateModel
+from MailService.models import EmailModel, ReplyEmailModel, TemplateModel
 # from app.common.db_connector import DBCollections
 
     
@@ -63,3 +61,7 @@ class MailServiceRepository:
     async def find_one_by_id(self, id):
         result = await self.coll.find_one({"_id": id})
         return result.get("email"), result.get("password")
+    
+    async def insert_email_from_scan(self, reply_mails: List[ReplyEmailModel]):
+        
+        pass

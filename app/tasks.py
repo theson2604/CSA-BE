@@ -17,6 +17,7 @@ from RecordObject.services import RecordObjectService
 from app.celery import celery as clr, redis_client
 import time
 
+from app.common.db_connector import DBCollections
 from app.common.enums import ActionType, TaskStatus
 from app.common.utils import get_current_hcm_datetime
 
@@ -61,22 +62,9 @@ def test_scan_mail(db: str, mail: dict, obj_id: str, admin_id: str):
 def scan_email():
     mail_repo = MailServiceRepository()
     system_emails = asyncio.get_event_loop().run_until_complete(mail_repo.find_many_email({}, {"email": 1, "db_str": 1, "template_id": 1, "admin_id": 1}))
-    # async def process_email(system_email):
-    #     db_str = system_email.get("db_str")
-    #     mail_service = MailServices(db_str)
-    #     scan_schema = {
-    #         "template": system_email.get("template_id"),
-    #         "email": system_email.get("email")
-    #     }
-    #     contents = asyncio.get_event_loop().run_until_complete(mail_service.scan_email(scan_schema, db_str, system_email.get("admin_id")))
-    #     return contents
-    
-    # tasks = [process_email(email) for email in system_emails]
-    # contents = asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
-
     for system_email in system_emails:
         db_str = system_email.get("db_str")
-        mail_service = MailServices(db_str)
+        mail_service = MailServices(db_str, DBCollections.REPLY_EMAIL)
         scan_schema = {
             "template": system_email.get("template_id"),
             "email": system_email.get("email")
@@ -119,21 +107,12 @@ def activate_send(db: str, action: dict, record_id: str):
     record_repo = RecordObjectRepository(db, obj_id)
     record = asyncio.get_event_loop().run_until_complete(record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id))[0]
     mail_service = MailServices(db, obj_id)
-    field_email = action.get("to")
     mail = {
         "email": action.get("from"),
+        "send_to": action.get("to"),
         "template": action.get("template_id"),
         "object": action.get("object_id")
     }
-    email_str = r"^fd_email_\d{9}$"
-    if not re.search(email_str, field_email):
-        ref_field, fd_email = field_email.split(".")
-        mail["send_to"] = record.get(ref_field).get("ref_to").get(fd_email)
-    else:
-        mail["send_to"] = record.get(field_email)
-
-    if not mail.get("send_to"):
-        return "Failed to send email."
     result = asyncio.get_event_loop().run_until_complete(mail_service.send_one(mail, db, record))
     return result
 
@@ -159,7 +138,7 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
         for content in contents:
             if action.get("field_contents"):
                 for field in action.get("field_contents"):
-                    record[field] = content
+                    record[field] = content.get("body")
 
             result = asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))
             if result:

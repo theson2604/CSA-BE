@@ -25,7 +25,7 @@ class ActionService:
         self.db_str = db_str
 
     async def validate_email(self, from_: str, current_user_id: str):
-        from InboundRule.repository import MailServiceRepository
+        from MailService.repository import MailServiceRepository
         mail_repo = MailServiceRepository(self.db_str)
         email = mail_repo.find_email({"email": from_})
         if not email:

@@ -6,6 +6,7 @@ from MailService.repository import MailServiceRepository
 from MailService.schemas import ScanMailSchema, SendMailSchema, EmailSchema, TemplateSchema
 from MailService.services import MailServices
 from Object.repository import ObjectRepository
+from RecordObject.repository import RecordObjectRepository
 from app.common.db_connector import DBCollections
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
@@ -50,13 +51,24 @@ async def send_mail(
         admin_id = CURRENT_USER.get("_id")
         object_id = mail_obj.get("object")
 
+        mail_repo = MailServiceRepository(db, DBCollections.EMAIL_TEMPLATE)
+        template = await mail_repo.find_template_by_id(mail_obj.get("template"))
+        if not template:
+            raise HTTPBadRequest(f"Not found template by id {mail_obj.get("template")}")
+
         obj_repo = ObjectRepository(db)
+        object_id = template.get("object_id")
         obj = await obj_repo.find_one_by_id(object_id)
         if not obj:
             raise HTTPBadRequest(f"Not found {object_id} object by _id")
-            
+        
+        record_repo = RecordObjectRepository(db, obj.get("obj_id"))
+        record = (await record_repo.get_one_by_id_with_parsing_ref_detail(mail_obj.get("record"), object_id))[0]
+        if not record:
+            raise HTTPBadRequest(f"Not found record by id {mail_obj.get("record_id")}")
+
         mail_service = MailServices(db, obj.get("obj_id"))
-        return await mail_service.send_one(mail, admin_id)
+        return await mail_service.send_one(mail_obj, db, record)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

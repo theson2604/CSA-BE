@@ -26,7 +26,7 @@ class ScanMailSchema(BaseModel):
 
 class SendMailSchema(ScanMailSchema):
     record: str = Field(..., alias="record_id")
-    send_to: List[str] = Field(..., max_length=100)
+    send_to: str = Field(..., max_length=100)
 
 class TemplateSchema(BaseModel):
     name: str = Field(..., max_length=100)
@@ -44,3 +44,10 @@ class TemplateSchema(BaseModel):
         elif template_type == "send" and not schema.get("subject"):
             raise ValueError(f"missing email subject for template type '{template_type}'")
         return self
+    
+
+class ReplyMailSchema(BaseModel):
+    from_: str
+    subject: str
+    body: str
+    sent_at: str

@@ -1,6 +1,6 @@
 import re
 from FieldObject.repository import FieldObjectRepository
-from MailService.models import EmailModel, TemplateModel
+from MailService.models import EmailModel, ReplyEmailModel, TemplateModel
 from MailService.repository import MailServiceRepository
 from MailService.schemas import *
 from Workflow.repository import WorkflowRepository
@@ -244,15 +244,27 @@ class MailServices:
         mail_subject = f"[{obj_id.replace('obj_','').upper()}.{record.get(fd_id)}] " + mail_subject
         mail_body = await self.field_id_to_field_value(mail_body, field_ids_body, record)
 
+        field_email = mail.get("send_to")
+        email_str = r"^fd_email_\d{6}$"
+        send_to = None
+        if not re.search(email_str, field_email):
+            print("NOT MATCH")
+            ref_field, fd_email = field_email.split(".")
+            send_to = record.get(ref_field).get("ref_to").get(fd_email)
+        else:
+            send_to = record.get(field_email)
+        if not send_to:
+            return "Failed to send email."
+        
         mail_model = MIMEText(mail_body)
         mail_model["Subject"] = mail_subject
         mail_model["From"] = email
-        mail_model["To"] = ",".join(mail.get("send_to"))
+        mail_model["To"] = ",".join(send_to)
         mail_pwd = await self.get_mail_pwd(email, db_str)
 
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp_server:
             smtp_server.login(email, mail_pwd)
-            smtp_server.sendmail(email, mail.get("send_to"), mail_model.as_string())
+            smtp_server.sendmail(email, send_to, mail_model.as_string())
         return "Message sent!"
 
     
@@ -319,12 +331,12 @@ class MailServices:
             print("SUBJECT: ", re_subject)
             for msg in mailbox.fetch(AND(date_gte=get_current_hcm_date(), subject=r"Re\*", seen=False), mark_seen=True):
                 # print("GOT MESS", msg.text, msg.subject)
-                # content = {}
-                text = MailServices.get_new_body_gmail(msg.text)
-                # content["from"] = msg.from_
-                content = text
-                # content = msg.text
-
+                content = {
+                    "from_": msg.from_,
+                    "subject": msg.subject,
+                    "body": MailServices.get_new_body_gmail(msg.text),
+                    "send_at": msg.date_str
+                }
                 # if MailServices.match_template(template.get("body"), text, bodies):
                 #     print("AKLSDJASHFWUI#RHO")
                 # subject = msg.subject
@@ -332,7 +344,7 @@ class MailServices:
                 # obj, prefix_id = meta_data.split(".")
                 # obj_id_str = f"obj_{obj.lower()}" # ref collection
                 # content["ref_obj_id"] = obj_id_str
-                mail_contents.append(content)
+                mail_contents.append(ReplyEmailModel.model_validate(content).model_dump(by_alias=True))
 
                 # TODO AFTER INTEGRATING TO WORKLOW, LET CUSTOMER CONFIG REF PARENT FIELD
                 # obj_id = (await self.obj_repo.find_one_by_object_id(obj_id_str)).get("_id")
@@ -354,6 +366,7 @@ class MailServices:
                 # print("BODY: ", msg.text)
         if len(mail_contents) != 0:
             await self.check_condition(template_id, current_user_id, mail_contents)
+            await self.scan_repo.insert_email_from_scan()
         else:
             print("EMPTYYYYYYYYY")
         

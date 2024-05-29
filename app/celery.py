@@ -11,13 +11,13 @@ celery.conf.update(
     enable_utc=False,
     # beat_scheduler='redbeat.RedBeatScheduler'
     # beat_schedule={}
-    beat_schedule=
-    {
-        'scan_email_on_interval': {
-            'task': 'app.tasks.scan_email',
-            'schedule': 15.0,  # Run every 10 seconds
-        },
-    }
+    # beat_schedule=
+    # {
+    #     'scan_email_on_interval': {
+    #         'task': 'app.tasks.scan_email',
+    #         'schedule': 15.0,  # Run every 10 seconds
+    #     },
+    # }
 )
 
 redis_client = redis.StrictRedis(host='redis', port=6379, db=0)
