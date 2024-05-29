@@ -7,8 +7,6 @@ class DatasetConfigSchema(BaseModel):
     obj_id_str: str
     features: List[str]
     label: str
-    train_model_name: str
-    train_model_description: str
     dataset_name: str
     dataset_description: str
     

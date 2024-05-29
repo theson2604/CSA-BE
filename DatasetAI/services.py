@@ -1,5 +1,7 @@
 import aiohttp
+from bson import ObjectId
 from fastapi import HTTPException
+from DatasetAI.models import DatasetAIModel
 from DatasetAI.repository import DatasetAIRepository
 from DatasetAI.schemas import DatasetConfigSchema
 from FieldObject.repository import FieldObjectRepository
@@ -37,8 +39,6 @@ class DatasetAIServices:
         obj_id_str = config.get("obj_id_str")
         features_id_str = config.get("features")
         label_id_str = config.get("label")
-        train_model_name = config.get("train_model_name")
-        train_model_description = config.get("train_model_description")
         dataset_name = config.get("dataset_name")
         dataset_description = config.get("dataset_description")
         
@@ -99,8 +99,7 @@ class DatasetAIServices:
             "src_obj_id_str": obj_id_str,
             "features": features_id_str,
             "label": label_id_str,
-            "field_mapping": field_mapping,
-            "train_model_id": generate_model_id(train_model_name)
+            "field_mapping": field_mapping
         }
         
         headers = {'Authorization': f'Bearer {access_token}'}
@@ -115,7 +114,16 @@ class DatasetAIServices:
         record_service = RecordObjectService(self.db_str, dataset_obj_id_str, dataset_obj_id)
         preprocessed_records = await record_service.get_all_records_with_detail(dataset_obj_id, page=1, page_size=10)
         
-        # Number of label's outputs
-        num_outputs = len(histogram_labels.get("histogram_labels", []))
+        dataset_model = DatasetAIModel(
+            id=str(ObjectId()),
+            name=dataset_name,
+            features=features_id_str,
+            label=label_id_str,
+            dataset_obj_id_str=dataset_obj_id_str,
+            description=dataset_description,
+            **histogram_labels
+        )
+        
+        inserted_config_id = await self.repo.insert_one(dataset_model.model_dump(by_alias=True))
             
-        return {"records": preprocessed_records, **histogram_labels}
+        return {"config_id": inserted_config_id, "records": preprocessed_records, **histogram_labels}

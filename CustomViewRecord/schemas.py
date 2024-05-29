@@ -2,7 +2,7 @@ import re
 from typing import List, Optional
 from pydantic import BaseModel
 
-from app.common.enums import CustomViewRecordType, DisplayCustomViewRecordType 
+from app.common.enums import CustomViewRecordType 
 
 class CustomViewRecordSchema(BaseModel):
     x: float
@@ -11,7 +11,6 @@ class CustomViewRecordSchema(BaseModel):
     h: float
     static: bool
     type: CustomViewRecordType
-    display: DisplayCustomViewRecordType
 
     # Main component
     object_id: Optional[str] = None

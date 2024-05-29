@@ -20,7 +20,7 @@ class DBCollections(str, Enum):
     EMAIL_TEMPLATE = "EmailTemplate"
     WORKFLOW = "Workflow"
     ACTION = "Action"
-    AI_DATASET = "AIDataset"
+    DATASET_AI = "DatasetAI"
     CUSTOM_VIEW_RECORD = "ViewRecord"
 
 # Root Collections
