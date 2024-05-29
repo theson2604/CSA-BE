@@ -40,12 +40,6 @@ class MailServices:
 
         self.db_str = db
 
-    async def change_config(self):
-        return await self.scan_repo.update_one_by_id("6655bf29be4cf0c9e2858287", {"email": "r123@gmail.com", "password": "123"})
-    
-    async def get_config(self, id):
-        return await self.scan_repo.find_one_by_id(id)
-
     def encrypt_aes(self, pwd: str):
         try:
             key = Random.new().read(int(os.environ.get("KEY_BYTES")))

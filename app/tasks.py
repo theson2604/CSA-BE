@@ -214,7 +214,7 @@ def trigger_task(task_name):
             'schedule': 5.0,  # Run every 5 seconds
             },
         }
-    
+
 
 @clr.task()
 def test_asyncio_run(t):
