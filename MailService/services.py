@@ -67,8 +67,8 @@ class MailServices:
             raise Exception("error in decrypt")
 
     def get_field_id(src):
-        field_regex = r"@fd_\w+_\d{3}"
-        ref_field_regex = r"@obj_\w+_\d{3}.fd_email_\d{3}"
+        field_regex = r"@fd_\w+_\d{6}"
+        ref_field_regex = r"@obj_\w+_\d{6}.fd_email_\d{6}"
         field_matches = re.finditer(field_regex, src)
         ref_field_matches = re.finditer(ref_field_regex, src)
         positions = []
