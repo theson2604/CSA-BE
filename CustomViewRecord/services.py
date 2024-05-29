@@ -16,7 +16,7 @@ class CustomViewRecordService:
         self.obj_repo = ObjectRepository(db_str)
         self.db_str = db_str
 
-    async def validate_and_get_all_view_record_models(self, view_records: List[CustomViewRecordSchema], current_user_id: str) -> List[CustomViewRecordModel]:
+    async def validate_and_get_all_view_record_models(self, view_records: List[CustomViewRecordSchema], current_user_id: str, parent_id: str = None) -> List[CustomViewRecordModel]:
         list_view_records = []
 
         for view_record in view_records:
@@ -40,7 +40,11 @@ class CustomViewRecordService:
                 view_record.pop("related_obj_id")
                 list_view_records.append(CustomViewMainModel.model_validate(view_record).model_dump(by_alias=True))
             else:
-                main_id = view_record.get("main_id")
+                if parent_id:
+                    main_id = parent_id
+                    view_record.update({"main_id": main_id})
+                else:
+                    main_id = view_record.get("main_id")
                 main_view = await self.repo.find_one_by_id(main_id)
                 if not main_view or main_view.get("type") != CustomViewRecordType.MAIN:
                     raise HTTPBadRequest(f"Can not find Custom View type '{CustomViewRecordType.MAIN}' by id {main_id}")
@@ -73,6 +77,18 @@ class CustomViewRecordService:
     async def create_one_view(self, view_record: CustomViewRecordSchema, current_user_id: str):
         view_record = (await self.validate_and_get_all_view_record_models([view_record], current_user_id))[0]
         return await self.repo.insert_one(view_record)
+    
+    async def create_many_views(self, view_records: List[CustomViewRecordSchema], current_user_id: str):
+        view_record = view_records[0].model_dump()
+        main_component_id = None
+        if view_record.get("type") == CustomViewRecordType.MAIN:
+            #Create MAIN first
+            main_component_id = await self.create_one_view(view_records[0], current_user_id)
+            view_records.pop(0)
+
+        view_record_models = await self.validate_and_get_all_view_record_models(view_records, current_user_id, main_component_id)
+        results = await self.repo.insert_many(view_record_models)
+        return [main_component_id] + results if main_component_id else results
     
     async def get_one_componet_by_id(self, id: str):
         return await self.repo.find_one_by_id(id)
