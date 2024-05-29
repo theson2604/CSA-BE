@@ -69,7 +69,7 @@ class WorkflowService:
         
         return self.repo.delete_one_by_id(id), self.action_repo.delete_many_by_workflow_id(id)
 
-    async def activate_workflow(self, workflow_id: str, current_user_id: str, record_id: str = None):
+    async def activate_workflow(self, workflow_id: str, current_user_id: str, record_id: str = None, mail_contents: List[str] = []):
         db = self.db_str
         workflow = self.repo.find_one_by_id(workflow_id)
         if not workflow:
@@ -82,10 +82,10 @@ class WorkflowService:
                 task = activate_send.delay(db, action, record_id)
                 set_task_metadata(task.id, {"type": "send"})
             elif type == "create":
-                task =  activate_create.delay(db, action, current_user_id, [])
+                task =  activate_create.delay(db, action, current_user_id, mail_contents)
                 set_task_metadata(task.id, {"type": "create"})
             elif type == "update":
-                task = activate_update.delay(db, action, current_user_id, [], record_id)
+                task = activate_update.delay(db, action, current_user_id, record_id)
                 set_task_metadata(task.id, {"type": "update"})
 
         return task.id

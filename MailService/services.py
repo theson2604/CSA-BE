@@ -5,6 +5,7 @@ from MailService.repository import MailServiceRepository
 from MailService.schemas import *
 from Workflow.repository import WorkflowRepository
 from app.common.db_connector import DBCollections
+from app.common.enums import FieldObjectType
 from app.common.errors import HTTPBadRequest
 # from fastapi import Depends
 from bson import ObjectId
@@ -300,11 +301,22 @@ class MailServices:
         if not template:
             raise HTTPBadRequest(f"Can not find template")
         
+        obj = await self.obj_repo.find_one_by_id(template.get("object_id"))
+        if not obj:
+            raise HTTPBadRequest(f"Can not find object in template")
+        
+        field_id = self.field_obj_repo.find_one_by_field_type(template.get("object_id"), FieldObjectType.ID)
+        if not field_id:
+            raise HTTPBadRequest(f"Can not find field id of object in template")
+        
+        obj_id = obj.get("obj_id").replace("obj_","").upper()
+        prefix = field_id.get("prefix")
         mail_contents = [] #List[dict]
 
         # bodies = MailServices.get_bodies(template.get("body"))
         with MailBox("imap.gmail.com").login(email, mail_pwd, 'INBOX') as mailbox:
-            for msg in mailbox.fetch(AND(date_gte=get_current_hcm_date(), subject=r"re\*", seen=False), mark_seen=False):
+            re_subject = r"Re: \[" + re.escape(f"{obj_id}.{prefix}") + r"\d+\]"
+            for msg in mailbox.fetch(AND(date_gte=get_current_hcm_date(), subject=re_subject, seen=False), mark_seen=False):
                 print("GOT MESS", msg.text)
                 content = {}
                 text = MailServices.get_new_body_gmail(msg.text)
@@ -339,24 +351,21 @@ class MailServices:
                 # print("SUBJECT: ", msg.subject)
                 # print("BODY: ", msg.text)
         if len(mail_contents) != 0:
-            await self.check_condition(template_id, current_user_id)
+            await self.check_condition(template_id, current_user_id, mail_contents)
         
         return mail_contents
     
 
-    async def check_condition(self, template_id: str, current_user_id: str):
-        template = self.template_repo.find_one_by_id(template_id)
-        object_id = template.get("object_id")
-        workflows = await self.workflow_repo.find_many({"object_id": object_id}, {"_id": 1, "trigger": 1})
+    async def check_condition(self, template_id: str, current_user_id: str, mail_contents: List[str]):
+        # template = self.template_repo.find_one_by_id(template_id)
+        # object_id = template.get("object_id")
+        workflows = await self.workflow_repo.find_many({"trigger": "scan"}, {"_id": 1, "trigger": 1})
         task_ids = []
         for workflow in workflows:
-            if workflow.get("trigger") != "scan":
-                continue
-
             from Workflow.services import WorkflowService
             workflow_service = WorkflowService(self.db_str)
             # activate current workflow
-            task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id)
+            task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, mail_contents=mail_contents)
             task_ids.append(task_id)
 
         return task_ids

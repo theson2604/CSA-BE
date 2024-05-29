@@ -12,7 +12,6 @@ from MailService.repository import MailServiceRepository
 from MailService.services import MailServices
 from Notification.services import NotificationService
 from Object.repository import ObjectRepository
-from celery import chain, group, shared_task, Celery
 from RecordObject.repository import RecordObjectRepository
 from RecordObject.services import RecordObjectService
 from app.celery import celery as clr, redis_client
@@ -82,8 +81,6 @@ def scan_email():
             "email": system_email.get("email")
         }
         contents = asyncio.get_event_loop().run_until_complete(mail_service.scan_email(scan_schema, db_str, system_email.get("admin_id")))
-        # if len(contents) != 0:
-        #     asyncio.get_event_loop().run_until_complete(mail_service.check_condition(system_email.get("template_id")))
 
     return contents
 
@@ -154,7 +151,7 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
 
 # DONE
 @clr.task(name = "update_record")
-def activate_update(db: str, action: dict, user_id: str, contents: List[str], record_id: str):
+def activate_update(db: str, action: dict, user_id: str, record_id: str):
     object_id = action.get("object_id")
     obj_repo = ObjectRepository(db)
     obj = asyncio.get_event_loop().run_until_complete(obj_repo.find_one_by_id(object_id))
@@ -168,12 +165,6 @@ def activate_update(db: str, action: dict, user_id: str, contents: List[str], re
         record.update(field_config)
 
     record_service = RecordObjectService(db, obj_id, object_id)
-
-    if action.get("option") == "yes":
-        if action.get("field_contents"):      
-            for field in action.get("field_contents"):
-                record[field] = contents[0]
-
     result = asyncio.get_event_loop().run_until_complete(record_service.update_one_record(record, user_id))
     field_repo = FieldObjectRepository(db)
     fd_id = (asyncio.get_event_loop().run_until_complete(field_repo.find_one_by_field_type(object_id, "id"))).get("field_id")
