@@ -1,6 +1,6 @@
 from typing import List, Union
 from bson import ObjectId
-from FieldObject.models import FieldEmail, FieldFloat, FieldId, FieldPhoneNumber, FieldReferenceObject, FieldSelect, FieldText, FieldReferenceFieldObject, FieldObjectBase, FieldTextArea, FieldDate
+from FieldObject.models import FieldEmail, FieldFloat, FieldId, FieldInteger, FieldPhoneNumber, FieldReferenceObject, FieldSelect, FieldText, FieldReferenceFieldObject, FieldObjectBase, FieldTextArea, FieldDate
 
 from FieldObject.repository import FieldObjectRepository
 from FieldObject.schemas import FieldObjectSchema, UpdateFieldObjectSchema
@@ -51,6 +51,9 @@ class FieldObjectService:
                     
                 elif field.get("field_type") is FieldObjectType.FLOAT:
                     list_fields.append(FieldFloat.model_validate(field_base).model_dump(by_alias=True))
+                    
+                elif field.get("field_type") is FieldObjectType.INTEGER:
+                    list_fields.append(FieldInteger.model_validate(field_base).model_dump(by_alias=True))
                 
                 elif field.get("field_type") is FieldObjectType.TEXTAREA:
                     list_fields.append(FieldTextArea.model_validate(field_base).model_dump(by_alias=True))

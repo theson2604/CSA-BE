@@ -7,10 +7,7 @@ from app.common.utils import get_current_hcm_datetime
 
 class DatasetAIModel(BaseModel):
     id: str = Field(..., alias="_id")
-    features: List[str] = Field(..., alias="features")
-    label: str = Field(..., alias="features")
-    src_obj_id: str = Field(..., alias="src_obj_id")
-    dest_obj_id: str = Field(..., alias="dest_obj_id")
+    histogram_labels: dict = Field(..., alias="histogram_labels")
     
     model_config = ConfigDict(
         populate_by_name=True

@@ -23,6 +23,9 @@ class FieldText(FieldObjectBase):
     
 class FieldFloat(FieldObjectBase):
     pass
+
+class FieldInteger(FieldObjectBase):
+    pass
     
 class FieldTextArea(FieldObjectBase):
     pass

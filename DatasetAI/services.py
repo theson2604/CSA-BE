@@ -32,6 +32,7 @@ class DatasetAIServices:
 
     async def config_preprocess_dataset(self, config: DatasetConfigSchema, cur_user_id: str, access_token: str) -> str:
         config = config.model_dump()
+        
         obj_id = config.get("obj_id")
         obj_id_str = config.get("obj_id_str")
         features_id_str = config.get("features")
@@ -66,8 +67,8 @@ class DatasetAIServices:
         label = {}
         for field in cpy_list_fields_detail:
             if field.get("field_id") == label_id_str:
-                if field.get("field_type") not in [FieldObjectType.FLOAT.value]:
-                    return HTTPBadRequest(f"label {field.get("field_name")} field_type must be 'float'")
+                if field.get("field_type") not in [FieldObjectType.INTEGER.value]:
+                    return HTTPBadRequest(f"label {field.get("field_name")} field_type must be 'integer'")
 
                 field.pop("field_id")
                 field.update({"is_label": True})
@@ -113,6 +114,8 @@ class DatasetAIServices:
                 
         record_service = RecordObjectService(self.db_str, dataset_obj_id_str, dataset_obj_id)
         preprocessed_records = await record_service.get_all_records_with_detail(dataset_obj_id, page=1, page_size=10)
-                
+        
+        # Number of label's outputs
+        num_outputs = len(histogram_labels.get("histogram_labels", []))
             
         return {"records": preprocessed_records, **histogram_labels}
