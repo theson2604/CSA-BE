@@ -178,9 +178,14 @@ class MailServices:
         matching_string_obj = re.search(r"\w+\s+\w+[,]\s+\w+\s+\d+[,]\s+\d+\s+\w+\s+\d+[:]\d+.*", msg)
         if matching_string_obj:
             body_list = msg.split(matching_string_obj.group())
+            # print("BODY: ", body_list)
             body = body_list[0] # index 0 is new body, index 1 is old body
-        if not body:
-            raise HTTPBadRequest("FAIL TO GET NEW BODY")
+            if not body:
+                raise HTTPBadRequest("FAIL TO GET NEW BODY")
+        else:
+            print(msg)
+            body = msg
+            # raise HTTPBadRequest("NOT MATCH BODY")
         return body
 
     async def create_email(self, email: EmailSchema, admin_id: str):
@@ -305,31 +310,34 @@ class MailServices:
         if not obj:
             raise HTTPBadRequest(f"Can not find object in template")
         
-        field_id = self.field_obj_repo.find_one_by_field_type(template.get("object_id"), FieldObjectType.ID)
+        field_id = await self.field_obj_repo.find_one_by_field_type(template.get("object_id"), FieldObjectType.ID)
         if not field_id:
             raise HTTPBadRequest(f"Can not find field id of object in template")
         
         obj_id = obj.get("obj_id").replace("obj_","").upper()
+        obj_name, seq = obj_id.split("_")
         prefix = field_id.get("prefix")
         mail_contents = [] #List[dict]
 
         # bodies = MailServices.get_bodies(template.get("body"))
         with MailBox("imap.gmail.com").login(email, mail_pwd, 'INBOX') as mailbox:
-            re_subject = r"Re: \[" + re.escape(f"{obj_id}.{prefix}") + r"\d+\]"
-            for msg in mailbox.fetch(AND(date_gte=get_current_hcm_date(), subject=re_subject, seen=False), mark_seen=False):
-                print("GOT MESS", msg.text)
-                content = {}
+            re_subject = r"Re: [" + re.escape(f"{obj_name}") + r"_" + re.escape(f"{seq}") + r"." + re.escape(f"{prefix}") + r"\*"
+            print("SUBJECT: ", re_subject)
+            for msg in mailbox.fetch(AND(date_gte=get_current_hcm_date(), subject=r"Re\*", seen=False), mark_seen=True):
+                # print("GOT MESS", msg.text, msg.subject)
+                # content = {}
                 text = MailServices.get_new_body_gmail(msg.text)
-                content["from"] = msg.from_
-                content["body"] = text
+                # content["from"] = msg.from_
+                content = text
+                # content = msg.text
 
                 # if MailServices.match_template(template.get("body"), text, bodies):
                 #     print("AKLSDJASHFWUI#RHO")
-                subject = msg.subject
-                meta_data = subject[subject.index("[")+1 : subject.index("]")]
-                obj, prefix_id = meta_data.split(".")
-                obj_id_str = f"obj_{obj.lower()}" # ref collection
-                content["ref_obj_id"] = obj_id_str
+                # subject = msg.subject
+                # meta_data = subject[subject.index("[")+1 : subject.index("]")]
+                # obj, prefix_id = meta_data.split(".")
+                # obj_id_str = f"obj_{obj.lower()}" # ref collection
+                # content["ref_obj_id"] = obj_id_str
                 mail_contents.append(content)
 
                 # TODO AFTER INTEGRATING TO WORKLOW, LET CUSTOMER CONFIG REF PARENT FIELD
@@ -352,6 +360,8 @@ class MailServices:
                 # print("BODY: ", msg.text)
         if len(mail_contents) != 0:
             await self.check_condition(template_id, current_user_id, mail_contents)
+        else:
+            print("EMPTYYYYYYYYY")
         
         return mail_contents
     

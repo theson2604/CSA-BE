@@ -187,10 +187,10 @@ async def inbound_file(
 
 # @router.post("/tasks")
 # def run_task(payload = Body(...)):
-#     value, t = payload["value"], payload["time"]
-#     task = create_task.delay(value, t)
-#     print(task)
-#     return JSONResponse({"task_id": task.id})
+#     t = payload["time"]
+#     task = test_asyncio_run.delay(t)
+#     # print(task)
+#     return task.id
 
 # @router.get("/tasks/{task_id}")
 # def get_status(task_id):

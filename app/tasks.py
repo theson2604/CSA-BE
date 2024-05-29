@@ -58,23 +58,24 @@ def test_scan_mail(db: str, mail: dict, obj_id: str, admin_id: str):
     return result
 
 @clr.task()
-def print_num(db_str: str = None, user_id: str = None):
-    if not db_str or not user_id:
-        return "EMPTY"
-    mail_service = MailServices(db_str, "ScanConfig")
-    email, result = asyncio.get_event_loop().run_until_complete(mail_service.get_config(user_id))
-    if email and result:
-        add.apply_async(args=(3,0), countdown=result)
-        return True
-
-    return False
-
-@clr.task()
 def scan_email():
     mail_repo = MailServiceRepository()
-    system_emails = asyncio.get_event_loop().run_until_complete(mail_repo.find_many_email({}, {"email": 1, "db_str": 1}))
+    system_emails = asyncio.get_event_loop().run_until_complete(mail_repo.find_many_email({}, {"email": 1, "db_str": 1, "template_id": 1, "admin_id": 1}))
+    # async def process_email(system_email):
+    #     db_str = system_email.get("db_str")
+    #     mail_service = MailServices(db_str)
+    #     scan_schema = {
+    #         "template": system_email.get("template_id"),
+    #         "email": system_email.get("email")
+    #     }
+    #     contents = asyncio.get_event_loop().run_until_complete(mail_service.scan_email(scan_schema, db_str, system_email.get("admin_id")))
+    #     return contents
+    
+    # tasks = [process_email(email) for email in system_emails]
+    # contents = asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
+
     for system_email in system_emails:
-        db_str = system_email.get("email")
+        db_str = system_email.get("db_str")
         mail_service = MailServices(db_str)
         scan_schema = {
             "template": system_email.get("template_id"),
@@ -84,6 +85,28 @@ def scan_email():
 
     return contents
 
+# @clr.task()
+# def scan_email():
+#     return asyncio.run(scan_email_async())
+
+async def scan_email_async():
+    mail_repo = MailServiceRepository()
+    system_emails = await mail_repo.find_many_email({}, {"email": 1, "db_str": 1})
+    
+    async def process_email(system_email):
+        db_str = system_email.get("email")
+        mail_service = MailServices(db_str)
+        scan_schema = {
+            "template": system_email.get("template_id"),
+            "email": system_email.get("email")
+        }
+        contents = await mail_service.scan_email(scan_schema, db_str, system_email.get("admin_id"))
+        return contents
+
+    tasks = [process_email(email) for email in system_emails]
+    results = await asyncio.gather(*tasks)
+    
+    return results
 
 # DONE
 @clr.task(name = "send_email")
@@ -140,7 +163,7 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
 
             result = asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))
             if result:
-                results.append(result.inserted_id)
+                results.append(result)
     
     field_repo = FieldObjectRepository(db)
     fd_id = (asyncio.get_event_loop().run_until_complete(field_repo.find_one_by_field_type(object_id, "id"))).get("field_id")
@@ -191,3 +214,16 @@ def trigger_task(task_name):
             'schedule': 5.0,  # Run every 5 seconds
             },
         }
+    
+
+@clr.task()
+def test_asyncio_run(t):
+    result = asyncio.run(test(t))
+    print("RESULT: ", result)
+    return result
+
+async def test(t):
+    print("hello")
+    await asyncio.sleep(t)
+    print(f"AFTER {t} seconds")
+    return True
