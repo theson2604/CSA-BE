@@ -117,8 +117,8 @@ class DatasetAIServices:
         dataset_model = DatasetAIModel(
             id=str(ObjectId()),
             name=dataset_name,
-            features=features_id_str,
-            label=label_id_str,
+            features=[field_mapping[feature] for feature in features_id_str],
+            label=field_mapping[label_id_str],
             dataset_obj_id_str=dataset_obj_id_str,
             description=dataset_description,
             **histogram_labels
