@@ -63,33 +63,28 @@ class MailServices:
             raise Exception("error in decrypt")
 
     def get_field_id(src):
+        field_regex = r"@fd_\w+_\d{3}"
+        ref_field_regex = r"@obj_\w+_\d{3}.fd_email_\d{3}"
+        field_matches = re.finditer(field_regex, src)
+        ref_field_matches = re.finditer(ref_field_regex, src)
         positions = []
-        for i in range(len(src)):
-            if src[i] == "@":
-                positions.append(i)
-        print(positions)
-        field_ids = ["" for _ in range(len(positions))]
-        for idx in range(len(positions)):
-            i = positions[idx]
-            while i+1 < len(src) and (src[i+1].isalnum() or src[i+1] == "_"):
-                i += 1
-                field_ids[idx] += (src[i])
-            idx = i
+        field_ids = []
+        for field_match in field_matches:
+            field_ids.append(field_match.group())
+            positions.append(field_match.start())
+        for ref_field_match in ref_field_matches:
+            field_ids.append(ref_field_match.group())
+            positions.append(ref_field_match.start())
         return field_ids, positions
     
     async def field_id_to_field_value(self, mail_body, field_ids, record):
-        for i in range(len(field_ids)):
-            print("REPLACE")
-            field_id = field_ids[i]
-            if field_id[0] != "f":
-                # obj_id, fd_id = field_id.split(".")
-                # ref_record_repo = RecordObjectRepository(self.db_str, obj_id)
-                # ref_record_repo.find_one
-                content = (await self.template_repo.find_template_by_id(field_id)).get("body")
-                # print(content)
-            else: content = record.get(field_id)
+        for i, field_id in enumerate(field_ids):
+            if field_id[1] != "f":
+                fd_ref, _, fd_id = field_id.split(".")
+                content = record.get(fd_ref[1:]).get("ref_to").get(fd_id)
+            else: content = record.get(field_id[1:])
             if not content: content = ""
-            mail_body = mail_body.replace(f"@{field_id}", content)
+            mail_body = mail_body.replace(field_id, content)
         return mail_body
     
     def get_bodies(template: str) -> List[str]:

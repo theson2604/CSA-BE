@@ -7,7 +7,7 @@ from app.common.errors import HTTPBadRequest
 async def read_file(file):
     file_extension = file.filename.split(".")[-1]
     if file_extension.lower() == "csv":
-        df = pd.read_csv(file.file)
+        df = pd.read_csv(file.file, keep_default_na=False)
     elif file_extension.lower() == "json":
         default = 'lines'
         file.file.seek(0)
@@ -22,7 +22,7 @@ async def read_file(file):
             print(file.file, type(file.file))
             data = json.load(file.file)
             df = pd.DataFrame(data)
-
-        return df
     else:
         raise HTTPBadRequest(f"Invalid file type {file_extension}.")
+
+    return df

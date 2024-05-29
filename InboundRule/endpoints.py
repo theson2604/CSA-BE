@@ -1,4 +1,6 @@
 import asyncio
+import json
+import subprocess
 from celery import chain, group
 from celery.result import AsyncResult
 from fastapi import APIRouter, Body, Form, HTTPException, UploadFile, File
@@ -26,9 +28,22 @@ async def start_schedule(task_name: str):
         trigger_task(task_name)
         # clr.conf.beat_schedule_filename = 'celerybeat-schedule'
         # clr.control.broadcast('add_consumer', arguments={'queue': 'celery'})
+
+        # clr.control.broadcast('add_consumer', arguments={'queue': 'celery'})
         return {"message": "Scheduled task successfully"}
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"Failed to schedule task: {str(e)}")
+    
+@router.post("/stop-schedule/")
+async def stop_schedule(task_name: str):
+    periodic_task_id = f'{task_name}_periodic_task'
+    
+    if "print_num_periodic_task" in clr.conf.beat_schedule:
+        del clr.conf.beat_schedule["print_num_periodic_task"]
+        # clr.conf.beat_schedule_filename = 'celerybeat-schedule'
+        return {"message": "Stopped scheduled task successfully"}
+    else:
+        raise HTTPException(status_code=404, detail="Task not found")
 
 @router.post("/inbound-file")
 @protected_route([SystemUserRole.ADMINISTRATOR])
