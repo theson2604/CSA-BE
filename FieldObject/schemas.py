@@ -48,6 +48,9 @@ class FieldObjectSchema(BaseModel):
         elif field_type == FieldObjectType.FLOAT:
             pass
         
+        elif field_type == FieldObjectType.INTEGER:
+            pass
+        
         elif field_type == FieldObjectType.EMAIL:
             pass
         

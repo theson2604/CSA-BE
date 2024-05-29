@@ -61,6 +61,10 @@ class RecordObjectService:
             elif field_type == FieldObjectType.FLOAT:
                 if not isinstance(field_value, float):
                     raise RecordException(f"field_value '{field_value}' of type {field_type} must be float.")
+                
+            elif field_type == FieldObjectType.INTEGER:
+                if not isinstance(field_value, int):
+                    raise RecordException(f"field_value '{field_value}' of type {field_type} must be int.")
 
             elif field_type == FieldObjectType.EMAIL:
                 email_regex = (

@@ -66,8 +66,8 @@ class DatasetAIServices:
         label = {}
         for field in cpy_list_fields_detail:
             if field.get("field_id") == label_id_str:
-                if field.get("field_type") not in [FieldObjectType.FLOAT.value]:
-                    return HTTPBadRequest(f"label {field.get("field_name")} field_type must be 'float'")
+                if field.get("field_type") not in [FieldObjectType.INTEGER.value]:
+                    return HTTPBadRequest(f"label {field.get("field_name")} field_type must be 'integer'")
 
                 field.pop("field_id")
                 field.update({"is_label": True})

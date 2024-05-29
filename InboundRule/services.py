@@ -121,6 +121,8 @@ class InboundRule:
                 df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_text(x, field_detail)))]
             elif fd_type == FieldObjectType.FLOAT:
                 df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_float(x, field_detail)))]
+            elif fd_type == FieldObjectType.INTEGER:
+                df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_integer(x, field_detail)))]
             elif fd_type == FieldObjectType.EMAIL:
                 df = df.loc[lambda df_: (df_[fd_id].apply(lambda x: InboundRule.check_email(x)))]
             elif fd_type == FieldObjectType.PHONE_NUMBER:
@@ -186,6 +188,11 @@ class InboundRule:
     
     def check_float(field_value, field_detail):
         if not isinstance(field_value, int) and not isinstance(field_value, float):
+            return False
+        return True
+    
+    def check_integer(field_value, field_detail):
+        if not isinstance(field_value, int):
             return False
         return True
     
