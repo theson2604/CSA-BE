@@ -126,6 +126,13 @@ class ActionService:
             action_model = action_models[0]
             action_model.update({"sorting_id": action_dump.get("sorting_id")})
             return await self.repo.insert_one(action_model)
+        
+    async def get_action_details(self, action_id: str):
+        result = await self.repo.find_one_by_id(action_id)
+        if not result:
+            raise HTTPBadRequest(f"Can not find action by id {action_id}")
+        
+        return result
     
     async def delete_one_action_by_id(self, id: str) -> bool:
         action = self.repo.find_one_by_id(id)

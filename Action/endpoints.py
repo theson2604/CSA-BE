@@ -30,6 +30,24 @@ async def create_action(
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
         
+@router.get("/get-action-details")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def get_action(
+    action_id: str,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        action_service = ActionService(db_str)
+        return await action_service.get_action_details(action_id)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
 @router.delete("/delete-action")
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
 async def delete_action(
