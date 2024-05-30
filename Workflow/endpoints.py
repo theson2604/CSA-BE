@@ -1,8 +1,10 @@
 
 from fastapi import APIRouter, HTTPException
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
+from Object.repository import ObjectRepository
 from Object.schemas import ObjectSchema, ObjectWithFieldSchema
 from Object.services import ObjectService
+from Workflow.repository import WorkflowRepository
 from Workflow.schemas import WorkflowSchema, WorkflowWithActionSchema
 from Workflow.services import WorkflowService
 from app.common.enums import SystemUserRole
@@ -41,6 +43,50 @@ async def create_workflow_with_actions(
         db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
         workflow_service = WorkflowService(db_str)
         return await workflow_service.create_workflow_with_actions(workflow_with_actions, current_user_id)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
+@router.get("/get-all-workflows")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def get_all_workflows(
+    object_id: str,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        obj_repo = ObjectRepository(db_str)
+        if not await obj_repo.find_one_by_id(object_id):
+            raise HTTPBadRequest(f"Can not find object by id {object_id}")
+        
+        workflow_service = WorkflowService(db_str)
+        return await workflow_service.get_all_workflows_by_object_id(object_id)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
+@router.get("/get-workflow-with-actions")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def get_all_workflows(
+    workflow_id: str,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        workflow_repo = WorkflowRepository(db_str)
+        if not await workflow_repo.find_one_by_id(workflow_id):
+            raise HTTPBadRequest(f"Can not find workflow by id {workflow_id}")
+        
+        workflow_service = WorkflowService(db_str)
+        return await workflow_service.get_workflow_with_all_actions(workflow_id)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

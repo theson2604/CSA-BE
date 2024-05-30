@@ -1,21 +1,16 @@
-from abc import ABC, abstractmethod
 from typing import List
-from RootAdministrator.constants import HIDDEN_METADATA_INFO
 from app.common.constants import ROOT_CSA_DB
 from app.common.db_connector import client, RootCollections
-from MailService.models import EmailModel, TemplateModel
+from MailService.models import EmailModel, ReplyEmailModel, TemplateModel
 # from app.common.db_connector import DBCollections
 
     
 class MailServiceRepository:
     def __init__(self, db_str: str = ROOT_CSA_DB, coll: str = RootCollections.EMAILS.value):
         global client
-        try:
-            self.db_str = db_str
-            self.db =  client.get_database(db_str)
-            self.coll = self.db.get_collection(coll)
-        except Exception as e:
-            print("ERORR IN MONGODb: ", e)
+        self.db_str = db_str
+        self.db =  client.get_database(db_str)
+        self.coll = self.db.get_collection(coll)
         
     async def insert_email(self, email: EmailModel):
         result = await self.coll.insert_one(email)
@@ -26,6 +21,10 @@ class MailServiceRepository:
     
     async def find_email_by_name(self, name: str, projection: dict = None):
         return await self.coll.find_one({"email": name}, projection)
+    
+    async def find_many_email(self, query: dict, projection: dict = None):
+        cursor = self.coll.find(query, projection)
+        return await cursor.to_list(length=None)
     
     async def insert_template(self, template: TemplateModel, projection: dict = None):
         result = await self.coll.insert_one(template, projection)
@@ -54,3 +53,21 @@ class MailServiceRepository:
         ]
 
         return await self.coll.aggregate(pipeline).to_list(length=None)
+    
+    async def update_one_by_id(self, id, query):
+        result = await self.coll.update_one({"_id": id}, {"$set": query})
+        return result.modified_count
+    
+    async def find_one_by_id(self, id):
+        result = await self.coll.find_one({"_id": id})
+        return result.get("email"), result.get("password")
+    
+    async def insert_email_from_scan(self, reply_mails: List[ReplyEmailModel]):
+        result = await self.coll.insert_many(reply_mails)
+        return result.inserted_ids
+    
+    async def get_all_reply_emails(
+        self, skip: int = 0, page_size: int = 100
+    ) -> list:
+        cursor = self.coll.find().sort("_id", -1).limit(page_size).skip(skip)
+        return await cursor.to_list(length=None)

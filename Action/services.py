@@ -25,7 +25,7 @@ class ActionService:
         self.db_str = db_str
 
     async def validate_email(self, from_: str, current_user_id: str):
-        from InboundRule.repository import MailServiceRepository
+        from MailService.repository import MailServiceRepository
         mail_repo = MailServiceRepository(self.db_str)
         email = mail_repo.find_email({"email": from_})
         if not email:
@@ -84,11 +84,16 @@ class ActionService:
                     
                 elif action_type in [ActionType.CREATE, ActionType.UPDATE]:
                     action_base.update({
-                        "option": action.get("option"),
-                        "field_contents": action.get("field_contents") if  action.get("field_contents") else [],
                         "field_configs": action.get("field_configs")
                     })
-                    list_actions.append(ActionRecord.model_validate(action_base).model_dump(by_alias=True))
+                    if action_type == ActionType.UPDATE:
+                        list_actions.append(ActionUpdate.model_validate(action_base).model_dump(by_alias=True))
+                    else:
+                        action_base.update({
+                            "option": action.get("option"),
+                            "field_contents": action.get("field_contents") if  action.get("field_contents") else []
+                        })
+                        list_actions.append(ActionCreate.model_validate(action_base).model_dump(by_alias=True))
                 
             return list_actions
         
@@ -121,6 +126,13 @@ class ActionService:
             action_model = action_models[0]
             action_model.update({"sorting_id": action_dump.get("sorting_id")})
             return await self.repo.insert_one(action_model)
+        
+    async def get_action_details(self, action_id: str):
+        result = await self.repo.find_one_by_id(action_id)
+        if not result:
+            raise HTTPBadRequest(f"Can not find action by id {action_id}")
+        
+        return result
     
     async def delete_one_action_by_id(self, id: str) -> bool:
         action = self.repo.find_one_by_id(id)

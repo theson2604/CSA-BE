@@ -1,49 +1,15 @@
-import asyncio
-import json
-import subprocess
-from celery import chain, group
-from celery.result import AsyncResult
 from fastapi import APIRouter, Body, Form, HTTPException, UploadFile, File
-from fastapi.responses import JSONResponse
 from Authentication.dependencies import AuthCredentialDepend, AuthServiceDepend
 from InboundRule.services import InboundRule
 from InboundRule.utils import read_file
-from MailService.schemas import MailSchema
-from Workflow.repository import WorkflowRepository
-from app.tasks import activate_create, activate_inbound, activate_inbound_with_new_obj, activate_send, activate_update, create_task, add, division, set_task_metadata, test_query, test_scan_mail, test_call
+from app.tasks import activate_create, activate_inbound, activate_inbound_with_new_obj, set_task_metadata
 from Object.repository import ObjectRepository
 from app.common.enums import SystemUserRole
 from app.common.errors import HTTPBadRequest
 from app.dependencies.authentication import protected_route
-from app.celery import celery as clr, trigger_task
-from celery.schedules import crontab, schedule
+# from app.celery import celery as clr, trigger_task
 
 router = APIRouter()
-
-@router.post("/start-schedule/")
-async def start_schedule(task_name: str):
-    # Generate a unique task id or use a predefined one
-
-    try:
-        trigger_task(task_name)
-        # clr.conf.beat_schedule_filename = 'celerybeat-schedule'
-        # clr.control.broadcast('add_consumer', arguments={'queue': 'celery'})
-
-        # clr.control.broadcast('add_consumer', arguments={'queue': 'celery'})
-        return {"message": "Scheduled task successfully"}
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Failed to schedule task: {str(e)}")
-    
-@router.post("/stop-schedule/")
-async def stop_schedule(task_name: str):
-    periodic_task_id = f'{task_name}_periodic_task'
-    
-    if "print_num_periodic_task" in clr.conf.beat_schedule:
-        del clr.conf.beat_schedule["print_num_periodic_task"]
-        # clr.conf.beat_schedule_filename = 'celerybeat-schedule'
-        return {"message": "Stopped scheduled task successfully"}
-    else:
-        raise HTTPException(status_code=404, detail="Task not found")
 
 @router.post("/inbound-file")
 @protected_route([SystemUserRole.ADMINISTRATOR])
@@ -77,7 +43,7 @@ async def inbound_file(
         
 @router.post("/inbound-file_with_new_obj")
 @protected_route([SystemUserRole.ADMINISTRATOR])
-async def inbound_file(
+async def inbound_file( 
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
     # config: FileObjectSchema = Depends(),
@@ -221,10 +187,10 @@ async def inbound_file(
 
 # @router.post("/tasks")
 # def run_task(payload = Body(...)):
-#     value, t = payload["value"], payload["time"]
-#     task = create_task.delay(value, t)
-#     print(task)
-#     return JSONResponse({"task_id": task.id})
+#     t = payload["time"]
+#     task = test_asyncio_run.delay(t)
+#     # print(task)
+#     return task.id
 
 # @router.get("/tasks/{task_id}")
 # def get_status(task_id):

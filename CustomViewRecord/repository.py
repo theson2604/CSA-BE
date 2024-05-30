@@ -14,6 +14,9 @@ class CustomViewRecordRepository:
         result = await self.view_record_coll.insert_one(view_record)
         return result.inserted_id
 
+    async def insert_many(self, view_records: List[CustomViewRecordModel]) -> str:
+        result = await self.view_record_coll.insert_many(view_records)
+        return result.inserted_ids
 
     async def find_one_by_id(self, id: str) -> Union[CustomViewRecordModel]:
         return await self.view_record_coll.find_one({"_id": id})

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, model_validator
 
 from Action.schemas import ActionSchema
@@ -9,7 +9,7 @@ class WorkflowSchema(BaseModel):
     object_id: str = Field(... ,alias="object_id") # container object
     description: str = Field(..., alias="description")
     trigger: str = Field(..., alias="trigger")
-    conditions: List[Dict[str, Any]] = None
+    conditions: Optional[List[Dict[str, Any]]] = None
 
     @model_validator(mode='after')
     def validate_workflow_schema(self):
