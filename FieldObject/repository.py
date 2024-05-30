@@ -1,6 +1,8 @@
 from typing import List, Union
 from abc import ABC, abstractmethod
 
+from bson import ObjectId
+
 from FieldObject.models import (
     FieldObjectBase,
     FieldEmail,
@@ -12,7 +14,9 @@ from FieldObject.models import (
 )
 
 from app.common.db_connector import client, DBCollections
-from app.common.enums import FieldObjectType
+from app.common.enums import DEFAULT_SENTIMENT_SCORE_FIELD, FieldObjectType
+from app.common.utils import generate_field_id
+
 
 class FieldObjectRepository:
     def __init__(self, db_str: str, coll: str = DBCollections.FIELD_OBJECT.value):
@@ -33,7 +37,7 @@ class FieldObjectRepository:
         # await self.create_indexing(field_id="field_id", index_name="field_id")
         result = await self.field_object_coll.insert_many(fields)
         return result.inserted_ids
-    
+
     async def insert_one(self, field: FieldObjectBase) -> str:
         result = await self.field_object_coll.insert_one(field)
         return result.inserted_id
@@ -62,7 +66,7 @@ class FieldObjectRepository:
         return await self.field_object_coll.find_one(
             {"object_id": obj_id, "field_id": fld_id}
         )
-    
+
     async def find_many_by_field_ids_str(
         self, obj_id: str, fld_ids: List[str], projection: dict = None
     ) -> Union[FieldObjectBase]:
@@ -77,18 +81,44 @@ class FieldObjectRepository:
         )
 
         return await cursor.to_list(length=None)
-    
+
     async def find_one_by_field_type(
         self, obj_id: str, field_type: str
     ) -> Union[FieldObjectBase]:
-        return await self.field_object_coll.find_one({"object_id": obj_id, })
+        return await self.field_object_coll.find_one(
+            {"object_id": obj_id, "field_type": field_type}
+        )
+
+    async def find_and_create_field_sentiment_score(self, obj_id: str):
+        sentiment_score_field = await self.field_object_coll.find_one(
+            {
+                "object_id": obj_id,
+                "field_name": DEFAULT_SENTIMENT_SCORE_FIELD,
+                "field_type": FieldObjectType.INTEGER,
+            }
+        )
+        if not sentiment_score_field:
+            field_id_str = generate_field_id(DEFAULT_SENTIMENT_SCORE_FIELD)
+            await self.field_object_coll.insert_one({
+                "_id": str(ObjectId()),
+                "field_name": DEFAULT_SENTIMENT_SCORE_FIELD,
+                "field_type": FieldObjectType.INTEGER,
+                "field_id": field_id_str,
+                "sorting_id": await self.field_object_coll.count_documents({"object_id": obj_id})
+            })
+            
+            return field_id_str
 
     async def find_all(self, query: dict = {}) -> List[Union[FieldObjectBase]]:
         return await self.field_object_coll.find(query).to_list(length=None)
-    
-    async def find_all_by_obj_id(self, obj_id: str, projection: dict = {}) -> List[Union[FieldObjectBase]]:
-        return await self.field_object_coll.find({"object_id": obj_id}, projection).to_list(length=None)
-    
+
+    async def find_all_by_obj_id(
+        self, obj_id: str, projection: dict = {}
+    ) -> List[Union[FieldObjectBase]]:
+        return await self.field_object_coll.find(
+            {"object_id": obj_id}, projection
+        ).to_list(length=None)
+
     async def get_all_by_field_types(
         self, obj_id: str, field_types: List[FieldObjectType]
     ) -> List[Union[FieldObjectBase]]:
@@ -134,37 +164,53 @@ class FieldObjectRepository:
                 }
             },
         ]
-        
-        field_refs = await self.field_object_coll.aggregate(pipeline).to_list(length=None)
-        
+
+        field_refs = await self.field_object_coll.aggregate(pipeline).to_list(
+            length=None
+        )
+
         for field_ref in field_refs:
-            if field_ref.get("field_type") == FieldObjectType.REFERENCE_FIELD_OBJECT.value:
-                ref_obj_id_value = field_ref.get("ref_obj_id_value") # _id
-                ref_field_obj_id = field_ref.get("ref_field_obj_id") # obj_objectb_386.fd_fieldb_149
+            if (
+                field_ref.get("field_type")
+                == FieldObjectType.REFERENCE_FIELD_OBJECT.value
+            ):
+                ref_obj_id_value = field_ref.get("ref_obj_id_value")  # _id
+                ref_field_obj_id = field_ref.get(
+                    "ref_field_obj_id"
+                )  # obj_objectb_386.fd_fieldb_149
                 ref_field_id_str = ref_field_obj_id.split(".")[1]
                 visited = [field_ref.get("_id")]
-                
-                linking_fields = await self.traverse_ref_fields(ref_obj_id_value, ref_field_id_str, visited)
-                
+
+                linking_fields = await self.traverse_ref_fields(
+                    ref_obj_id_value, ref_field_id_str, visited
+                )
+
                 field_ref.update({"linking_fields": linking_fields})
-                
+
         return field_refs
-                
+
     async def traverse_ref_fields(self, obj_id, field_id_str, visited):
         field = await self.find_one_by_field_id_str(obj_id, field_id_str)
-        
-        if field and field.get("_id") in visited: raise Exception("Infinite ref field loop")
-        
-        if field and field.get("field_type") == FieldObjectType.REFERENCE_FIELD_OBJECT.value:    
-            ref_obj_id_value = field.get("ref_obj_id_value") # _id
-            ref_field_obj_id = field.get("ref_field_obj_id") # obj_objectb_386.fd_fieldb_149
+
+        if field and field.get("_id") in visited:
+            raise Exception("Infinite ref field loop")
+
+        if (
+            field
+            and field.get("field_type") == FieldObjectType.REFERENCE_FIELD_OBJECT.value
+        ):
+            ref_obj_id_value = field.get("ref_obj_id_value")  # _id
+            ref_field_obj_id = field.get(
+                "ref_field_obj_id"
+            )  # obj_objectb_386.fd_fieldb_149
             ref_field_id_str = ref_field_obj_id.split(".")[1]
-            
+
             visited += [field.get("_id")]
-            
-            return [field] + await self.traverse_ref_fields(ref_obj_id_value, ref_field_id_str, visited)
-        
+
+            return [field] + await self.traverse_ref_fields(
+                ref_obj_id_value, ref_field_id_str, visited
+            )
+
         # elif field and field.get("field_type") is FieldObjectType.REFERENCE_OBJECT.value:
-            
+
         return []
-    

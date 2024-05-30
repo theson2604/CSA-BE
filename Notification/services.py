@@ -53,6 +53,17 @@ class NotificationService:
                 
             else:
                 message = "Failed to update record."
+        elif task_type == ActionType.SENTIMENT:
+            if task_status == TaskStatus.SUCCESS:
+                message = "Scoring sentiment succesfully."
+                task_result = result.result
+                notification.update({"record": {
+                    "record_prefix": task_result.get("record_prefix"),
+                    "score": task_result.get("score")
+                }})
+                
+            else:
+                message = "Failed to score sentiment."
         else:
             if task_status == TaskStatus.SUCCESS:
                 message = "Upload file succesfully."

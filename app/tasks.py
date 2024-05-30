@@ -6,6 +6,8 @@ from celery.schedules import crontab, schedule
 from typing import List
 
 from fastapi import WebSocket
+from DatasetAI.schemas import DatasetConfigSchema
+from DatasetAI.services import DatasetAIServices
 from FieldObject.repository import FieldObjectRepository
 from InboundRule.services import InboundRule
 from MailService.services import MailServices
@@ -205,6 +207,17 @@ def activate_inbound_with_new_obj(db, config: dict, user_id: str, df: str):
     result = asyncio.get_event_loop().run_until_complete(inbound_service.inbound_file_with_new_obj(user_id, config, df))
     return result
 
+@clr.task(name = "preprocess_dataset")
+def activate_preprocess_dataset(db_str: str, config: DatasetConfigSchema, cur_user_id: str, access_token: str):
+    dataset_service = DatasetAIServices(db_str)
+    result = asyncio.get_event_loop().run_until_complete(dataset_service.config_preprocess_dataset(config, cur_user_id, access_token))
+    return result
+
+@clr.task(name = "activate_score_sentiment")
+def activate_score_sentiment(db_str, config: dict, record_id: str, cur_user_id: str, access_token: str):
+    dataset_service = DatasetAIServices(db_str)
+    result = asyncio.get_event_loop().run_until_complete(dataset_service.infer_sentiment_score(db_str, config, record_id, cur_user_id, access_token))
+    return result
 
 def test_call(num: int):
     task = group(create_task.s(7, 27), add.s(num, 11), create_task.s(3, 17), division.s(9, 0)).apply_async()

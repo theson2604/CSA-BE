@@ -22,6 +22,7 @@ async def create_record(
 ):
     try:
         db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        access_token = CREDENTIALS.credentials
         record = record.model_dump()
         obj_id = record.get("object_id")
         obj_repo = ObjectRepository(db_str)
@@ -30,7 +31,7 @@ async def create_record(
             raise HTTPBadRequest(f"Not found {obj_id} object by _id")
         
         record_service = RecordObjectService(db_str, obj.get("obj_id"), obj_id)
-        return await record_service.create_record(record, current_user_id)
+        return await record_service.create_record(record, current_user_id, access_token)
     
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -182,6 +183,7 @@ async def update_record(
 ):
     try:
         db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        access_token = CREDENTIALS.credentials
         record = record.model_dump()
         obj_id = record.get("object_id")
         obj_repo = ObjectRepository(db_str)
@@ -190,7 +192,7 @@ async def update_record(
             raise HTTPBadRequest(f"Not found {obj_id} object by _id")
         
         record_service = RecordObjectService(db_str, obj.get("obj_id"), obj_id)
-        return await record_service.update_one_record(record, current_user_id)
+        return await record_service.update_one_record(record, current_user_id, access_token)
     
     except Exception as e:
         if isinstance(e, HTTPException):

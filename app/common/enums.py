@@ -25,6 +25,7 @@ class ActionType(str, Enum):
     SCAN = 'scan'
     CREATE  = 'create'
     UPDATE =  'update'
+    SENTIMENT = 'sentiment'
 
 class TaskStatus(str, Enum):
     SUCCESS = 'SUCCESS'
@@ -41,6 +42,8 @@ class StatusCodeException(int, Enum):
     BAD_REQUEST = 400
 
 FIELD_ID = "ID"
+# Default field Sentiment Score
+DEFAULT_SENTIMENT_SCORE_FIELD = "Sentiment Score"
 
 class GroupObjectType(str, Enum):
     AI_DATASETS = "ai_dataset"

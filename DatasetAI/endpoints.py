@@ -8,6 +8,8 @@ from app.dependencies.authentication import protected_route
 from dotenv import load_dotenv
 import os
 
+from app.tasks import activate_preprocess_dataset
+
 load_dotenv()
 
 router = APIRouter()
@@ -22,8 +24,8 @@ async def config(
 ):
     try:
         db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
-        service = DatasetAIServices(db_str)
-        return await service.config_preprocess_dataset(config, current_user_id, CREDENTIALS.credentials)
+        task = activate_preprocess_dataset.delay(db_str, config, current_user_id, CREDENTIALS.credentials)
+        # return await service.config_preprocess_dataset(config, current_user_id, CREDENTIALS.credentials)
         
     except Exception as e:
         if isinstance(e, HTTPException):

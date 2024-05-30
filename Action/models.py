@@ -30,6 +30,11 @@ class ActionRecord(ActionBase):
     field_contents: List[str]
     field_configs: List[Dict[str, Any]]
     
+class ActionScoreSentiment(ActionBase):
+    field_to_score: str = Field(..., alias="field_to_score")
+    sentiment_model: str = Field(..., alias="sentiment_model")
+    
+    
 # class ActionUpdate(ActionBase):
 #     country_code: str = Field(..., alias="country_code")
 

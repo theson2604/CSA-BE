@@ -11,8 +11,9 @@ from Object.repository import ObjectRepository
 from Workflow.models import WorkflowModel
 from Workflow.repository import WorkflowRepository
 from Workflow.schemas import WorkflowSchema, WorkflowWithActionSchema
+from app.common.enums import ActionType
 from app.common.errors import HTTPBadRequest
-from app.tasks import activate_create, activate_send, activate_update, set_task_metadata
+from app.tasks import activate_create, activate_score_sentiment, activate_send, activate_update, set_task_metadata
 
 load_dotenv()
 
@@ -69,7 +70,7 @@ class WorkflowService:
         
         return self.repo.delete_one_by_id(id), self.action_repo.delete_many_by_workflow_id(id)
 
-    async def activate_workflow(self, workflow_id: str, current_user_id: str, record_id: str = None):
+    async def activate_workflow(self, workflow_id: str, current_user_id: str, access_token: str = "", record_id: str = None):
         db = self.db_str
         workflow = self.repo.find_one_by_id(workflow_id)
         if not workflow:
@@ -78,14 +79,17 @@ class WorkflowService:
         workflow_with_actions = await self.repo.get_workflow_with_all_actions(workflow_id)
         for action in workflow_with_actions.get("actions"): # for action in actions
             type = action.get("type")
-            if type == "send":
+            if type == ActionType.SEND:
                 task = activate_send.delay(db, action, current_user_id, record_id)
-                set_task_metadata(task.id, {"type": "send"})
-            elif type == "create":
+                set_task_metadata(task.id, {"type": ActionType.SEND})
+            elif type == ActionType.CREATE:
                 task =  activate_create.delay(db, action, current_user_id, [])
-                set_task_metadata(task.id, {"type": "create"})
-            elif type == "update":
+                set_task_metadata(task.id, {"type": ActionType.CREATE})
+            elif type == ActionType.UPDATE:
                 task = activate_update.delay(db, action, current_user_id, [], record_id)
-                set_task_metadata(task.id, {"type": "update"})
-
+                set_task_metadata(task.id, {"type": ActionType.UPDATE})
+            elif type == ActionType.SENTIMENT:
+                task = activate_score_sentiment(db, action, record_id, current_user_id, access_token)
+                set_task_metadata(task.id, {"type": ActionType.SENTIMENT})
+                
         return task.id

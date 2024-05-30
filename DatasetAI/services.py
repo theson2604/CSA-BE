@@ -1,3 +1,5 @@
+import asyncio
+import re
 import aiohttp
 from bson import ObjectId
 from fastapi import HTTPException
@@ -7,8 +9,10 @@ from DatasetAI.schemas import DatasetConfigSchema
 from FieldObject.repository import FieldObjectRepository
 from FieldObject.schemas import FieldObjectSchema
 from GroupObjects.repository import GroupObjectRepository
+from Object.repository import ObjectRepository
 from Object.schemas import ObjectWithFieldSchema
 from Object.services import ObjectService
+from RecordObject.repository import RecordObjectRepository
 from RecordObject.services import RecordObjectService
 from app.common.enums import FieldObjectType, GroupObjectType
 from app.common.errors import HTTPBadRequest
@@ -16,7 +20,7 @@ import httpx
 from dotenv import load_dotenv
 import os
 import copy
-from app.common.utils import generate_model_id
+from app.common.utils import generate_model_id, get_current_hcm_datetime
 import logging
 
 load_dotenv()
@@ -32,7 +36,7 @@ class DatasetAIServices:
         self.group_obj_repo = GroupObjectRepository(db_str)
         self.db_str = db_str
 
-    async def config_preprocess_dataset(self, config: DatasetConfigSchema, cur_user_id: str, access_token: str) -> str:
+    async def config_preprocess_dataset(self, config: DatasetConfigSchema, cur_user_id: str, access_token: str) -> dict:
         config = config.model_dump()
         
         obj_id = config.get("obj_id")
@@ -127,3 +131,48 @@ class DatasetAIServices:
         inserted_config_id = await self.repo.insert_one(dataset_model.model_dump(by_alias=True))
             
         return {"config_id": inserted_config_id, "records": preprocessed_records, **histogram_labels}
+    
+    async def infer_sentiment_score(self, db_str: str, config: dict, record_id: str, cur_user_id: str, access_token: str):
+        object_id = config.get("object_id")
+        obj_repo = ObjectRepository(db_str)
+        obj = await obj_repo.find_one_by_id(object_id)
+        obj_id = obj.get("obj_id")
+        record_repo = RecordObjectRepository(db_str, obj_id)
+        
+        record = await record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id)[0]
+        # Field to score sentiment
+        text = record.get(config.get("field_to_score"), "")
+        model_id = config.get("sentiment_model", "") # SentimentModel model_<name>_<id>
+        
+        if not text: 
+            return -1
+        body = {
+            "text": text,
+            "model_id": model_id
+        }
+        
+        headers = {'Authorization': f'Bearer {access_token}'}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f'{os.environ.get("AI_SERVER_URL")}/predict', json=body, headers=headers) as response:
+                if response.status != 200:
+                    error_message = await response.text()
+                    raise HTTPException(status_code=response.status, detail=error_message)
+                
+                score = await response.json()
+                
+        # Auto create, update SENTIMENT_SCORE field for record
+        field_score_id_str = await self.field_obj_repo.find_and_create_field_sentiment_score(obj_id)
+        record.update({
+            field_score_id_str: score.get("score"),
+            "modified_by": cur_user_id,
+            "modified_at": get_current_hcm_datetime()
+        })
+        record_repo.insert_one(record)
+        
+        # Get field_type id of record
+        pattern = r'^fd_id_\d{6}$'
+        matching_keys = [key for key in record.keys() if re.match(pattern, key)]
+        if matching_keys:
+            record_prefix_id = record.get(matching_keys[0], "")
+    
+            return {"record_prefix": record_prefix_id, "score": score}

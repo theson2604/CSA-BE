@@ -162,7 +162,7 @@ class RecordObjectService:
 
         return record
     
-    async def check_conditions(self, record: dict, trigger: str, current_user_id: str):
+    async def check_conditions(self, record: dict, trigger: str, current_user_id: str, access_token: str):
         obj_id = record.get("object_id")
         record_id = record.get("_id")
         workflows = await self.workflow_repo.find_many({"object_id": obj_id}, {"_id": 1, "trigger": 1, "conditions": 1})
@@ -184,13 +184,13 @@ class RecordObjectService:
                 from Workflow.services import WorkflowService
                 workflow_service = WorkflowService(self.db_str)
                 # activate current workflow
-                task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, record_id)
+                task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, record_id, access_token=access_token)
                 task_ids.append(task_id)
 
         return task_ids
 
     async def create_record(
-        self, record: RecordObjectSchema, current_user_id: str
+        self, record: RecordObjectSchema, current_user_id: str, access_token: str
     ) -> str:
         obj_id = record.pop("object_id")
         inserted_record = {"object_id": obj_id}
@@ -224,7 +224,7 @@ class RecordObjectService:
             RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True)
         )
 
-        await self.check_conditions(inserted_record, "create", current_user_id)
+        await self.check_conditions(inserted_record, "create", current_user_id, access_token)
         return result
 
     async def get_all_records_with_detail(
@@ -262,7 +262,7 @@ class RecordObjectService:
         
         return await self.record_repo.get_all_records_ref_to(record_id, ref_obj_id)
 
-    async def update_one_record(self, record: dict, current_user_id: str) -> bool:
+    async def update_one_record(self, record: dict, current_user_id: str, access_token: str) -> bool:
         record_id = record.pop("record_id")
         current_record = await self.record_repo.find_one_by_id(record_id)
         if not current_record:
@@ -280,7 +280,7 @@ class RecordObjectService:
         })
 
         result = await self.record_repo.update_and_get_one_by_id(record_id, updated_record)
-        await self.check_conditions(result, "update", current_user_id)
+        await self.check_conditions(result, "update", current_user_id, access_token)
 
         return result
 
