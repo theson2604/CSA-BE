@@ -352,7 +352,6 @@ class MailServices:
                     break
                 # raise HTTPBadRequest(f"{msg.subject}, {regex_subject}")
                 splited_prefix = record_prefix.split(".")
-                raise HTTPBadRequest(f"{splited_prefix}")
                 content = {
                     # "id": str(ObjectId()),
                     "from_": msg.from_,
