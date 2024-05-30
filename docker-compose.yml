@@ -130,7 +130,7 @@ services:
   celery_worker:
     container_name: celery-worker
     build: .
-    command: celery -A app.celery.celery worker -B --loglevel=INFO --concurrency=4
+    command: celery -A app.celery.celery worker --loglevel=INFO --concurrency=4
     volumes:
       - .:/app/csa_be
       - certs:/usr/share/elasticsearch/config/certs

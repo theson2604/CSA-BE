@@ -63,5 +63,11 @@ class MailServiceRepository:
         return result.get("email"), result.get("password")
     
     async def insert_email_from_scan(self, reply_mails: List[ReplyEmailModel]):
-        
-        pass
+        result = await self.coll.insert_many(reply_mails)
+        return result.inserted_ids
+    
+    async def get_all_reply_emails(
+        self, skip: int = 0, page_size: int = 100
+    ) -> list:
+        cursor = self.coll.find().sort("_id", -1).limit(page_size).skip(skip)
+        return await cursor.to_list(length=None)

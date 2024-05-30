@@ -83,6 +83,7 @@ class WorkflowService:
         
         workflow_with_actions = await self.repo.get_workflow_with_all_actions(workflow_id)
         for action in workflow_with_actions.get("actions"): # for action in actions
+            # raise HTTPBadRequest(f"{action.get("type")}")
             type = action.get("type")
             if type == "send":
                 task = activate_send.delay(db, action, record_id)

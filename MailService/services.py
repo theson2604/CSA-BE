@@ -1,3 +1,4 @@
+from email.mime.multipart import MIMEMultipart
 import re
 from FieldObject.repository import FieldObjectRepository
 from MailService.models import EmailModel, ReplyEmailModel, TemplateModel
@@ -68,27 +69,37 @@ class MailServices:
 
     def get_field_id(src):
         field_regex = r"@fd_\w+_\d{6}"
-        ref_field_regex = r"@obj_\w+_\d{6}.fd_email_\d{6}"
-        field_matches = re.finditer(field_regex, src)
+        ref_field_regex = r"@fd_\w+_\d{6}.obj_\w+_\d{6}.fd_\w+_\d{6}"
         ref_field_matches = re.finditer(ref_field_regex, src)
         positions = []
         field_ids = []
-        for field_match in field_matches:
-            field_ids.append(field_match.group())
-            positions.append(field_match.start())
         for ref_field_match in ref_field_matches:
             field_ids.append(ref_field_match.group())
             positions.append(ref_field_match.start())
+        field_matches = re.finditer(field_regex, src)
+        for field_match in field_matches:
+            if field_match.start() in positions:
+                continue
+            field_ids.append(field_match.group())
+            positions.append(field_match.start())
         return field_ids, positions
     
     async def field_id_to_field_value(self, mail_body, field_ids, record):
         for i, field_id in enumerate(field_ids):
-            if field_id[1] != "f":
-                fd_ref, _, fd_id = field_id.split(".")
-                content = record.get(fd_ref[1:]).get("ref_to").get(fd_id)
-            else: content = record.get(field_id[1:])
-            if not content: content = ""
-            mail_body = mail_body.replace(field_id, content)
+            try:
+                if "." in field_id:
+                    try:
+                        print(field_id)
+                        fd_ref, _, fd_id = field_id.split(".")
+                        content = record.get(fd_ref[1:]).get("ref_to").get(fd_id)
+                    except:
+                        raise HTTPBadRequest(f"DEBUG2 {field_id}")
+                else: 
+                    content = record.get(field_id[1:])
+                if not content: content = ""
+                mail_body = mail_body.replace(field_id, content)
+            except Exception as e:
+                raise HTTPBadRequest(f"DEBUG: {e}, {field_id}, {record}")
         return mail_body
     
     def get_bodies(template: str) -> List[str]:
@@ -238,40 +249,41 @@ class MailServices:
         mail_subject = template.get("subject")
         field_ids_subject, postions = MailServices.get_field_id(mail_subject)
         field_ids_body, postions = MailServices.get_field_id(mail_body)
+        # raise HTTPBadRequest(f"field: {field_ids_body}, pos: {postions}")
         print(field_ids_body)
         if len(field_ids_subject) != 0:
             mail_subject = await self.field_id_to_field_value(mail_subject, field_ids_subject, record)
         mail_subject = f"[{obj_id.replace('obj_','').upper()}.{record.get(fd_id)}] " + mail_subject
         mail_body = await self.field_id_to_field_value(mail_body, field_ids_body, record)
 
-        field_email = mail.get("send_to")
+        field_email = mail.get("send_to")[0]
         email_str = r"^fd_email_\d{6}$"
         send_to = None
         if not re.search(email_str, field_email):
-            print("NOT MATCH")
-            ref_field, fd_email = field_email.split(".")
+            ref_field, _, fd_email = field_email.split(".")
             send_to = record.get(ref_field).get("ref_to").get(fd_email)
         else:
             send_to = record.get(field_email)
         if not send_to:
             return "Failed to send email."
         
-        mail_model = MIMEText(mail_body)
+        mail_model = MIMEMultipart("alternative")
+        mail_model = MIMEText(mail_body, "HTML")
         mail_model["Subject"] = mail_subject
         mail_model["From"] = email
-        mail_model["To"] = ",".join(send_to)
+        # mail_model["To"] = ",".join(send_to)
         mail_pwd = await self.get_mail_pwd(email, db_str)
-
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp_server:
             smtp_server.login(email, mail_pwd)
             smtp_server.sendmail(email, send_to, mail_model.as_string())
         return "Message sent!"
 
     
-    async def get_mail_pwd(self, email: str, db_str: str) -> str:
-        result = await self.repo.find_email({"email": email, "db_str": db_str}, projection={"modified_at": 0, "created_at": 0})
+    async def get_mail_pwd(self, email: str, db_str: str, result: dict = None) -> str:
         if not result:
-            raise HTTPBadRequest("Cannot find email")
+            result = await self.repo.find_email({"email": email, "db_str": db_str}, projection={"modified_at": 0, "created_at": 0})
+            if not result:
+                raise HTTPBadRequest("Cannot find email")
         return self.decrypt_aes(result.get("key"), result.get("iv"), result.get("pwd"))
     
     async def create_template(self, template) -> str:
@@ -301,13 +313,14 @@ class MailServices:
     async def get_templates_by_object_id(self, object_id) -> List:
         return await self.template_repo.get_templates_by_object_id(object_id)
     
-    async def scan_email(self, mail: ScanMailSchema, db_str: str, current_user_id: str):
+    async def scan_email(self, system_email: dict):
         print("START SCAN")
         # mail = mail.model_dump()
-        email = mail.get("email")
-        mail_pwd = await self.get_mail_pwd(email, db_str)
+        db_str = system_email.get("db_str")
+        email = system_email.get("email")
+        mail_pwd = await self.get_mail_pwd(email, db_str, system_email)
 
-        template_id = mail.get("template")
+        template_id = system_email.get("template_id")
         template = await self.template_repo.find_template_by_id(template_id)
         if not template:
             raise HTTPBadRequest(f"Can not find template")
@@ -323,59 +336,49 @@ class MailServices:
         obj_id = obj.get("obj_id").replace("obj_","").upper()
         obj_name, seq = obj_id.split("_")
         prefix = field_id.get("prefix")
-        mail_contents = [] #List[dict]
+        mail_contents = [] # List[dict]
 
         # bodies = MailServices.get_bodies(template.get("body"))
         with MailBox("imap.gmail.com").login(email, mail_pwd, 'INBOX') as mailbox:
+            regex_subject = re.escape(f"{obj_id}") + r"." + re.escape(f"{prefix}") + r"\d+"
             re_subject = r"Re: [" + re.escape(f"{obj_name}") + r"_" + re.escape(f"{seq}") + r"." + re.escape(f"{prefix}") + r"\*"
             print("SUBJECT: ", re_subject)
             for msg in mailbox.fetch(AND(date_gte=get_current_hcm_date(), subject=r"Re\*", seen=False), mark_seen=True):
                 # print("GOT MESS", msg.text, msg.subject)
+                matches = re.finditer(regex_subject, msg.subject)
+                
+                for matche in matches:
+                    record_prefix = matche.group()
+                    break
+                # raise HTTPBadRequest(f"{msg.subject}, {regex_subject}")
+                splited_prefix = record_prefix.split(".")
+                raise HTTPBadRequest(f"{splited_prefix}")
                 content = {
+                    # "id": str(ObjectId()),
                     "from_": msg.from_,
                     "subject": msg.subject,
                     "body": MailServices.get_new_body_gmail(msg.text),
-                    "send_at": msg.date_str
+                    "sent_at": msg.date_str,
+                    "record_prefix": splited_prefix[1]
                 }
-                # if MailServices.match_template(template.get("body"), text, bodies):
-                #     print("AKLSDJASHFWUI#RHO")
-                # subject = msg.subject
-                # meta_data = subject[subject.index("[")+1 : subject.index("]")]
-                # obj, prefix_id = meta_data.split(".")
-                # obj_id_str = f"obj_{obj.lower()}" # ref collection
-                # content["ref_obj_id"] = obj_id_str
+                print("MAILLLLL: ", content)
                 mail_contents.append(ReplyEmailModel.model_validate(content).model_dump(by_alias=True))
-
-                # TODO AFTER INTEGRATING TO WORKLOW, LET CUSTOMER CONFIG REF PARENT FIELD
-                # obj_id = (await self.obj_repo.find_one_by_object_id(obj_id_str)).get("_id")
-                # ref_record_repo = RecordObjectRepository(self.db_str, obj_id_str)
-                # fd_id = (await self.field_obj_repo.find_one_by_field_type(obj_id, "id")).get("field_id")
-                
-                # ref_record_id = (await ref_record_repo.find_one({fd_id: prefix_id})).get("_id")
-
-                # IF NEED TO INSERT RECORD
-                # new_record = MailServices.get_field_value_from_text(template.get("body"), text, bodies)
-                # new_record = {"fd_content_790": text, "fd_score_034": 9, "object_id": template.get("object_id")}
-                # object = (await self.obj_repo.find_one_by_id(template.get("object_id"))) # current collection
-                # obj_id_str = object.get("obj_id")
-                # record_services = RecordObjectService(self.db_str, obj_id_str, template.get("object_id"))
-                # result = await record_services.create_record(new_record, admin_id)
-                # return result
-                    
-                # print("SUBJECT: ", msg.subject)
-                # print("BODY: ", msg.text)
-        if len(mail_contents) != 0:
-            await self.check_condition(template_id, current_user_id, mail_contents)
-            await self.scan_repo.insert_email_from_scan()
-        else:
-            print("EMPTYYYYYYYYY")
+        try:
+            if len(mail_contents) != 0: # last dict in mail_contents is parent info of new records
+                mail_contents.append({"ref_obj_name": obj.get("obj_name"), "ref_obj_id": obj.get("_id"), "ref_obj_id_str": obj.get("obj_id")})
+                task_ids = await self.check_condition(system_email.get("admin_id"), mail_contents)
+                if len(task_ids) == 0:
+                    mail_contents.pop()
+                # await self.scan_repo.insert_email_from_scan(mail_contents)
+            else:
+                print("EMPTYYYYYYYYY")
+        except Exception as e:
+            raise HTTPBadRequest(f"DUBGUG2 {e}")
         
         return mail_contents
     
 
-    async def check_condition(self, template_id: str, current_user_id: str, mail_contents: List[str]):
-        # template = self.template_repo.find_one_by_id(template_id)
-        # object_id = template.get("object_id")
+    async def check_condition(self, current_user_id: str, mail_contents: List[str]):
         workflows = await self.workflow_repo.find_many({"trigger": "scan"}, {"_id": 1, "trigger": 1})
         task_ids = []
         for workflow in workflows:
@@ -386,3 +389,7 @@ class MailServices:
             task_ids.append(task_id)
 
         return task_ids
+    
+    async def get_all_reply_emails(self, page: int = 1, page_size: int = 100):
+        skip = (page - 1) * page_size
+        return await self.scan_repo.get_all_reply_emails(skip, page_size)

@@ -1,12 +1,13 @@
 import asyncio
 import json
-import re
 from celery.result import AsyncResult
 from celery.schedules import crontab, schedule
 from typing import List
 
 from fastapi import WebSocket
 from FieldObject.repository import FieldObjectRepository
+from FieldObject.schemas import FieldObjectSchema
+from FieldObject.services import FieldObjectService
 from InboundRule.services import InboundRule
 from MailService.repository import MailServiceRepository
 from MailService.services import MailServices
@@ -61,15 +62,15 @@ def test_scan_mail(db: str, mail: dict, obj_id: str, admin_id: str):
 @clr.task()
 def scan_email():
     mail_repo = MailServiceRepository()
-    system_emails = asyncio.get_event_loop().run_until_complete(mail_repo.find_many_email({}, {"email": 1, "db_str": 1, "template_id": 1, "admin_id": 1}))
+    system_emails = asyncio.get_event_loop().run_until_complete(mail_repo.find_many_email({}, {"created_at": 0, "modified_at": 0}))
     for system_email in system_emails:
-        db_str = system_email.get("db_str")
-        mail_service = MailServices(db_str, DBCollections.REPLY_EMAIL)
-        scan_schema = {
-            "template": system_email.get("template_id"),
-            "email": system_email.get("email")
-        }
-        contents = asyncio.get_event_loop().run_until_complete(mail_service.scan_email(scan_schema, db_str, system_email.get("admin_id")))
+        # db_str = system_email.get("db_str")
+        mail_service = MailServices(system_email.get("db_str"), DBCollections.REPLY_EMAIL)
+        # scan_schema = {
+        #     "template": system_email.get("template_id"),
+        #     "email": system_email.get("email")
+        # }
+        contents = asyncio.get_event_loop().run_until_complete(mail_service.scan_email(system_email))
 
     return contents
 
@@ -126,8 +127,9 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
     record = {
         "object_id": object_id
     }
-    for field_config in action.get("field_configs"):
-        record.update(field_config)
+    if action.get("field_configs"):
+        for field_config in action.get("field_configs"):
+            record.update(field_config)
 
     record_service = RecordObjectService(db, obj_id, object_id)
 
@@ -135,11 +137,48 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
     if action.get("option") == "no":
         results = [asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))]
     else:
+        parent_info = contents.pop()
+        field_repo = FieldObjectRepository(db)
+        ref_parent_field = asyncio.get_event_loop().run_until_complete(field_repo.find_one(
+            {"field_name": parent_info.get("ref_obj_name"), "object_id": object_id, "field_type": "ref_obj"}
+        ))
+        if not ref_parent_field:
+            field_service = FieldObjectService(db)
+            field_schema = {
+                "field_type": "ref_obj",
+                "field_name": parent_info.get("ref_obj_name"),
+                "object_id": object_id,
+                "sorting_id": len(asyncio.get_event_loop().run_until_complete(field_service.get_all_fields_by_obj_id(object_id))),
+                "src": parent_info.get("ref_obj_id"),
+                "cascade_option": "delete"
+            }
+            ref_parent_field_id = asyncio.get_event_loop().run_until_complete(
+                field_service.create_one_field(FieldObjectSchema.model_validate(field_schema).model_dump())
+            )
+        else:
+            ref_parent_field_id = ref_parent_field.get("_id")
+
+        
+        ref_parent_field = asyncio.get_event_loop().run_until_complete(
+                field_repo.find_one_by_id(ref_parent_field_id)
+            )
+        parent_field_id = asyncio.get_event_loop().run_until_complete(
+            field_repo.find_one_by_field_type(parent_info.get("ref_obj_id"), "id")
+        ).get("field_id")
+        parent_record_repo = RecordObjectRepository(db, parent_info.get("ref_obj_id_str"))
+        
         for content in contents:
             if action.get("field_contents"):
                 for field in action.get("field_contents"):
                     record[field] = content.get("body")
 
+            print("PARENT_FIELD_IDDDDD :" , parent_field_id, content.get("record_prefix"))
+            parent_record = asyncio.get_event_loop().run_until_complete(
+                parent_record_repo.find_one({parent_field_id: content.get("record_prefix")})
+            )
+            if parent_record:
+                record[ref_parent_field.get("field_id")] = parent_record.get("_id")
+            record["object_id"] = object_id
             result = asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))
             if result:
                 results.append(result)
@@ -153,23 +192,37 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
 
 # DONE
 @clr.task(name = "update_record")
-def activate_update(db: str, action: dict, user_id: str, record_id: str):
+def activate_update(db: str, action: dict, user_id: str, record_id: str, contents: List[str]):
     object_id = action.get("object_id")
     obj_repo = ObjectRepository(db)
     obj = asyncio.get_event_loop().run_until_complete(obj_repo.find_one_by_id(object_id))
     obj_id = obj.get("obj_id")
-
-    record = {
-        "record_id": record_id,
-        "object_id": object_id
-    }
-    for field_config in action.get("field_configs"):
-        record.update(field_config)
-
-    record_service = RecordObjectService(db, obj_id, object_id)
-    result = asyncio.get_event_loop().run_until_complete(record_service.update_one_record(record, user_id))
     field_repo = FieldObjectRepository(db)
     fd_id = (asyncio.get_event_loop().run_until_complete(field_repo.find_one_by_field_type(object_id, "id"))).get("field_id")
+    result = 0
+
+    if len(contents) != 0:
+        contents.pop() #{"ref_obj_name": obj_name, "ref_obj_id": object_id}
+        record_repo = RecordObjectRepository(db, obj_id)
+        for content in contents:
+            record_prefix = content.get("record_prefix")
+            record = {}
+            for field_config in action.get("field_configs"):
+                record.update(field_config)
+
+            result += asyncio.get_event_loop().run_until_complete(record_repo.update_one({fd_id: record_prefix}, record))
+
+    else:
+        record = {
+            "record_id": record_id,
+            "object_id": object_id
+        }
+        for field_config in action.get("field_configs"):
+            record.update(field_config)
+
+        record_service = RecordObjectService(db, obj_id, object_id)
+        result = asyncio.get_event_loop().run_until_complete(record_service.update_one_record(record, user_id))
+
     return result, fd_id
 
 @clr.task(name = "inbound_file")
