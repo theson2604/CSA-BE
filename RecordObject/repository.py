@@ -44,8 +44,9 @@ class RecordObjectRepository:
     async def insert_many(self, records: List[RecordObjectModel]) -> str:
         result = await self.record_coll.insert_many(records)
         return [inserted_id for inserted_id in result.inserted_ids]
-
-    async def get_parsing_ref_detail_pipeline(self, object_id: str) -> List[dict]:
+    
+    
+    async def get_parsing_ref_detail_pipeline(self, object_id: str, prefix: str = "") -> List[dict]:
         """
         Get parsing ref detail pipeline \n
         :Params:
@@ -67,6 +68,9 @@ class RecordObjectRepository:
             )
 
             base_local_field_id = field_detail.get("field_id")
+            if prefix:
+                base_local_field_id = f"{prefix}.ref_to.{base_local_field_id}"
+                
             local_field_accumulator = f"{base_local_field_id}"
 
             stages = [
@@ -81,50 +85,57 @@ class RecordObjectRepository:
                 {"$set": {f"{base_local_field_id}.ref_to": {"$first": "$ref"}}},
             ]
             parsing_ref_pipeline = parsing_ref_pipeline + stages
-            # Parse Linking Fields
+            # Parse Linking Fields for ref_field_obj
             linking_fields = field_detail.get("linking_fields", [])
-            for linking_field in linking_fields:
-                local_field_id = linking_field.get("field_id")
+            if field_detail.get("field_type") == FieldObjectType.REFERENCE_FIELD_OBJECT and linking_fields:
+                for linking_field in linking_fields:
+                    local_field_id = linking_field.get("field_id")
 
-                full_ref_field_obj_id = (
-                    linking_field.get("ref_obj_id")
-                    if linking_field.get("field_type")
-                    == FieldObjectType.REFERENCE_OBJECT
-                    else linking_field.get("ref_field_obj_id")
-                )
+                    full_ref_field_obj_id = (
+                        linking_field.get("ref_obj_id")
+                        if linking_field.get("field_type")
+                        == FieldObjectType.REFERENCE_OBJECT
+                        else linking_field.get("ref_field_obj_id")
+                    )
 
-                ref_obj_id = (
-                    full_ref_field_obj_id
-                    if linking_field.get("field_type")
-                    == FieldObjectType.REFERENCE_OBJECT
-                    else full_ref_field_obj_id.split(".")[0]
-                )
+                    ref_obj_id = (
+                        full_ref_field_obj_id
+                        if linking_field.get("field_type")
+                        == FieldObjectType.REFERENCE_OBJECT
+                        else full_ref_field_obj_id.split(".")[0]
+                    )
 
-                local_field_accumulator = (
-                    f"{local_field_accumulator}.ref_to.{local_field_id}"
-                )
+                    local_field_accumulator = (
+                        f"{local_field_accumulator}.ref_to.{local_field_id}"
+                    )
 
-                stages = [
-                    {
-                        "$lookup": {
-                            "from": ref_obj_id,
-                            "localField": f"{local_field_accumulator}.ref_to",
-                            "foreignField": "_id",
-                            "as": "ref",
-                        },
-                    },
-                    {
-                        "$set": {
-                            f"{base_local_field_id}.ref_to": {
-                                "$first": "$ref",
+                    stages = [
+                        {
+                            "$lookup": {
+                                "from": ref_obj_id,
+                                "localField": f"{local_field_accumulator}.ref_to",
+                                "foreignField": "_id",
+                                "as": "ref",
                             },
-                            f"{base_local_field_id}.field_value": f"${local_field_accumulator}.field_value",
                         },
-                    },
-                ]
+                        {
+                            "$set": {
+                                f"{base_local_field_id}.ref_to": {
+                                    "$first": "$ref",
+                                },
+                                f"{base_local_field_id}.field_value": f"${local_field_accumulator}.field_value",
+                            },
+                        },
+                    ]
 
-                parsing_ref_pipeline = parsing_ref_pipeline + stages
-
+                    parsing_ref_pipeline = parsing_ref_pipeline + stages
+            
+            elif field_detail.get("field_type") == FieldObjectType.REFERENCE_OBJECT:
+                # Parse all Field refs in next level ref_obj
+                nested_object_id = field_detail.get("ref_obj_id_value")
+                nested_ref_pipeline = await self.get_parsing_ref_detail_pipeline(nested_object_id, prefix=f"{base_local_field_id}")
+                parsing_ref_pipeline += nested_ref_pipeline[:-1]
+                
             parsing_ref_pipeline += [
                 {
                     "$project": {
@@ -140,7 +151,6 @@ class RecordObjectRepository:
                     },
                 }
             ]
-
         return parsing_ref_pipeline
 
     async def get_all_with_parsing_ref_detail(
@@ -170,6 +180,15 @@ class RecordObjectRepository:
 
         # total_records count + parsing record_details
         pipeline = [
+            {
+                "$project": {
+                    # "created_at": 0,
+                    "modified_at": 0,
+                    "created_by": 0,
+                    "modified_by": 0,
+                    "object_id": 0,
+                }
+            },
             {
                 "$facet": {
                     "total_records": [{"$count": "total"}],
