@@ -8,7 +8,7 @@ from app.common.enums import ActionType, TaskStatus
 
     
 class NotificationService:
-    def __init__(self, db_str: str, clients):
+    def __init__(self, db_str: str):
         self.repo = ActionRepository(db_str)
         self.object_repo = ObjectRepository(db_str)
         # self.mail_repo = MailServiceRepository(db_str)
@@ -16,7 +16,7 @@ class NotificationService:
 
         self.db_str = db_str
 
-    async def send_one(task_id: str, result):
+    async def send_one(task_id: str, result, clients):
         task_status = result.status
         from app.tasks import get_task_metadata
         metadata = get_task_metadata(task_id)
