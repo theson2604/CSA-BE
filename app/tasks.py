@@ -36,16 +36,16 @@ async def monitor_tasks(clients: List[WebSocket]):
             else:
                 print("NOT READY")
 
-@clr.task()
-def monitor_tasks():
-    tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
-    asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.1))
-    for task_id in tasks_info[list(tasks_info.keys())[0]]:
-        result = AsyncResult(task_id["id"])
-        if result.ready():
-            asyncio.get_running_loop().run_until_complete(NotificationService.send_one(task_id["id"], result))
-        else:
-            print("NOT READY")
+# @clr.task()
+# def monitor_tasks():
+#     tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
+#     asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.1))
+#     for task_id in tasks_info[list(tasks_info.keys())[0]]:
+#         result = AsyncResult(task_id["id"])
+#         if result.ready():
+#             asyncio.get_running_loop().run_until_complete(NotificationService.send_one(task_id["id"], result))
+#         else:
+#             print("NOT READY")
 
 def set_task_metadata(task_id: str, metadata: dict):
     return redis_client.set(task_id, json.dumps(metadata))

@@ -34,8 +34,8 @@ if platform.system() == 'Windows':
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run at startup
-    # asyncio.create_task(monitor_tasks(clients))
-    # yield
+    asyncio.create_task(monitor_tasks(clients))
+    yield
     print('Shutting down...')
 
 app = FastAPI(lifespan=lifespan)

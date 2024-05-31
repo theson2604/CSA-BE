@@ -8,7 +8,7 @@ from app.common.enums import ActionType, TaskStatus
 
     
 class NotificationService:
-    def __init__(self, db_str: str):
+    def __init__(self, db_str: str, clients):
         self.repo = ActionRepository(db_str)
         self.object_repo = ObjectRepository(db_str)
         # self.mail_repo = MailServiceRepository(db_str)
@@ -112,6 +112,6 @@ class NotificationService:
                 }})
         notification["message"] = message
         print("NOTIFICATION: ", notification)
-        from app.main import clients
+        # from app.main import clients
         for client in clients:
             await client.send_json(notification)
