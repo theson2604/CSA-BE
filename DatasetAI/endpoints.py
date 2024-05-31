@@ -24,6 +24,7 @@ async def config(
 ):
     try:
         db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        config = config.model_dump()
         task = activate_preprocess_dataset.delay(db_str, config, current_user_id, CREDENTIALS.credentials)
         # return await service.config_preprocess_dataset(config, current_user_id, CREDENTIALS.credentials)
         

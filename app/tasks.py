@@ -241,7 +241,7 @@ def activate_inbound_with_new_obj(db, config: dict, user_id: str, df: str):
     return result
 
 @clr.task(name = "preprocess_dataset")
-def activate_preprocess_dataset(db_str: str, config: DatasetConfigSchema, cur_user_id: str, access_token: str):
+def activate_preprocess_dataset(db_str: str, config: dict, cur_user_id: str, access_token: str):
     dataset_service = DatasetAIServices(db_str)
     result = asyncio.get_event_loop().run_until_complete(dataset_service.config_preprocess_dataset(config, cur_user_id, access_token))
     return result
