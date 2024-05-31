@@ -180,6 +180,7 @@ class MailServices:
         return contents
     
     def get_new_body_gmail(msg):
+        re_body = r"On \w+, \d+ \w+ \d+ at"
         matching_string_obj = re.search(r"\w+\s+\w+[,]\s+\w+\s+\d+[,]\s+\d+\s+\w+\s+\d+[:]\d+.*", msg)
         if matching_string_obj:
             body_list = msg.split(matching_string_obj.group())
