@@ -17,10 +17,13 @@ celery.conf.update(
     # }
 )
 celery.conf.beat_schedule = {
+    'notify_task_result': {
+        
+    },
     'scan_email_on_interval': {
-            'task': 'app.tasks.scan_email',
-            'schedule': 15.0,
-        },
+        'task': 'app.tasks.scan_email',
+        'schedule': 15.0,
+    },
 }
 
 redis_client = redis.StrictRedis(host='redis', port=6379, db=0)

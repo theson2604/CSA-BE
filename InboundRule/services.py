@@ -50,7 +50,7 @@ class InboundRule:
         # return json.loads(json_str)
         return df
     
-    async def inbound_file(self, file_inbound: dict, user_id: str) -> Tuple[int, int]:
+    async def inbound_file(self, file_inbound: dict, user_id: str) -> Tuple[str, int, int]:
         start_time = time.time()
         json_df = file_inbound.get("file")
         df = pd.read_json(json_df, orient="records")

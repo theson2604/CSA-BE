@@ -314,8 +314,8 @@ class RecordObjectRepository:
         result = await self.record_coll.update_one({"_id": id}, {"$set": record})
         return result.modified_count
     
-    async def update_and_get_one_by_id(self, id: str, record: dict):
-        result = await self.record_coll.find_one_and_update({"_id": id}, {"$set": record}, return_document=ReturnDocument.AFTER)
+    async def update_and_get_one(self, query: dict, record: dict):
+        result = await self.record_coll.find_one_and_update(query, {"$set": record}, return_document=ReturnDocument.AFTER)
         return result
     
     async def update_one(self, query: dict, record: dict):

@@ -23,9 +23,11 @@ class FieldObjectType(str, Enum):
 class ActionType(str, Enum):
     SEND = 'send'
     SCAN = 'scan'
+    SCAN = 'scan'
     CREATE  = 'create'
     UPDATE =  'update'
     SENTIMENT = 'sentiment'
+    INBOUND = 'inbound'
 
 class TaskStatus(str, Enum):
     SUCCESS = 'SUCCESS'

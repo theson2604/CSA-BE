@@ -277,7 +277,7 @@ class MailServices:
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp_server:
             smtp_server.login(email, mail_pwd)
             smtp_server.sendmail(email, send_to, mail_model.as_string())
-        return "Message sent!"
+        return "Message sent."
 
     
     async def get_mail_pwd(self, email: str, db_str: str, result: dict = None) -> str:
@@ -361,19 +361,15 @@ class MailServices:
                     "sent_at": msg.date_str,
                     "record_prefix": splited_prefix[1]
                 }
-                print("MAILLLLL: ", content)
                 mail_contents.append(ReplyEmailModel.model_validate(content).model_dump(by_alias=True))
-        try:
-            if len(mail_contents) != 0: # last dict in mail_contents is parent info of new records
-                mail_contents.append({"ref_obj_name": obj.get("obj_name"), "ref_obj_id": obj.get("_id"), "ref_obj_id_str": obj.get("obj_id")})
-                task_ids = await self.check_condition(system_email.get("admin_id"), mail_contents)
-                if len(task_ids) == 0:
-                    mail_contents.pop()
-                # await self.scan_repo.insert_email_from_scan(mail_contents)
-            else:
-                print("EMPTYYYYYYYYY")
-        except Exception as e:
-            raise HTTPBadRequest(f"DUBGUG2 {e}")
+        if len(mail_contents) != 0: # last dict in mail_contents is parent info of new records
+            mail_contents.append({"ref_obj_name": obj.get("obj_name"), "ref_obj_id": obj.get("_id"), "ref_obj_id_str": obj.get("obj_id")})
+            task_ids = await self.check_condition(system_email.get("admin_id"), mail_contents)
+            if len(task_ids) == 0:
+                mail_contents.pop()
+            # await self.scan_repo.insert_email_from_scan(mail_contents)
+        else:
+            print("EMPTYYYYYYYYY")
         
         return mail_contents
     
