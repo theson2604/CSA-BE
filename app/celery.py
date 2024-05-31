@@ -17,10 +17,10 @@ celery.conf.update(
     # }
 )
 celery.conf.beat_schedule = {
-    # 'notify_task_result': {
-    #     'task': 'app.tasks.monitor_tasks',
-    #     'schedule': 1
-    # },
+    'notify_task_result': {
+        'task': 'app.tasks.monitor_tasks',
+        'schedule': 5.0
+    },
     'scan_email_on_interval': {
         'task': 'app.tasks.scan_email',
         'schedule': 15.0,

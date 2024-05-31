@@ -5,7 +5,6 @@ from Action.models import *
 from Object.repository import ObjectRepository
 from Workflow.repository import WorkflowRepository
 from app.common.enums import ActionType, TaskStatus
-from app.main import clients
 
     
 class NotificationService:
@@ -113,5 +112,6 @@ class NotificationService:
                 }})
         notification["message"] = message
         print("NOTIFICATION: ", notification)
+        from app.main import clients
         for client in clients:
             await client.send_json(notification)

@@ -130,7 +130,7 @@ def activate_send(db: str, action: dict, record_id: str) -> str:
 @clr.task(name = "create_record")
 def activate_create(
     db: str, action: dict, user_id: str, contents: List[str]
-) -> Tuple[List[RecordObjectModel.object_id], str]:
+) -> Tuple[List[RecordObjectModel], str]:
     object_id = action.get("object_id")
     obj_repo = ObjectRepository(db)
     obj = asyncio.get_event_loop().run_until_complete(obj_repo.find_one_by_id(object_id))
@@ -205,7 +205,7 @@ def activate_create(
 @clr.task(name = "update_record")
 def activate_update(
     db: str, action: dict, user_id: str, record_id: str, contents: List[str]
-) -> Tuple[List[RecordObjectModel.object_id], str]:
+) -> Tuple[List[RecordObjectModel], str]:
     object_id = action.get("object_id")
     obj_repo = ObjectRepository(db)
     obj = asyncio.get_event_loop().run_until_complete(obj_repo.find_one_by_id(object_id))
