@@ -23,7 +23,6 @@ class FieldObjectType(str, Enum):
 class ActionType(str, Enum):
     SEND = 'send'
     SCAN = 'scan'
-    SCAN = 'scan'
     CREATE  = 'create'
     UPDATE =  'update'
     SENTIMENT = 'sentiment'
