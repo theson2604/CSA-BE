@@ -86,7 +86,7 @@ class FieldObjectRepository:
         self, obj_id: str, field_type: str
     ) -> Union[FieldObjectBase]:
         return await self.field_object_coll.find_one(
-            {"object_id": obj_id, "field_type": field_type"field_type": field_type}
+            {"object_id": obj_id, "field_type": field_type}
         )
 
     async def find_and_create_field_sentiment_score(self, obj_id: str):
