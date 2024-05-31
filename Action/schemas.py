@@ -24,9 +24,11 @@ class ActionSchema(BaseModel):
     template_id: Optional[str] = None
     
     # Create/Update
+    field_configs: Optional[List[Dict[str, Any]]] = []
+
+    # Create
     option: Optional[str] = None # True if use scan else False
-    field_contents: Optional[List[str]] = None
-    field_configs: Optional[List[Dict[str, Any]]] = None
+    field_contents: Optional[List[str]] = []
 
     @model_validator(mode='after')
     def validate_field_obj_schema(self):
@@ -45,18 +47,21 @@ class ActionSchema(BaseModel):
                     raise ValueError(f"missing required 'time' for type {ActionType.SCAN}.")
             
         elif type in [ActionType.CREATE, ActionType.UPDATE]:
-            option = schema.get("option")
-            if not option:
-                raise ValueError(f"missing required 'option' for type {type}.")
+            field_configs, field_contents = schema.get("field_configs"), schema.get("field_contents")
+            # if not field_configs and not field_contents:
+            #     raise ValueError(f"missing both required 'field_configs' and 'field_contents' for type {type}.")
             
-            if option not in ["yes", "no"]:
-                raise ValueError(f"invalid option {option}")
+            if len(field_configs) == 0 and len(field_contents) == 0:
+                raise ValueError(f"'field_configs' and 'field_contents' can not be both empty.")
+
             
-            field_configs = schema.get("field_configs")
-            if not field_configs:
-                raise ValueError(f"missing required 'field_configs' for type {type}.")
-            if len(field_configs) == 0:
-                raise ValueError(f"'field_configs' can not be empty.")
+            if type == ActionType.CREATE:
+                option = schema.get("option")
+                if not option:
+                    raise ValueError(f"missing required 'option' for type {type}.")
+                
+                if option not in ["yes", "no"]:
+                    raise ValueError(f"invalid option {option}")
             
         else:
             raise ValueError(f"invalid 'type' {type}.")

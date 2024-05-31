@@ -318,6 +318,10 @@ class RecordObjectRepository:
         result = await self.record_coll.find_one_and_update({"_id": id}, {"$set": record}, return_document=ReturnDocument.AFTER)
         return result
     
+    async def update_one(self, query: dict, record: dict):
+        result = await self.record_coll.update_one(query, {"$set": record})
+        return result.modified_count
+    
     async def update_many(self, filter, update: dict, coll = None) -> int:
         record_coll = self.db.get_collection(coll) if coll else self.record_coll
         if isinstance(type(filter), dict):

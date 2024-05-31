@@ -16,7 +16,7 @@ router = APIRouter()
 
 @router.post("/create-custom-view-record")
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
-async def create_custom_view_record(
+async def create_one(
     view_record: CustomViewRecordSchema,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
@@ -26,6 +26,24 @@ async def create_custom_view_record(
         db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
         view_record_service = CustomViewRecordService(db_str)
         return await view_record_service.create_one_view(view_record, current_user_id)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+    if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+    
+@router.post("/create-many-custom-view-records")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def create_many(
+    view_record: List[CustomViewRecordSchema],
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        view_record_service = CustomViewRecordService(db_str)
+        return await view_record_service.create_many_views(view_record, current_user_id)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

@@ -47,7 +47,10 @@ class RecordObjectService:
             field_detail = await self.field_obj_repo.find_one_by_field_id_str(
                 obj_id, field_id
             )
-            field_type = field_detail.get("field_type")
+            try:
+                field_type = field_detail.get("field_type")
+            except Exception as e:
+                raise HTTPBadRequest(f"field {field_id} {field_value}")
             
             if field_type == FieldObjectType.TEXT:
                 length = field_detail.get("length")
@@ -192,6 +195,7 @@ class RecordObjectService:
     async def create_record(
         self, record: RecordObjectSchema, current_user_id: str, access_token: str
     ) -> str:
+        print("RECORD: ", record)
         obj_id = record.pop("object_id")
         inserted_record = {"object_id": obj_id}
         

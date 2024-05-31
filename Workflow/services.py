@@ -42,9 +42,9 @@ class WorkflowService:
             object_id = object_id,
             description = workflow.get("description"),
             trigger = workflow.get("trigger"),
-            conditions = workflow.get("conditions")
-            # modified_by = current_user_id,
-            # created_by = current_user_id
+            conditions = workflow.get("conditions"),
+            modified_by = current_user_id,
+            created_by = current_user_id
         )
         
         return await self.repo.insert_one(workflow_model.model_dump(by_alias=True))
@@ -63,6 +63,12 @@ class WorkflowService:
                 await self.repo.delete_one_by_id(new_workflow_id)
             return HTTPBadRequest(str(e))
         
+    async def get_all_workflows_by_object_id(self, object_id: str):
+        return await self.repo.find_many({"object_id": object_id})
+    
+    async def get_workflow_with_all_actions(self, workflow_id: str):
+        return await self.repo.get_workflow_with_all_actions(workflow_id)
+        
     async def delete_workflow_and_actions_by_id(self, id: str):
         workflow = self.repo.find_one_by_id(id)
         if not workflow:
@@ -70,7 +76,7 @@ class WorkflowService:
         
         return self.repo.delete_one_by_id(id), self.action_repo.delete_many_by_workflow_id(id)
 
-    async def activate_workflow(self, workflow_id: str, current_user_id: str, access_token: str = "", record_id: str = None):
+    async def activate_workflow(self, workflow_id: str, current_user_id: str, access_token: str = "", record_id: str = None, mail_contents: List[str] = []):
         db = self.db_str
         workflow = self.repo.find_one_by_id(workflow_id)
         if not workflow:
@@ -78,15 +84,16 @@ class WorkflowService:
         
         workflow_with_actions = await self.repo.get_workflow_with_all_actions(workflow_id)
         for action in workflow_with_actions.get("actions"): # for action in actions
+            # raise HTTPBadRequest(f"{action.get("type")}")
             type = action.get("type")
             if type == ActionType.SEND:
-                task = activate_send.delay(db, action, current_user_id, record_id)
+                task = activate_send.delay(db, action, record_id)
                 set_task_metadata(task.id, {"type": ActionType.SEND})
             elif type == ActionType.CREATE:
-                task =  activate_create.delay(db, action, current_user_id, [])
+                task =  activate_create.delay(db, action, current_user_id, mail_contents)
                 set_task_metadata(task.id, {"type": ActionType.CREATE})
             elif type == ActionType.UPDATE:
-                task = activate_update.delay(db, action, current_user_id, [], record_id)
+                task = activate_update.delay(db, action, current_user_id, record_id, mail_contents)
                 set_task_metadata(task.id, {"type": ActionType.UPDATE})
             elif type == ActionType.SENTIMENT:
                 task = activate_score_sentiment(db, action, record_id, current_user_id, access_token)

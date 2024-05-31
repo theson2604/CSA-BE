@@ -25,10 +25,12 @@ class ActionScan(ActionBase):
     time: str = Field(..., alias="time")
     template_id: str = Field(..., alias="template_id")
     
-class ActionRecord(ActionBase):
+class ActionUpdate(ActionBase):
+    field_configs: List[Dict[str, Any]]
+
+class ActionCreate(ActionUpdate):
     option: str = Field(..., alias="option")
     field_contents: List[str]
-    field_configs: List[Dict[str, Any]]
     
 class ActionScoreSentiment(ActionBase):
     field_to_score: str = Field(..., alias="field_to_score")
