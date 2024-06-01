@@ -29,12 +29,15 @@ async def monitor_tasks(clients: List[WebSocket]):
     while True:
         tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
         await asyncio.sleep(0.1)
-        for task_id in tasks_info[list(tasks_info.keys())[0]]:
-            result = AsyncResult(task_id["id"])
-            if result.ready():
-                await NotificationService.send_one(task_id["id"], result, clients)
-            else:
-                print("NOT READY")
+        try:
+            for task_id in tasks_info[list(tasks_info.keys())[0]]:
+                result = AsyncResult(task_id["id"])
+                if result.ready():
+                    await NotificationService.send_one(task_id["id"], result, clients)
+                else:
+                    print("NOT READY")
+        except:
+            continue
 
 # @clr.task()
 # def monitor_tasks():
@@ -197,7 +200,7 @@ def activate_create(
     field_repo = FieldObjectRepository(db)
     fd_id = (asyncio.get_event_loop().run_until_complete(field_repo.find_one_by_field_type(object_id, "id"))).get("field_id")
     record_repo = RecordObjectRepository(db, obj_id)
-    results = asyncio.get_event_loop().run_until_complete(record_repo.find_all({"_id": {"$in": [result.get("_id") for result in results]}}, {"_id": 1, "object_id": 1, fd_id: 1}))
+    results = asyncio.get_event_loop().run_until_complete(record_repo.find_all({"_id": {"$in": results}}, {"_id": 1, "object_id": 1, fd_id: 1}))
     return results, fd_id
 
 

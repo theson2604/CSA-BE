@@ -41,7 +41,7 @@ class ReplyEmailModel(BaseModel):
     subject: str = Field(..., alias="subject")
     body: str = Field(..., alias="body")
     sent_at: str = Field(..., alias="sent_at")
-    record_prefix: str = Field(..., alias="record_prefix")
+    # record_prefix: str = Field(..., alias="record_prefix")
 
     created_at: str = Field(..., alias="created_at", default_factory=get_current_hcm_datetime)
     
