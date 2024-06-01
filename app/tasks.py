@@ -44,9 +44,9 @@ async def monitor_tasks(clients: List[WebSocket]):
             result = AsyncResult(task_id["id"])
             if result.ready():
                 await NotificationService.send_one(task_id["id"], result, clients)
-            else:
+            # else:
                 old_ids.append(task_id)
-                print("NOT READY")
+            #     print("NOT READY")
 
 # @clr.task()
 # def monitor_tasks():

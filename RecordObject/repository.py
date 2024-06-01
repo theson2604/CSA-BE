@@ -231,9 +231,9 @@ class RecordObjectRepository:
         return await self.record_coll.find_one({"_id": id}, projection)
 
     async def find_all(
-        self, query: dict = {}, projection: dict = None
+        self, query: dict = {}, projection: dict = None, skip: int = 1, page_size: int = 100
     ) -> List[RecordObjectModel]:
-        return await self.record_coll.find(query, projection).to_list(length=None)
+        return await self.record_coll.find(query, projection).skip(skip).limit(page_size).to_list(length=None)
     
     async def get_all_records(self) -> List[RecordObjectModel]:
         cursor = self.record_coll.find({})
@@ -435,4 +435,12 @@ class RecordObjectRepository:
             }
         ]
 
+        return await self.record_coll.aggregate(pipeline).to_list(length=None)
+    
+    async def get_historgram_labels(self, field_id: str):
+        pipeline = [
+            {"$group": {"_id": f"${field_id}", "count": {"$sum": 1}}},
+            {"$sort": {"_id": 1}}
+        ]
+        
         return await self.record_coll.aggregate(pipeline).to_list(length=None)

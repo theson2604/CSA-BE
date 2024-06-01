@@ -214,6 +214,4 @@ class FieldObjectRepository:
                 ref_obj_id_value, ref_field_id_str, visited
             )
 
-        # elif field and field.get("field_type") is FieldObjectType.REFERENCE_OBJECT.value:
-
         return []

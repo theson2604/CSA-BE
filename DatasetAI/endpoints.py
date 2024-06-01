@@ -38,22 +38,62 @@ async def config(
             raise HTTPBadRequest(str(e))
         
         
-@router.get("/detail")
+@router.get("/get-detail-by-id")
 @protected_route([SystemUserRole.ADMINISTRATOR])
-async def config(
-    dataset_id_str: str,
+async def get_detail_by_id(
+    dataset_obj_id: str,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
     CURRENT_USER = None
 ):
     try:
         db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
-        regex_obj_str = r"^obj_\w+_\d{6}$"
-        # obj_id_str
-        match = re.search(regex_obj_str, dataset_id_str)
-        if not match:
-            raise ValueError(f"invalid 'dataset_id_str' {dataset_id_str}. It must be {regex_obj_str}.")
+        service = DatasetAIServices(db_str)
+        return await service.get_detail(dataset_obj_id=dataset_obj_id)
         
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
+        
+@router.get("/get-detail-by-id-str")
+@protected_route([SystemUserRole.ADMINISTRATOR])
+async def get_detail_by_id_str(
+    dataset_obj_id_str: str,
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        regex_str = r"^obj_\w+_\d{6}$"
+        match = re.search(regex_str, dataset_obj_id_str)
+        if not match:
+            raise ValueError(f"invalid 'dataset_obj_id_str' {dataset_obj_id_str}. It must be {regex_str}")
+        
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        service = DatasetAIServices(db_str)
+        return await service.get_detail(dataset_obj_id_str=dataset_obj_id_str)
+        
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
+        
+@router.get("/get-all-models")
+@protected_route([SystemUserRole.ADMINISTRATOR])
+async def get_all_models(
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:        
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        service = DatasetAIServices(db_str)
+        return await service.get_all_models()
         
     except Exception as e:
         if isinstance(e, HTTPException):
