@@ -29,43 +29,29 @@ class NotificationService:
         if task_type == ActionType.SEND:
             if task_status == TaskStatus.SUCCESS:
                 message = result.result
-                notification.update({"result": {
-                    "status": TaskStatus.SUCCESS
-                }})
             else:
                 message = "Failed to send email."
-                notification.update({"result": {
-                    "status": TaskStatus.FAILURE
-                }})
         elif task_type == ActionType.CREATE:
             if task_status == TaskStatus.SUCCESS:
                 message = "Create record succesfully."
-                task_result, fd_id = result.result
+                task_results, fd_id = result.result
                 notification.update({"result": {
-                    "object_id": task_result.get("object_id"),
+                    "object_id": task_results[0].get("object_id"),
                     "record_prefix": [task_result.get(fd_id) for task_result in task_results],
-                    "status": TaskStatus.SUCCESS
                 }})
             else:
                 message = "Failed to create record."
-                notification.update({"result": {
-                    "status": TaskStatus.FAILURE
-                }})
         elif task_type == ActionType.UPDATE:
             if task_status == TaskStatus.SUCCESS:
                 message = "Update record succesfully."
                 task_results, fd_id = result.result
                 notification.update({"result": {
-                    "object_id": task_result.get("object_id"),
+                    "object_id": task_results[0].get("object_id"),
                     "record_prefix": [task_result.get(fd_id) for task_result in task_results],
-                    "status": TaskStatus.SUCCESS
                 }})
                 
             else:
                 message = "Failed to update record."
-                notification.update({"result": {
-                    "status": TaskStatus.FAILURE
-                }})
         elif task_type == ActionType.SENTIMENT:
             if task_status == TaskStatus.SUCCESS:
                 message = "Scoring sentiment succesfully."
@@ -73,14 +59,10 @@ class NotificationService:
                 notification.update({"result": {
                     "record_prefix": task_result.get("record_prefix"),
                     "score": task_result.get("score"),
-                    "status": TaskStatus.SUCCESS
                 }})
                 
             else:
                 message = "Failed to score sentiment."
-                notification.update({"result": {
-                    "status": TaskStatus.FAILURE
-                }})
         elif task_type == ActionType.INBOUND:
             if task_status == TaskStatus.SUCCESS:
                 message = "File uploading succesfully."
@@ -89,27 +71,19 @@ class NotificationService:
                     "object_id": object_id,
                     "success": success,
                     "failed": fail,
-                    "status": TaskStatus.SUCCESS
                 }})
                 
             else:
                 message = "Failed to upload file."
-                notification.update({"result": {
-                    "status": TaskStatus.FAILURE
-                }})
         else:
             if task_status == TaskStatus.SUCCESS:
                 task_result = result.result
                 message = "Email scanned successfully."
                 notification.update({"result": {
                     "emails": len(task_result),
-                    "status": TaskStatus.SUCCESS
                 }})
             else:
                 message = "Failed to upload file."
-                notification.update({"result": {
-                    "status": TaskStatus.FAILURE
-                }})
         notification["message"] = message
         print("NOTIFICATION: ", notification)
         # from app.main import clients
