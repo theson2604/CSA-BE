@@ -54,6 +54,7 @@ class ActionService:
                     "name": action.get("name"),
                     "type": action.get("type"),
                     "description": action.get("description"),
+                    "status": action.get("status"),
                     "sorting_id": index,
                     "object_id": object_id
                 }

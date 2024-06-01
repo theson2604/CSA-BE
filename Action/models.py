@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.common.enums import ActionType
+from app.common.enums import ActionType, ActionWorkflowStatus
 
 class ActionBase(BaseModel):
     id: str = Field(..., alias="_id")
@@ -9,6 +9,7 @@ class ActionBase(BaseModel):
     type: ActionType = Field(..., alias="type")
     name: str = Field(..., max_length=100, alias="name")
     description: str = Field(..., max_length=500, alias="description")
+    status: ActionWorkflowStatus = Field(..., alias="status")
     object_id: str = Field(..., alias="object_id")
     sorting_id: int = Field(..., ge=0)
     

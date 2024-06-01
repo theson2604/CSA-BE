@@ -2,12 +2,13 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field, model_validator  
 
-from app.common.enums import ActionType 
+from app.common.enums import ActionType, ActionWorkflowStatus
 
 class ActionSchema(BaseModel):
     name: str
     type: ActionType
     description: str
+    status: ActionWorkflowStatus
     object_id: str # target record to apply action to
 
     workflow_id: Optional[str] = None # container workflow, no need to consider container object

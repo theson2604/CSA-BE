@@ -27,6 +27,10 @@ class ActionType(str, Enum):
     UPDATE =  'update'
     SENTIMENT = 'sentiment'
     INBOUND = 'inbound'
+    
+class ActionWorkflowStatus(str, Enum):
+    ACTIVE = 'active'
+    INACTIVE = 'inactive'
 
 class TaskStatus(str, Enum):
     SUCCESS = 'SUCCESS'
@@ -38,6 +42,9 @@ class CustomViewRecordType(str, Enum):
     SEND_EMAIL = 'send_email'
     MAILBOX = 'mailbox'
 
+class DashboardType(str, Enum):
+    PIE = 'pie'
+    BAR = 'bar'
     
 class StatusCodeException(int, Enum):
     BAD_REQUEST = 400

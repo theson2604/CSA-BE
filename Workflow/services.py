@@ -11,7 +11,7 @@ from Object.repository import ObjectRepository
 from Workflow.models import WorkflowModel
 from Workflow.repository import WorkflowRepository
 from Workflow.schemas import WorkflowSchema, WorkflowWithActionSchema
-from app.common.enums import ActionType
+from app.common.enums import ActionType, ActionWorkflowStatus
 from app.common.errors import HTTPBadRequest
 from app.tasks import activate_create, activate_score_sentiment, activate_send, activate_update, set_task_metadata
 
@@ -41,6 +41,7 @@ class WorkflowService:
             name = workflow.get("name"),
             object_id = object_id,
             description = workflow.get("description"),
+            status = workflow.get("status"),
             trigger = workflow.get("trigger"),
             conditions = workflow.get("conditions"),
             modified_by = current_user_id,
@@ -85,6 +86,9 @@ class WorkflowService:
         workflow_with_actions = await self.repo.get_workflow_with_all_actions(workflow_id)
         task = {}
         for action in workflow_with_actions.get("actions"): # for action in actions
+            if action.get("status") == ActionWorkflowStatus.INACTIVE:
+                continue
+            
             type = action.get("type")
             if type == ActionType.SEND:
                 task = activate_send.delay(db, action, record_id)

@@ -23,6 +23,7 @@ class DBCollections(str, Enum):
     DATASET_AI = "DatasetAI"
     CUSTOM_VIEW_RECORD = "ViewRecord"
     REPLY_EMAIL = "ReplyEmail"
+    DASHBOARD = "Dashboard"
 
 # Root Collections
 class RootCollections(str, Enum):

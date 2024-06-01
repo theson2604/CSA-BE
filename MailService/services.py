@@ -6,7 +6,7 @@ from MailService.repository import MailServiceRepository
 from MailService.schemas import *
 from Workflow.repository import WorkflowRepository
 from app.common.db_connector import DBCollections
-from app.common.enums import FieldObjectType
+from app.common.enums import ActionWorkflowStatus, FieldObjectType
 from app.common.errors import HTTPBadRequest
 # from fastapi import Depends
 from bson import ObjectId
@@ -379,7 +379,7 @@ class MailServices:
     
 
     async def check_condition(self, current_user_id: str, mail_contents: List[str]):
-        workflows = await self.workflow_repo.find_many({"trigger": "scan"}, {"_id": 1, "trigger": 1})
+        workflows = await self.workflow_repo.find_many({"trigger": "scan"}, {"_id": 1, "trigger": 1, "status": ActionWorkflowStatus.ACTIVE})
         task_ids = []
         for workflow in workflows:
             from Workflow.services import WorkflowService

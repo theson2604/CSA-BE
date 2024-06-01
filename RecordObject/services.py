@@ -168,7 +168,7 @@ class RecordObjectService:
     async def check_conditions(self, record: dict, trigger: str, current_user_id: str, access_token: str):
         obj_id = record.get("object_id")
         record_id = record.get("_id")
-        workflows = await self.workflow_repo.find_many({"object_id": obj_id}, {"_id": 1, "trigger": 1, "conditions": 1})
+        workflows = await self.workflow_repo.find_many({"object_id": obj_id}, {"_id": 1, "trigger": 1, "conditions": 1, "status": ActionWorkflowStatus.ACTIVE})
         print("WORKFLOWS: ", workflows)
         task_ids = []
         for workflow in workflows:
