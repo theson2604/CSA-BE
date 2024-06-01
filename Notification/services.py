@@ -76,6 +76,9 @@ class NotificationService:
                 
             else:
                 message = "Failed to score sentiment."
+                notification.update({"result": {
+                    "status": TaskStatus.FAILURE
+                }})
                 
         elif task_type == ActionType.SENTIMENT:
             if task_status == TaskStatus.SUCCESS:
