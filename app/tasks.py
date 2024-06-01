@@ -19,10 +19,13 @@ from RecordObject.repository import RecordObjectRepository
 from RecordObject.services import RecordObjectService
 from app.celery import celery as clr, redis_client
 import time
-
+import logging
 from app.common.db_connector import DBCollections
 from app.common.enums import ActionType, TaskStatus
 from app.common.utils import get_current_hcm_datetime
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 async def monitor_tasks(clients: List[WebSocket]):
     while True:

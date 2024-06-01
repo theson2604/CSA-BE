@@ -26,6 +26,7 @@ class ActionType(str, Enum):
     CREATE  = 'create'
     UPDATE =  'update'
     SENTIMENT = 'sentiment'
+    PREPROCESS_DATASET = 'preprocess_dataset'
 
 class TaskStatus(str, Enum):
     SUCCESS = 'SUCCESS'
