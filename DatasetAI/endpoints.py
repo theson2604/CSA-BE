@@ -57,9 +57,10 @@ async def get_detail_by_id(
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
         
+        
 @router.get("/get-detail-by-id-str")
 @protected_route([SystemUserRole.ADMINISTRATOR])
-async def get_detail_by_id(
+async def get_detail_by_id_str(
     dataset_obj_id_str: str,
     CREDENTIALS: AuthCredentialDepend,
     AUTHEN_SERVICE: AuthServiceDepend,
@@ -74,6 +75,25 @@ async def get_detail_by_id(
         db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
         service = DatasetAIServices(db_str)
         return await service.get_detail(dataset_obj_id_str=dataset_obj_id_str)
+        
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
+        
+@router.get("/get-all-models")
+@protected_route([SystemUserRole.ADMINISTRATOR])
+async def get_all_models(
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:        
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        service = DatasetAIServices(db_str)
+        return await service.get_all_models()
         
     except Exception as e:
         if isinstance(e, HTTPException):

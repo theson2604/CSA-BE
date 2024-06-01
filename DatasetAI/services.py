@@ -14,6 +14,7 @@ from Object.schemas import ObjectWithFieldSchema
 from Object.services import ObjectService
 from RecordObject.repository import RecordObjectRepository
 from RecordObject.services import RecordObjectService
+from app.common.db_connector import DBCollections
 from app.common.enums import FieldObjectType, GroupObjectType
 from app.common.errors import HTTPBadRequest
 import httpx
@@ -35,6 +36,9 @@ class DatasetAIServices:
         self.field_obj_repo = FieldObjectRepository(db_str)
         self.group_obj_repo = GroupObjectRepository(db_str)
         self.db_str = db_str
+        
+    async def get_all_models(self):
+        return await self.repo.get_all_models()
         
     async def get_detail(self, dataset_obj_id: str = "", dataset_obj_id_str: str = ""):
         dataset_detail = {}
