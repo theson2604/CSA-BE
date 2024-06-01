@@ -36,9 +36,8 @@ class DatasetAIServices:
         self.group_obj_repo = GroupObjectRepository(db_str)
         self.db_str = db_str
 
-    async def config_preprocess_dataset(self, config: DatasetConfigSchema, cur_user_id: str, access_token: str) -> dict:
-        config = config.model_dump()
-        
+    async def config_preprocess_dataset(self, config: dict, cur_user_id: str, access_token: str) -> dict:
+        # config = config.model_dump()
         obj_id = config.get("obj_id")
         obj_id_str = config.get("obj_id_str")
         features_id_str = config.get("features")
