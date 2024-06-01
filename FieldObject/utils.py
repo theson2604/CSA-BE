@@ -22,7 +22,6 @@ def check_loop(seq, new_path):
     """
     graph = defaultdict(list)
 
-    # Represent the sequence as a graph
     for i in range(len(seq) - 1):
         graph[seq[i]].append(seq[i + 1])
     # {"A": ["B", "C", "D"], "B": ["C", "D"], "C": ["D"]}
@@ -34,7 +33,6 @@ def check_loop(seq, new_path):
     visited = {node: False for node in seq}
     recursion_stack = {node: False for node in seq}
 
-    # Check for loops using DFS
     for node in seq:
         if not visited[node]:
             if has_loop(graph, node, visited, recursion_stack):

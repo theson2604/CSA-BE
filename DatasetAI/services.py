@@ -110,29 +110,26 @@ class DatasetAIServices:
                     error_message = await response.text()
                     raise HTTPException(status_code=response.status, detail=error_message)
                 
-                res = await response.to_json()
+                res = await response.json()
                 
         # record_service = RecordObjectService(self.db_str, dataset_obj_id_str, dataset_obj_id)
         # preprocessed_records = await record_service.get_all_records_with_detail(dataset_obj_id, page=1, page_size=5)
         
-        if res.get("message") == "success":
-            dataset_model = DatasetAIModel(
-                id=str(ObjectId()),
-                name=dataset_name,
-                features=[field_mapping[feature] for feature in features_id_str],
-                label=field_mapping[label_id_str],
-                field_mapping=field_mapping,
-                src_obj_id_str=obj_id_str,
-                dataset_obj_id_str=dataset_obj_id_str,
-                description=dataset_description,
-                # **histogram_labels
-            )
-            
-            dataset_id = await self.repo.insert_one(dataset_model.model_dump(by_alias=True))
-                
-            return {"dataset_id": dataset_id, "message": f"{dataset_name}({dataset_obj_id_str})"}
+        dataset_model = DatasetAIModel(
+            id=str(ObjectId()),
+            name=dataset_name,
+            features=[field_mapping[feature] for feature in features_id_str],
+            label=field_mapping[label_id_str],
+            field_mapping=field_mapping,
+            src_obj_id_str=obj_id_str,
+            dataset_obj_id_str=dataset_obj_id_str,
+            description=dataset_description,
+            # **histogram_labels
+        )
         
-        return {}
+        dataset_id = await self.repo.insert_one(dataset_model.model_dump(by_alias=True))
+            
+        return {"dataset_id": dataset_id, "message": f"{dataset_name}({dataset_obj_id_str})"}
     
     async def infer_sentiment_score(self, db_str: str, config: dict, record_id: str, cur_user_id: str, access_token: str):
         object_id = config.get("object_id")
