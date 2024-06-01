@@ -31,7 +31,9 @@ async def inbound_file(
         df = (await read_file(file)).to_json(orient="records")
         task = activate_inbound.delay(db, {"file": df, "config": {"map": mapping, "object": object_id}}, obj.get("obj_id"), user_id)
         set_task_metadata(task.id, {"type": ActionType.INBOUND})
-        return task.id
+        
+        return {"task_id": task.id, "type": ActionType.INBOUND}
+    
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
