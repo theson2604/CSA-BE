@@ -187,7 +187,7 @@ class RecordObjectService:
                 from Workflow.services import WorkflowService
                 workflow_service = WorkflowService(self.db_str)
                 # activate current workflow
-                task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, record_id, access_token)
+                task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, access_token, record_id)
                 task_ids.append(task_id)
 
         return task_ids

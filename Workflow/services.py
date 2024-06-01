@@ -78,14 +78,13 @@ class WorkflowService:
 
     async def activate_workflow(self, workflow_id: str, current_user_id: str, access_token: str, record_id: str = None, mail_contents: List[str] = []):
         db = self.db_str
-        workflow = self.repo.find_one_by_id(workflow_id)
+        workflow = await self.repo.find_one_by_id(workflow_id)
         if not workflow:
             raise HTTPBadRequest(f"Can not find workflow by id {workflow_id}")
         
         workflow_with_actions = await self.repo.get_workflow_with_all_actions(workflow_id)
         task = {}
         for action in workflow_with_actions.get("actions"): # for action in actions
-            # raise HTTPBadRequest(f"{action.get("type")}")
             type = action.get("type")
             if type == ActionType.SEND:
                 task = activate_send.delay(db, action, record_id)

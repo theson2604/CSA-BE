@@ -146,7 +146,7 @@ def activate_create(
 
     results = []
     if action.get("option") == "no":
-        results.append(asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id)))
+        results.append(asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))) #inserted_id
     else:
         parent_info = contents.pop()
         field_repo = FieldObjectRepository(db)
@@ -190,14 +190,14 @@ def activate_create(
             if parent_record:
                 record[ref_parent_field.get("field_id")] = parent_record.get("_id")
             record["object_id"] = object_id
-            result = asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))
+            result = asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id)) #inserted_id
             if result:
                 results.append(result)
     
     field_repo = FieldObjectRepository(db)
     fd_id = (asyncio.get_event_loop().run_until_complete(field_repo.find_one_by_field_type(object_id, "id"))).get("field_id")
     record_repo = RecordObjectRepository(db, obj_id)
-    results = asyncio.get_event_loop().run_until_complete(record_repo.find_all({"_id": {"$in": results}}, {"object_id": 1, fd_id: 1}))
+    results = asyncio.get_event_loop().run_until_complete(record_repo.find_all({"_id": {"$in": [result.get("_id") for result in results]}}, {"_id": 1, "object_id": 1, fd_id: 1}))
     return results, fd_id
 
 
@@ -212,7 +212,7 @@ def activate_update(
     obj_id = obj.get("obj_id")
     field_repo = FieldObjectRepository(db)
     fd_id = (asyncio.get_event_loop().run_until_complete(field_repo.find_one_by_field_type(object_id, "id"))).get("field_id")
-    result = []
+    results = []
     record_service = RecordObjectService(db, obj_id, object_id)
 
     if len(contents) != 0:
@@ -220,13 +220,17 @@ def activate_update(
         record_repo = RecordObjectRepository(db, obj_id)
         for content in contents:
             record_prefix = content.get("record_prefix")
-            record = {}
+            record = asyncio.get_event_loop().run_until_complete(record_repo.find_one({fd_id: record_prefix}))
+            new_record = {
+                "record_id": record.get("_id"),
+                "object_id": record.get("object_id")
+            }
             for field_config in action.get("field_configs"):
-                record.update(field_config)
+                new_record.update(field_config)
 
             #switch to record_service.update_one_record to trigger worfkflow
-            result += asyncio.get_event_loop().run_until_complete(record_repo.update_and_get_one({fd_id: record_prefix}, record))
-            # result += asyncio.get_event_loop().run_until_complete(record_service.update_one_record({fd_id: record_prefix}, record))
+            # result += asyncio.get_event_loop().run_until_complete(record_repo.update_and_get_one({fd_id: record_prefix}, new_record))
+            results.append(asyncio.get_event_loop().run_until_complete(record_service.update_one_record(new_record, user_id)))
 
     else:
         record = {
@@ -236,9 +240,9 @@ def activate_update(
         for field_config in action.get("field_configs"):
             record.update(field_config)
 
-        result += asyncio.get_event_loop().run_until_complete(record_service.update_one_record(record, user_id))
+        results.append(asyncio.get_event_loop().run_until_complete(record_service.update_one_record(record, user_id)))
 
-    return result, fd_id
+    return results, fd_id
 
 @clr.task(name = "inbound_file")
 def activate_inbound(db, file_inbound: dict, obj_id: str, user_id: str) -> Tuple[str, int, int]:
