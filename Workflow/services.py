@@ -76,13 +76,14 @@ class WorkflowService:
         
         return self.repo.delete_one_by_id(id), self.action_repo.delete_many_by_workflow_id(id)
 
-    async def activate_workflow(self, workflow_id: str, current_user_id: str, access_token: str = "", record_id: str = None, mail_contents: List[str] = []):
+    async def activate_workflow(self, workflow_id: str, current_user_id: str, access_token: str, record_id: str = None, mail_contents: List[str] = []):
         db = self.db_str
         workflow = self.repo.find_one_by_id(workflow_id)
         if not workflow:
             raise HTTPBadRequest(f"Can not find workflow by id {workflow_id}")
         
         workflow_with_actions = await self.repo.get_workflow_with_all_actions(workflow_id)
+        task = {}
         for action in workflow_with_actions.get("actions"): # for action in actions
             # raise HTTPBadRequest(f"{action.get("type")}")
             type = action.get("type")
@@ -99,4 +100,4 @@ class WorkflowService:
                 task = activate_score_sentiment(db, action, record_id, current_user_id, access_token)
                 set_task_metadata(task.id, {"type": ActionType.SENTIMENT})
                 
-        return task.id
+        return task.id if task != {} else task

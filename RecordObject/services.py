@@ -187,13 +187,13 @@ class RecordObjectService:
                 from Workflow.services import WorkflowService
                 workflow_service = WorkflowService(self.db_str)
                 # activate current workflow
-                task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, record_id, access_token=access_token)
+                task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, record_id, access_token)
                 task_ids.append(task_id)
 
         return task_ids
 
     async def create_record(
-        self, record: RecordObjectSchema, current_user_id: str, access_token: str
+        self, record: RecordObjectSchema, current_user_id: str, access_token: str = "" 
     ) -> str:
         print("RECORD: ", record)
         obj_id = record.pop("object_id")
@@ -266,7 +266,7 @@ class RecordObjectService:
         
         return await self.record_repo.get_all_records_ref_to(record_id, ref_obj_id)
 
-    async def update_one_record(self, record: dict, current_user_id: str, access_token: str) -> bool:
+    async def update_one_record(self, record: dict, current_user_id: str, access_token: str = "") -> bool:
         record_id = record.pop("record_id")
         current_record = await self.record_repo.find_one_by_id(record_id)
         if not current_record:
@@ -283,7 +283,7 @@ class RecordObjectService:
             "modified_by": current_user_id
         })
 
-        result = await self.record_repo.update_and_get_one_by_id(record_id, updated_record)
+        result = await self.record_repo.update_and_get_one({"_id": record_id}, updated_record)
         await self.check_conditions(result, "update", current_user_id, access_token)
 
         return result

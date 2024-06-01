@@ -15,7 +15,7 @@ class NotificationBase(BaseModel):
     
     model_config = ConfigDict(
         populate_by_name=True
-    )
+)
 
 class ActionSend(ActionBase):
     from_: str = Field(..., alias="from")
