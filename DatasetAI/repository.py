@@ -19,10 +19,3 @@ class DatasetAIRepository:
     
     async def find_one_by_dataset_obj_id_str(self, dataset_obj_id_str: str, projection: dict = {}):
         return await self.dataset_ai_coll.find_one({"dataset_obj_id_str": dataset_obj_id_str}, projection)
-
-    async def get_historgram_labels(self, field_id: str):
-        pipeline = [
-            {"$group": {"_id": f"${field_id}", "count": {"$sum": 1}}},
-            {"$sort": {"_id": 1}}
-        ]
-        return await self.dataset_ai_coll.aggregate(pipeline).to_list(length=None)

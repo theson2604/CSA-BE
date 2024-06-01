@@ -71,11 +71,11 @@ class NotificationService:
             if task_status == TaskStatus.SUCCESS:
                 task_result = result.result
                 dataset_message = task_result.pop("message")
-                message = f"Dataset AI {dataset_message} preprocess succesfully."
+                message = f"Dataset AI - {dataset_message} preprocess succesfully."
                 notification.update(**task_result)
                 
             else:
-                message = "Failed to score sentiment."
+                message = "Failed to preprocess datasets."
                 notification.update({"result": {
                     "status": TaskStatus.FAILURE
                 }})
