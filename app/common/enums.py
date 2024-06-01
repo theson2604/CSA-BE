@@ -27,6 +27,7 @@ class ActionType(str, Enum):
     UPDATE =  'update'
     SENTIMENT = 'sentiment'
     INBOUND = 'inbound'
+    PREPROCESS_DATASET = 'preprocess_dataset'
     
 class ActionWorkflowStatus(str, Enum):
     ACTIVE = 'active'

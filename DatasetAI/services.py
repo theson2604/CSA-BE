@@ -37,7 +37,6 @@ class DatasetAIServices:
         self.db_str = db_str
 
     async def config_preprocess_dataset(self, config: dict, cur_user_id: str, access_token: str) -> dict:
-        # config = config.model_dump()
         obj_id = config.get("obj_id")
         obj_id_str = config.get("obj_id_str")
         features_id_str = config.get("features")
@@ -77,7 +76,6 @@ class DatasetAIServices:
                 field.update({"is_label": True})
                 label = field
                 break
-                
         dataset_fields_schema = [FieldObjectSchema(**x) for x in features] + [FieldObjectSchema(**label)]
         # Create new AI Dataset Object in group "AI Datasets" by default
         group_ai_datasets = await self.group_obj_repo.get_group_by_type(GroupObjectType.AI_DATASETS)
@@ -112,24 +110,29 @@ class DatasetAIServices:
                     error_message = await response.text()
                     raise HTTPException(status_code=response.status, detail=error_message)
                 
-                histogram_labels = await response.json()
+                res = await response.to_json()
                 
-        record_service = RecordObjectService(self.db_str, dataset_obj_id_str, dataset_obj_id)
-        preprocessed_records = await record_service.get_all_records_with_detail(dataset_obj_id, page=1, page_size=10)
+        # record_service = RecordObjectService(self.db_str, dataset_obj_id_str, dataset_obj_id)
+        # preprocessed_records = await record_service.get_all_records_with_detail(dataset_obj_id, page=1, page_size=5)
         
-        dataset_model = DatasetAIModel(
-            id=str(ObjectId()),
-            name=dataset_name,
-            features=[field_mapping[feature] for feature in features_id_str],
-            label=field_mapping[label_id_str],
-            dataset_obj_id_str=dataset_obj_id_str,
-            description=dataset_description,
-            **histogram_labels
-        )
-        
-        inserted_config_id = await self.repo.insert_one(dataset_model.model_dump(by_alias=True))
+        if res.get("message") == "success":
+            dataset_model = DatasetAIModel(
+                id=str(ObjectId()),
+                name=dataset_name,
+                features=[field_mapping[feature] for feature in features_id_str],
+                label=field_mapping[label_id_str],
+                field_mapping=field_mapping,
+                src_obj_id_str=obj_id_str,
+                dataset_obj_id_str=dataset_obj_id_str,
+                description=dataset_description,
+                # **histogram_labels
+            )
             
-        return {"config_id": inserted_config_id, "records": preprocessed_records, **histogram_labels}
+            dataset_id = await self.repo.insert_one(dataset_model.model_dump(by_alias=True))
+                
+            return {"dataset_id": dataset_id, "message": f"{dataset_name}({dataset_obj_id_str})"}
+        
+        return {}
     
     async def infer_sentiment_score(self, db_str: str, config: dict, record_id: str, cur_user_id: str, access_token: str):
         object_id = config.get("object_id")
@@ -175,3 +178,5 @@ class DatasetAIServices:
             record_prefix_id = record.get(matching_keys[0], "")
     
             return {"record_prefix": record_prefix_id, "score": score}
+        
+    

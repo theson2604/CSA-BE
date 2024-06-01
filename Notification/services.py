@@ -52,6 +52,23 @@ class NotificationService:
                 
             else:
                 message = "Failed to update record."
+                notification.update({"result": {
+                    "status": TaskStatus.FAILURE
+                }})
+                
+        elif task_type == ActionType.PREPROCESS_DATASET:
+            if task_status == TaskStatus.SUCCESS:
+                task_result = result.result
+                dataset_message = task_result.pop("message")
+                message = f"Dataset AI {dataset_message} preprocess succesfully."
+                notification.update(**task_result)
+                
+            else:
+                message = "Failed to score sentiment."
+                notification.update({"result": {
+                    "status": TaskStatus.FAILURE
+                }})
+                
         elif task_type == ActionType.SENTIMENT:
             if task_status == TaskStatus.SUCCESS:
                 message = "Scoring sentiment succesfully."
