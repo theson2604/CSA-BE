@@ -30,17 +30,22 @@ logger = logging.getLogger(__name__)
 
 async def monitor_tasks(clients: List[WebSocket]):
     while True:
+        old_ids = []
         tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
         await asyncio.sleep(0.1)
         try:
             task_ids = tasks_info[list(tasks_info.keys())[0]]
         except:
             task_ids = []
+        old_ids.extend(task_ids)
         for task_id in task_ids:
+            # if task_id in old_ids:
+            #     continue
             result = AsyncResult(task_id["id"])
             if result.ready():
                 await NotificationService.send_one(task_id["id"], result, clients)
             else:
+                old_ids.append(task_id)
                 print("NOT READY")
 
 # @clr.task()
