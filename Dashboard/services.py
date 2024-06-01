@@ -91,6 +91,21 @@ class DashboardService:
             })
 
         return dashboards
+
+    async def get_all_components(self):
+        dashboards = await self.repo.find_many()
+        if len(dashboards) == 0:
+            return None
+        
+        for index, dashboard in enumerate(dashboards):
+            record_repo = RecordObjectRepository(self.db_str, dashboard.get("obj_id"))
+            field_counts = await record_repo.get_field_value_count(dashboard.get("field_id_str"))
+            dashboards[index].update({
+                "value": [field_count.get("_id") for field_count in field_counts],
+                "count": [field_count.get("count") for field_count in field_counts]
+            })
+
+        return dashboards
     
     async def update_one_by_id(self, dashboard: UpdateDashboardSchema, current_user_id):
         updated_dashboard = (await self.validate_and_get_all_dashboard_models([dashboard], current_user_id))[0]

@@ -91,6 +91,23 @@ async def get_all_dashboard_by_object_id(
         if isinstance(e, Exception):
             raise HTTPBadRequest(str(e))
         
+@router.get("/get-all")
+@protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
+async def get_all(
+    CREDENTIALS: AuthCredentialDepend,
+    AUTHEN_SERVICE: AuthServiceDepend,
+    CURRENT_USER = None
+):
+    try:
+        db_str, current_user_id = CURRENT_USER.get("db"), CURRENT_USER.get("_id")
+        dashboard_service = DashboardService(db_str)
+        return await dashboard_service.get_all_components()
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        if isinstance(e, Exception):
+            raise HTTPBadRequest(str(e))
+        
 @router.post("/update-one-by-id")
 @protected_route([SystemUserRole.ADMINISTRATOR, SystemUserRole.USER])
 async def update_one(

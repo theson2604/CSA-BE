@@ -23,7 +23,7 @@ class DashboardRepository:
     async def find_one(self, query: dict, projection: dict = None) -> Union[DashboardModel]:
         return await self.dashboard_coll.find_one(query, projection)
     
-    async def find_many(self,  query: dict, projection: dict = None) -> List[Union[DashboardModel]]:
+    async def find_many(self,  query: dict = {}, projection: dict = None) -> List[Union[DashboardModel]]:
         cursor = self.dashboard_coll.find(query, projection)
         return await cursor.to_list(length=None)
     
