@@ -4,7 +4,7 @@ from InboundRule.services import InboundRule
 from InboundRule.utils import read_file
 from app.tasks import activate_create, activate_inbound, activate_inbound_with_new_obj, set_task_metadata
 from Object.repository import ObjectRepository
-from app.common.enums import SystemUserRole
+from app.common.enums import ActionType, SystemUserRole
 from app.common.errors import HTTPBadRequest
 from app.dependencies.authentication import protected_route
 # from app.celery import celery as clr, trigger_task
@@ -30,10 +30,7 @@ async def inbound_file(
         
         df = (await read_file(file)).to_json(orient="records")
         task = activate_inbound.delay(db, {"file": df, "config": {"map": mapping, "object": object_id}}, obj.get("obj_id"), user_id)
-        task_metadata = {
-            "type": "inbound_file",
-        }
-        set_task_metadata(task.id, task_metadata)
+        set_task_metadata(task.id, {"type": ActionType.INBOUND})
         return task.id
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -66,10 +63,7 @@ async def inbound_file(
         }
         df = (await read_file(file)).to_json(orient="records")
         task = activate_inbound_with_new_obj.delay(db, config, user_id, df)
-        task_metadata = {
-            "type": "inbound_file_obj",
-        }
-        set_task_metadata(task.id, task_metadata)
+        set_task_metadata(task.id, {"type": ActionType.INBOUND})
         return task.id
     except Exception as e:
         if isinstance(e, HTTPException):

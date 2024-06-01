@@ -26,6 +26,7 @@ class ActionType(str, Enum):
     CREATE  = 'create'
     UPDATE =  'update'
     SENTIMENT = 'sentiment'
+    INBOUND = 'inbound'
 
 class TaskStatus(str, Enum):
     SUCCESS = 'SUCCESS'

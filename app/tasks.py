@@ -2,7 +2,7 @@ import asyncio
 import json
 from celery.result import AsyncResult
 from celery.schedules import crontab, schedule
-from typing import List
+from typing import List, Tuple
 
 from fastapi import WebSocket
 from DatasetAI.schemas import DatasetConfigSchema
@@ -15,6 +15,7 @@ from MailService.repository import MailServiceRepository
 from MailService.services import MailServices
 from Notification.services import NotificationService
 from Object.repository import ObjectRepository
+from RecordObject.models import RecordObjectModel
 from RecordObject.repository import RecordObjectRepository
 from RecordObject.services import RecordObjectService
 from app.celery import celery as clr, redis_client
@@ -34,6 +35,17 @@ async def monitor_tasks(clients: List[WebSocket]):
                 await NotificationService.send_one(task_id["id"], result, clients)
             else:
                 print("NOT READY")
+
+# @clr.task()
+# def monitor_tasks():
+#     tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
+#     asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.1))
+#     for task_id in tasks_info[list(tasks_info.keys())[0]]:
+#         result = AsyncResult(task_id["id"])
+#         if result.ready():
+#             asyncio.get_running_loop().run_until_complete(NotificationService.send_one(task_id["id"], result))
+#         else:
+#             print("NOT READY")
 
 def set_task_metadata(task_id: str, metadata: dict):
     return redis_client.set(task_id, json.dumps(metadata))
@@ -62,16 +74,11 @@ def test_scan_mail(db: str, mail: dict, obj_id: str, admin_id: str):
     return result
 
 @clr.task()
-def scan_email():
+def scan_email() -> List[dict]:
     mail_repo = MailServiceRepository()
     system_emails = asyncio.get_event_loop().run_until_complete(mail_repo.find_many_email({}, {"created_at": 0, "modified_at": 0}))
     for system_email in system_emails:
-        # db_str = system_email.get("db_str")
         mail_service = MailServices(system_email.get("db_str"), DBCollections.REPLY_EMAIL)
-        # scan_schema = {
-        #     "template": system_email.get("template_id"),
-        #     "email": system_email.get("email")
-        # }
         contents = asyncio.get_event_loop().run_until_complete(mail_service.scan_email(system_email))
 
     return contents
@@ -101,7 +108,7 @@ async def scan_email_async():
 
 # DONE
 @clr.task(name = "send_email")
-def activate_send(db: str, action: dict, record_id: str):
+def activate_send(db: str, action: dict, record_id: str) -> str:
     object_id = action.get("object_id")
     obj_repo = ObjectRepository(db)
     obj = asyncio.get_event_loop().run_until_complete(obj_repo.find_one_by_id(object_id))
@@ -121,7 +128,9 @@ def activate_send(db: str, action: dict, record_id: str):
 
 # DONE
 @clr.task(name = "create_record")
-def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
+def activate_create(
+    db: str, action: dict, user_id: str, contents: List[str]
+) -> Tuple[List[RecordObjectModel], str]:
     object_id = action.get("object_id")
     obj_repo = ObjectRepository(db)
     obj = asyncio.get_event_loop().run_until_complete(obj_repo.find_one_by_id(object_id))
@@ -137,7 +146,7 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
 
     results = []
     if action.get("option") == "no":
-        results = [asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))]
+        results.append(asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id)))
     else:
         parent_info = contents.pop()
         field_repo = FieldObjectRepository(db)
@@ -194,14 +203,17 @@ def activate_create(db: str, action: dict, user_id: str, contents: List[str]):
 
 # DONE
 @clr.task(name = "update_record")
-def activate_update(db: str, action: dict, user_id: str, record_id: str, contents: List[str]):
+def activate_update(
+    db: str, action: dict, user_id: str, record_id: str, contents: List[str]
+) -> Tuple[List[RecordObjectModel], str]:
     object_id = action.get("object_id")
     obj_repo = ObjectRepository(db)
     obj = asyncio.get_event_loop().run_until_complete(obj_repo.find_one_by_id(object_id))
     obj_id = obj.get("obj_id")
     field_repo = FieldObjectRepository(db)
     fd_id = (asyncio.get_event_loop().run_until_complete(field_repo.find_one_by_field_type(object_id, "id"))).get("field_id")
-    result = 0
+    result = []
+    record_service = RecordObjectService(db, obj_id, object_id)
 
     if len(contents) != 0:
         contents.pop() #{"ref_obj_name": obj_name, "ref_obj_id": object_id}
@@ -212,7 +224,9 @@ def activate_update(db: str, action: dict, user_id: str, record_id: str, content
             for field_config in action.get("field_configs"):
                 record.update(field_config)
 
-            result += asyncio.get_event_loop().run_until_complete(record_repo.update_one({fd_id: record_prefix}, record))
+            #switch to record_service.update_one_record to trigger worfkflow
+            result += asyncio.get_event_loop().run_until_complete(record_repo.update_and_get_one({fd_id: record_prefix}, record))
+            # result += asyncio.get_event_loop().run_until_complete(record_service.update_one_record({fd_id: record_prefix}, record))
 
     else:
         record = {
@@ -222,20 +236,19 @@ def activate_update(db: str, action: dict, user_id: str, record_id: str, content
         for field_config in action.get("field_configs"):
             record.update(field_config)
 
-        record_service = RecordObjectService(db, obj_id, object_id)
-        result = asyncio.get_event_loop().run_until_complete(record_service.update_one_record(record, user_id))
+        result += asyncio.get_event_loop().run_until_complete(record_service.update_one_record(record, user_id))
 
     return result, fd_id
 
 @clr.task(name = "inbound_file")
-def activate_inbound(db, file_inbound: dict, obj_id: str, user_id: str):
+def activate_inbound(db, file_inbound: dict, obj_id: str, user_id: str) -> Tuple[str, int, int]:
     config = file_inbound.get("config")
     inbound_service = InboundRule(db, config.get("object"), obj_id)
     result = asyncio.get_event_loop().run_until_complete(inbound_service.inbound_file(file_inbound, user_id))
     return result
 
 @clr.task(name = "inbound_file_with_obj")
-def activate_inbound_with_new_obj(db, config: dict, user_id: str, df: str):
+def activate_inbound_with_new_obj(db, config: dict, user_id: str, df: str) -> Tuple[str, int, int]:
     inbound_service = InboundRule(db)
     result = asyncio.get_event_loop().run_until_complete(inbound_service.inbound_file_with_new_obj(user_id, config, df))
     return result
