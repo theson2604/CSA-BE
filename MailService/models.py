@@ -36,7 +36,7 @@ class TemplateModel(BaseModel):
     )
 
 class ReplyEmailModel(BaseModel):
-    # id: str = Field(..., alias="_id")
+    id: str = Field(..., alias="_id")
     from_: str = Field(..., alias="from")
     subject: str = Field(..., alias="subject")
     body: str = Field(..., alias="body")

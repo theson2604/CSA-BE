@@ -370,7 +370,7 @@ class MailServices:
             mail_contents.pop()
             print("MAIL_CONTENTS ", mail_contents)
             await self.scan_repo.insert_email_from_scan(
-                [ReplyEmailModel.model_validate({"_id": str(ObjectId()), **content}).model_dump(by_alias=True) for content in mail_contents]
+                [ReplyEmailModel.model_validate({"id": str(ObjectId()), **content}).model_dump(by_alias=True) for content in mail_contents]
             )
         else:
             print("EMPTYYYYYYYYY")
