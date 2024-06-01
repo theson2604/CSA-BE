@@ -44,27 +44,6 @@ class WorkflowRepository:
         cursor = self.workflow_coll.find(query, projection)
         return await cursor.to_list(length=None)
 
-    # async def get_all_objects_with_field_details(self) -> Optional[list]:
-    #     pipeline = [
-    #         {
-    #             "$lookup": {
-    #                 "from": DBCollections.FIELD_OBJECT.value,
-    #                 "localField": "_id",
-    #                 "foreignField": "object_id",
-    #                 "as": "fields",
-    #             }
-    #         },
-    #         {
-    #             "$set": {
-    #                 "fields": {
-    #                     "$sortArray": {"input": "$fields", "sortBy": {"sorting_id": 1}}
-    #                 }
-    #             }
-    #         },
-    #     ]
-        
-    #     return await self.obj_coll.aggregate(pipeline).to_list(length=None)
-
     async def get_workflow_with_all_actions(self, workflow_id: str) -> Optional[dict]:
         """
         :Params:
@@ -97,7 +76,10 @@ class WorkflowRepository:
         async for doc in self.workflow_coll.aggregate(pipeline):
             return doc
 
-    # async def count_all(self, query: dict = {}) -> int:
-    #     return await self.obj_coll.count_documents(query)
     async def delete_one_by_id(self, id: str) -> bool:
         return await self.workflow_coll.delete_one({"_id": id})
+
+    async def update_one_by_id(self, id: str, workflow: dict) -> str:
+        result = await self.workflow_coll_coll.update_one({"_id": id}, {"$set": workflow})
+        return result.modified_count
+    

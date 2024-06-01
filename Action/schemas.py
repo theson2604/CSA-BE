@@ -70,6 +70,7 @@ class ActionSchema(BaseModel):
         return self
     
 class UpdateActionSchema(ActionSchema):
-    id: str = Field(..., alias="_id")
+    action_id: str
+    workflow_id: str
     object_id: str
-    sorting_id: int
+    sorting_id: str

@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.common.enums import ActionType, ActionWorkflowStatus
+from app.common.utils import get_current_hcm_datetime
 
 class ActionBase(BaseModel):
     id: str = Field(..., alias="_id")
@@ -12,6 +13,11 @@ class ActionBase(BaseModel):
     status: ActionWorkflowStatus = Field(..., alias="status")
     object_id: str = Field(..., alias="object_id")
     sorting_id: int = Field(..., ge=0)
+
+    # created_at: str = Field(..., alias="created_at", default_factory=get_current_hcm_datetime)
+    # modified_at: str = Field(..., alias="modified_at", default_factory=get_current_hcm_datetime)
+    # created_by: str = Field(..., alias="created_by")
+    # modified_by: str = Field(..., alias="modified_by")
     
     model_config = ConfigDict(
         populate_by_name=True

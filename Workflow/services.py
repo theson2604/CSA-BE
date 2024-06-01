@@ -10,9 +10,10 @@ from Action.services import ActionService, ActionServiceException
 from Object.repository import ObjectRepository
 from Workflow.models import WorkflowModel
 from Workflow.repository import WorkflowRepository
-from Workflow.schemas import WorkflowSchema, WorkflowWithActionSchema
+from Workflow.schemas import UpdateWorkflowSchema, WorkflowSchema, WorkflowWithActionSchema
 from app.common.enums import ActionType, ActionWorkflowStatus
 from app.common.errors import HTTPBadRequest
+from app.common.utils import get_current_hcm_datetime
 from app.tasks import activate_create, activate_score_sentiment, activate_send, activate_update, set_task_metadata
 
 load_dotenv()
@@ -104,3 +105,23 @@ class WorkflowService:
                 set_task_metadata(task.id, {"type": ActionType.SENTIMENT})
                 
         return task.id if task != {} else task
+    
+    async def update_one_workflow(self, workflow: UpdateWorkflowSchema, current_user_id: str) -> int:
+        workflow_dump = workflow.model_dump()
+        workflow_dump.update({
+            "modified_by": current_user_id,
+            "modified_at": get_current_hcm_datetime
+        })
+        return await self.repo.update_one_by_id(workflow_dump.pop("workflow_id"), workflow_dump)
+    
+    async def update_many_workflows(self, workflows: List[UpdateWorkflowSchema], current_user_id) -> int:
+        result = 0
+        for workflow in workflows:
+            workflow_dump = workflow.model_dump()
+            workflow_dump.update({
+                "modified_by": current_user_id,
+                "modified_at": get_current_hcm_datetime
+            })
+            if await self.repo.update_one_by_id(workflow_dump.pop("workflow_id"), workflow_dump):
+                result += 1
+        return result
