@@ -15,7 +15,7 @@ from RecordObject.schemas import RecordObjectSchema, UpdateRecordSchema
 from RecordObject.search import ElasticsearchRecord
 from RecordObject.utils import use_operator
 from Workflow.repository import WorkflowRepository
-from app.common.enums import FieldObjectType
+from app.common.enums import ActionWorkflowStatus, FieldObjectType
 from app.common.errors import HTTPBadRequest
 from app.common.utils import generate_next_record_id, get_current_hcm_datetime
 

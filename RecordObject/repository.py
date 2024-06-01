@@ -422,3 +422,17 @@ class RecordObjectRepository:
                 result = [await self.delete_one_by_id(record.get("_id")) for record in ref_records.get(key)]
 
         return (await self.record_coll.delete_one({"_id": id})).deleted_count
+    
+    async def get_field_value_count(self, field_id: str):
+        pipeline = [
+            {
+                "$group": {
+                    "_id": f"${field_id}",
+                    "count": {
+                        "$sum": 1
+                    }
+                }
+            }
+        ]
+
+        return await self.record_coll.aggregate(pipeline).to_list(length=None)

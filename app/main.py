@@ -17,6 +17,7 @@ import DatasetAI.endpoints
 import Workflow.endpoints
 import Action.endpoints
 import CustomViewRecord.endpoints
+import Dashboard.endpoints
 import os
 import platform
 from dotenv import load_dotenv
@@ -101,3 +102,4 @@ app.include_router(Workflow.endpoints.router, prefix="/api/workflow", tags=["Wor
 app.include_router(Action.endpoints.router, prefix="/api/action", tags=["Action"])
 app.include_router(DatasetAI.endpoints.router, prefix="/api/ai-dataset", tags=["AI Dataset"])
 app.include_router(CustomViewRecord.endpoints.router, prefix="/api/view-record", tags=["Custom View Record"])
+app.include_router(Dashboard.endpoints.router, prefix="/api/dashboard", tags=["Dashboard"])
