@@ -3,12 +3,14 @@ from pydantic import BaseModel, Field, model_validator
 
 from Action.schemas import ActionSchema
 from FieldObject.schemas import FieldObjectSchema
+from app.common.enums import ActionWorkflowStatus
 
 class WorkflowSchema(BaseModel):
-    name: str = Field(..., max_length=100, min_length=1)
-    object_id: str = Field(... ,alias="object_id") # container object
-    description: str = Field(..., alias="description")
-    trigger: str = Field(..., alias="trigger")
+    name: str
+    object_id: str # container object
+    description: str
+    status: ActionWorkflowStatus
+    trigger: str
     conditions: Optional[List[Dict[str, Any]]] = None
 
     @model_validator(mode='after')
@@ -25,3 +27,5 @@ class WorkflowSchema(BaseModel):
 class WorkflowWithActionSchema(WorkflowSchema):
     actions: List[ActionSchema]
     
+class UpdateWorkflowSchema(WorkflowSchema):
+    workflow_id: str

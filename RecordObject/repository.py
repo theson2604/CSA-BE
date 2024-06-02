@@ -423,6 +423,20 @@ class RecordObjectRepository:
 
         return (await self.record_coll.delete_one({"_id": id})).deleted_count
     
+    async def get_field_value_count(self, field_id: str):
+        pipeline = [
+            {
+                "$group": {
+                    "_id": f"${field_id}",
+                    "count": {
+                        "$sum": 1
+                    }
+                }
+            }
+        ]
+
+        return await self.record_coll.aggregate(pipeline).to_list(length=None)
+    
     async def get_historgram_labels(self, field_id: str):
         pipeline = [
             {"$group": {"_id": f"${field_id}", "count": {"$sum": 1}}},

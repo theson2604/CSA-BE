@@ -15,7 +15,7 @@ from RecordObject.schemas import RecordObjectSchema, UpdateRecordSchema
 from RecordObject.search import ElasticsearchRecord
 from RecordObject.utils import use_operator
 from Workflow.repository import WorkflowRepository
-from app.common.enums import FieldObjectType
+from app.common.enums import ActionWorkflowStatus, FieldObjectType
 from app.common.errors import HTTPBadRequest
 from app.common.utils import generate_next_record_id, get_current_hcm_datetime
 
@@ -168,7 +168,7 @@ class RecordObjectService:
     async def check_conditions(self, record: dict, trigger: str, current_user_id: str, access_token: str):
         obj_id = record.get("object_id")
         record_id = record.get("_id")
-        workflows = await self.workflow_repo.find_many({"object_id": obj_id}, {"_id": 1, "trigger": 1, "conditions": 1})
+        workflows = await self.workflow_repo.find_many({"object_id": obj_id}, {"_id": 1, "trigger": 1, "conditions": 1, "status": ActionWorkflowStatus.ACTIVE})
         print("WORKFLOWS: ", workflows)
         task_ids = []
         for workflow in workflows:
@@ -187,7 +187,7 @@ class RecordObjectService:
                 from Workflow.services import WorkflowService
                 workflow_service = WorkflowService(self.db_str)
                 # activate current workflow
-                task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, record_id, access_token)
+                task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, access_token, record_id)
                 task_ids.append(task_id)
 
         return task_ids

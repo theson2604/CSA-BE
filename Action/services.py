@@ -2,7 +2,7 @@ from typing import List, Union
 from bson import ObjectId
 from Action.models import ActionBase
 from Action.repository import ActionRepository
-from Action.schemas import ActionSchema
+from Action.schemas import ActionSchema, UpdateActionSchema
 from Action.models import *
 
 from FieldObject.schemas import FieldObjectSchema, UpdateFieldObjectSchema
@@ -54,8 +54,9 @@ class ActionService:
                     "name": action.get("name"),
                     "type": action.get("type"),
                     "description": action.get("description"),
+                    "status": action.get("status"),
                     "sorting_id": index,
-                    "object_id": object_id
+                    "object_id": object_id,
                 }
                 action_type = action.get("type")
                 if action_type is ActionType.SEND:
@@ -104,13 +105,18 @@ class ActionService:
         action_models = await self.validate_and_get_all_action_models(workflow_id, actions, current_user_id)
         return await self.repo.insert_many(action_models)
     
-    async def update_one_action(self, action: UpdateFieldObjectSchema) -> int:
+    async def update_one_action(self, action: UpdateActionSchema) -> int:
         action_dump = action.model_dump()
-        action_models = await self.validate_and_get_all_action_models(action_dump.get("object_id"), [action])
+        action_models = await self.validate_and_get_all_action_models(action_dump.get("workflow_id"), [action])
         if isinstance(action_models, list) and len(action_models) == 1:
             action_model = action_models[0]
             action_model.update({"sorting_id": action_dump.get("sorting_id")})
             return await self.repo.update_one_by_id(action_model.pop("_id"), action_model)
+        
+    # async def update_many_actions(self, actions: List[UpdateActionSchema]) -> int:
+
+    #     action_models = awai
+    #     return
         
     async def update_sorting(self, fields: List[str]):
         sorted_list = []

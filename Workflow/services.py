@@ -10,9 +10,10 @@ from Action.services import ActionService, ActionServiceException
 from Object.repository import ObjectRepository
 from Workflow.models import WorkflowModel
 from Workflow.repository import WorkflowRepository
-from Workflow.schemas import WorkflowSchema, WorkflowWithActionSchema
-from app.common.enums import ActionType
+from Workflow.schemas import UpdateWorkflowSchema, WorkflowSchema, WorkflowWithActionSchema
+from app.common.enums import ActionType, ActionWorkflowStatus
 from app.common.errors import HTTPBadRequest
+from app.common.utils import get_current_hcm_datetime
 from app.tasks import activate_create, activate_score_sentiment, activate_send, activate_update, set_task_metadata
 
 load_dotenv()
@@ -41,6 +42,7 @@ class WorkflowService:
             name = workflow.get("name"),
             object_id = object_id,
             description = workflow.get("description"),
+            status = workflow.get("status"),
             trigger = workflow.get("trigger"),
             conditions = workflow.get("conditions"),
             modified_by = current_user_id,
@@ -78,14 +80,16 @@ class WorkflowService:
 
     async def activate_workflow(self, workflow_id: str, current_user_id: str, access_token: str, record_id: str = None, mail_contents: List[str] = []):
         db = self.db_str
-        workflow = self.repo.find_one_by_id(workflow_id)
+        workflow = await self.repo.find_one_by_id(workflow_id)
         if not workflow:
             raise HTTPBadRequest(f"Can not find workflow by id {workflow_id}")
         
         workflow_with_actions = await self.repo.get_workflow_with_all_actions(workflow_id)
         task = {}
         for action in workflow_with_actions.get("actions"): # for action in actions
-            # raise HTTPBadRequest(f"{action.get("type")}")
+            if action.get("status") == ActionWorkflowStatus.INACTIVE:
+                continue
+            
             type = action.get("type")
             if type == ActionType.SEND:
                 task = activate_send.delay(db, action, record_id)
@@ -101,3 +105,23 @@ class WorkflowService:
                 set_task_metadata(task.id, {"type": ActionType.SENTIMENT})
                 
         return task.id if task != {} else task
+    
+    async def update_one_workflow(self, workflow: UpdateWorkflowSchema, current_user_id: str) -> int:
+        workflow_dump = workflow.model_dump()
+        workflow_dump.update({
+            "modified_by": current_user_id,
+            "modified_at": get_current_hcm_datetime
+        })
+        return await self.repo.update_one_by_id(workflow_dump.pop("workflow_id"), workflow_dump)
+    
+    async def update_many_workflows(self, workflows: List[UpdateWorkflowSchema], current_user_id) -> int:
+        result = 0
+        for workflow in workflows:
+            workflow_dump = workflow.model_dump()
+            workflow_dump.update({
+                "modified_by": current_user_id,
+                "modified_at": get_current_hcm_datetime
+            })
+            if await self.repo.update_one_by_id(workflow_dump.pop("workflow_id"), workflow_dump):
+                result += 1
+        return result

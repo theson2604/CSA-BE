@@ -184,28 +184,28 @@ services:
     networks:
       - csa
 
-  ai-server:
-    build: ../AI
-    container_name: csa-ai
-    image: csa-ai:latest
-    ports:
-      - 8002:8002
-    environment:
-      - CUDA_HOME=/usr/local/cuda
-      - LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
-    volumes:
-      - ../AI:/app/csa_ai
-    command: ["uvicorn", "app.main:app", "--reload", "--host=0.0.0.0", "--port=8002"]
-    runtime: nvidia
-    networks:
-      - csa
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+  # ai-server:
+  #   build: ../AI
+  #   container_name: csa-ai
+  #   image: csa-ai:latest
+  #   ports:
+  #     - 8002:8002
+  #   environment:
+  #     - CUDA_HOME=/usr/local/cuda
+  #     - LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
+  #   volumes:
+  #     - ../AI:/app/csa_ai
+  #   command: ["uvicorn", "app.main:app", "--reload", "--host=0.0.0.0", "--port=8002"]
+  #   runtime: nvidia
+  #   networks:
+  #     - csa
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
 
 volumes:
   certs:

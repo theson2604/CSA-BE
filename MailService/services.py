@@ -6,7 +6,7 @@ from MailService.repository import MailServiceRepository
 from MailService.schemas import *
 from Workflow.repository import WorkflowRepository
 from app.common.db_connector import DBCollections
-from app.common.enums import FieldObjectType
+from app.common.enums import ActionWorkflowStatus, FieldObjectType
 from app.common.errors import HTTPBadRequest
 # from fastapi import Depends
 from bson import ObjectId
@@ -361,13 +361,17 @@ class MailServices:
                     "sent_at": msg.date_str,
                     "record_prefix": splited_prefix[1]
                 }
-                mail_contents.append(ReplyEmailModel.model_validate(content).model_dump(by_alias=True))
+                # mail_contents.append(ReplyEmailModel.model_validate(content).model_dump(by_alias=True))\
+                mail_contents.append(content)
         if len(mail_contents) != 0: # last dict in mail_contents is parent info of new records
             mail_contents.append({"ref_obj_name": obj.get("obj_name"), "ref_obj_id": obj.get("_id"), "ref_obj_id_str": obj.get("obj_id")})
             task_ids = await self.check_condition(system_email.get("admin_id"), mail_contents)
-            if len(task_ids) == 0:
-                mail_contents.pop()
-            # await self.scan_repo.insert_email_from_scan(mail_contents)
+            # if len(task_ids) == 0:
+            mail_contents.pop()
+            print("MAIL_CONTENTS ", mail_contents)
+            await self.scan_repo.insert_email_from_scan(
+                [ReplyEmailModel.model_validate({"id": str(ObjectId()), **content}).model_dump(by_alias=True) for content in mail_contents]
+            )
         else:
             print("EMPTYYYYYYYYY")
         
@@ -375,13 +379,13 @@ class MailServices:
     
 
     async def check_condition(self, current_user_id: str, mail_contents: List[str]):
-        workflows = await self.workflow_repo.find_many({"trigger": "scan"}, {"_id": 1, "trigger": 1})
+        workflows = await self.workflow_repo.find_many({"trigger": "scan"}, {"_id": 1, "trigger": 1, "status": ActionWorkflowStatus.ACTIVE})
         task_ids = []
         for workflow in workflows:
             from Workflow.services import WorkflowService
             workflow_service = WorkflowService(self.db_str)
             # activate current workflow
-            task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, mail_contents=mail_contents)
+            task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, "", mail_contents=mail_contents)
             task_ids.append(task_id)
 
         return task_ids

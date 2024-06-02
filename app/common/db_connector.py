@@ -24,6 +24,7 @@ class DBCollections(str, Enum):
     CUSTOM_VIEW_RECORD = "ViewRecord"
     SENTIMENT_MODEL = "SentimentModel"
     REPLY_EMAIL = "ReplyEmail"
+    DASHBOARD = "Dashboard"
 
 # Root Collections
 class RootCollections(str, Enum):
