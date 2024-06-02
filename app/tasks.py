@@ -65,18 +65,6 @@ def set_task_metadata(task_id: str, metadata: dict):
 def get_task_metadata(task_id: str):
     return redis_client.get(task_id)
 
-def print_info(self):
-    print(f"{self.name} has parent with task id {self.request.parent_id}")
-    print(f"chain of {self.name}: {self.request.chain}")
-    print(f"self.request.id: {self.request.id}")
-
-@clr.task(bind=True)
-def add(self, a, t):
-    # print_info(self)
-
-    # time.sleep(t)
-    return a+1
-
 @clr.task()
 def test_scan_mail(db: str, mail: dict, obj_id: str, admin_id: str):
     mail_service = MailServices(db, obj_id)
@@ -195,7 +183,6 @@ def activate_create(
                 for field in action.get("field_contents"):
                     record[field] = content.get("body")
 
-            print("PARENT_FIELD_IDDDDD :" , parent_field_id, content.get("record_prefix"))
             parent_record = asyncio.get_event_loop().run_until_complete(
                 parent_record_repo.find_one({parent_field_id: content.get("record_prefix")})
             )
@@ -284,23 +271,4 @@ def activate_score_sentiment(db_str, config: dict, record_id: str, cur_user_id: 
     result = asyncio.get_event_loop().run_until_complete(dataset_service.infer_sentiment_score(db_str, config, record_id, cur_user_id, access_token))
     return result
 
-def trigger_task(task_name):
-    periodic_task_id = f'{task_name}_periodic_task'
-    clr.conf.beat_schedule = {'print_num_periodic_task': {
-            'task': 'app.tasks.print_num',
-            'schedule': 5.0,  # Run every 5 seconds
-            },
-        }
 
-
-@clr.task()
-def test_asyncio_run(t):
-    result = asyncio.run(test(t))
-    print("RESULT: ", result)
-    return result
-
-async def test(t):
-    print("hello")
-    await asyncio.sleep(t)
-    print(f"AFTER {t} seconds")
-    return True

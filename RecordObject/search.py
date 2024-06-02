@@ -1,3 +1,4 @@
+import logging
 from typing import List
 from Object.repository import ObjectRepository
 from RecordObject.constants import CustomAnalyzer
@@ -7,6 +8,9 @@ from app.common.enums import FieldObjectType
 from elasticsearch.helpers import async_bulk
 
 import timeit 
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class ElasticsearchRecord(ElasticsearchBase):
     def __init__(self, db_str: str, obj_id_str: str, obj_id: str):
@@ -36,7 +40,7 @@ class ElasticsearchRecord(ElasticsearchBase):
         )
         
         endTime = timeit.default_timer()
-        print("elastic search time:", endTime - startTime)
+        logger.info("elastic search time:", endTime - startTime)
 
         result = response.get("hits", {"hits": []}).get("hits")
         record_ids = [o.get("_id") for o in result]
@@ -46,7 +50,7 @@ class ElasticsearchRecord(ElasticsearchBase):
             record_ids, self.obj_id
         )
         endTime = timeit.default_timer()
-        print("mongo parse time:", endTime - startTime)
+        logger.info("mongo parse time:", endTime - startTime)
         return res
 
     async def index_doc(self, record_id: str, doc: dict):
