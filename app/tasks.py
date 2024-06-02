@@ -18,25 +18,22 @@ from RecordObject.repository import RecordObjectRepository
 from RecordObject.services import RecordObjectService
 from SentimentAnalysis.services import SentimentAnalysisServices
 from app.celery import celery as clr, redis_client
-import time
 import logging
 from app.common.db_connector import DBCollections
-from app.common.enums import ActionType, TaskStatus
-from app.common.utils import get_current_hcm_datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def monitor_tasks(clients: List[WebSocket]):
     while True:
-        old_ids = []
+        # old_ids = []
         tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
         await asyncio.sleep(0.1)
         try:
             task_ids = tasks_info[list(tasks_info.keys())[0]]
         except:
             task_ids = []
-        old_ids.extend(task_ids)
+        # old_ids.extend(task_ids)
         for task_id in task_ids:
             # if task_id in old_ids:
             #     continue
@@ -44,19 +41,8 @@ async def monitor_tasks(clients: List[WebSocket]):
             if result.ready():
                 await NotificationService.send_one(task_id["id"], result, clients)
             # else:
-                old_ids.append(task_id)
+                # old_ids.append(task_id)
             #     print("NOT READY")
-
-# @clr.task()
-# def monitor_tasks():
-#     tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
-#     asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.1))
-#     for task_id in tasks_info[list(tasks_info.keys())[0]]:
-#         result = AsyncResult(task_id["id"])
-#         if result.ready():
-#             asyncio.get_running_loop().run_until_complete(NotificationService.send_one(task_id["id"], result))
-#         else:
-#             print("NOT READY")
 
 def set_task_metadata(task_id: str, metadata: dict):
     return redis_client.set(task_id, json.dumps(metadata))
@@ -82,28 +68,6 @@ def scan_email() -> List[dict]:
 
     return contents
 
-# @clr.task()
-# def scan_email():
-#     return asyncio.run(scan_email_async())
-
-async def scan_email_async():
-    mail_repo = MailServiceRepository()
-    system_emails = await mail_repo.find_many_email({}, {"email": 1, "db_str": 1})
-    
-    async def process_email(system_email):
-        db_str = system_email.get("email")
-        mail_service = MailServices(db_str)
-        scan_schema = {
-            "template": system_email.get("template_id"),
-            "email": system_email.get("email")
-        }
-        contents = await mail_service.scan_email(scan_schema, db_str, system_email.get("admin_id"))
-        return contents
-
-    tasks = [process_email(email) for email in system_emails]
-    results = await asyncio.gather(*tasks)
-    
-    return results
 
 # DONE
 @clr.task(name = "send_email")
