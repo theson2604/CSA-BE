@@ -181,10 +181,11 @@ class MailServices:
         return contents
     
     def get_new_body_gmail(msg):
-        re_body = r"On \w+, \d+ \w+ \d+ at"
-        matching_string_obj = re.search(r"\w+\s+\w+[,]\s+\w+\s+\d+[,]\s+\d+\s+\w+\s+\d+[:]\d+.*", msg)
-        if matching_string_obj:
-            body_list = msg.split(matching_string_obj.group())
+        match_body_eng = re.search(r"\w+\s+\w+[,]\s+\w+\s+\d+[,]\s+\d+\s+\w+\s+\d+[:]\d+.*", msg)
+        match_body_vie = re.search(r"Vào (CN|Th \d), \d{1,2} thg \d{1,2}, \d{4} vào lúc \d{1,2}:\d{2} <[^>]+> đã viết:", msg)
+        match_body = match_body_eng or match_body_vie
+        if match_body:
+            body_list = msg.split(match_body.group())
             body = body_list[0] # index 0 is new body, index 1 is old body
             if not body:
                 raise HTTPBadRequest("FAIL TO GET NEW BODY")
