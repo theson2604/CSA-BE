@@ -35,6 +35,8 @@ class NotificationService:
             if task_status == TaskStatus.SUCCESS:
                 message = "Create record succesfully."
                 task_results, fd_id = result.result
+                if len(task_results) == 0:
+                    task_results = [""]
                 notification.update({"result": {
                     "object_id": task_results[0].get("object_id"),
                     "record_prefix": [task_result.get(fd_id) for task_result in task_results],
