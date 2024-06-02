@@ -26,9 +26,10 @@ class SentimentAnalysisServices:
         object_id = config.get("object_id")
         obj = await self.obj_repo.find_one_by_id(object_id)
         obj_id = obj.get("obj_id")
-        self.record_repo = RecordObjectRepository(db_str, obj_id)
+        record_repo = RecordObjectRepository(db_str, obj_id)
         
-        record = await self.record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id)[0]
+        record = await record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id)
+        record = record[0]
         # Field to score sentiment
         text = record.get(config.get("field_score"), "")
         model_id = config.get("model_id_str", "") # SentimentModel model_<name>_<id>
@@ -50,14 +51,24 @@ class SentimentAnalysisServices:
                 score = await response.json()
                 
         # Auto create, update SENTIMENT_SCORE field for record
-        field_score_id_str = await self.field_obj_repo.find_and_create_field_sentiment_score(obj_id)
-        record.update({
-            field_score_id_str: score.get("score"),
+        is_existed, field_detail = await self.field_obj_repo.find_and_create_field_sentiment_score(object_id)
+        if is_existed and isinstance(field_detail, dict):
+            # Get field Sentiment Score of record
+            field_sentiment_score = field_detail.get("field_id")
+            record.update({
+            field_sentiment_score: score.get("score"),
             "modified_by": cur_user_id,
             "modified_at": get_current_hcm_datetime()
         })
+        elif not is_existed and isinstance(field_detail, str):
+            field_score_id_str = field_detail
+            record.update({
+                field_score_id_str: score.get("score"),
+                "modified_by": cur_user_id,
+                "modified_at": get_current_hcm_datetime()
+            })
         
-        await self.record_repo.insert_one(record)
+        await record_repo.update_one_by_id(record.pop('_id'), record)
         
         # Get field_type id of record
         pattern = r'^fd_id_\d{6}$'
@@ -65,6 +76,6 @@ class SentimentAnalysisServices:
         if matching_keys:
             record_prefix_id = record.get(matching_keys[0], "")
     
-            return {"record_prefix": record_prefix_id, "score": score}
+            return {"record_prefix": record_prefix_id, "score": score.get("score"), "new_field_score": not is_existed}
         
     

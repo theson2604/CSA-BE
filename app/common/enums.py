@@ -53,6 +53,7 @@ class StatusCodeException(int, Enum):
 FIELD_ID = "ID"
 # Default field Sentiment Score
 DEFAULT_SENTIMENT_SCORE_FIELD = "Sentiment Score"
+DEFAULT_SENTIMENT_SCORE_FIELD_ID = "sentimentscore"
 
 class GroupObjectType(str, Enum):
     AI_DATASETS = "ai_dataset"
