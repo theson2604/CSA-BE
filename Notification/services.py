@@ -1,4 +1,5 @@
 import json
+import logging
 from fastapi import WebSocket
 from Action.repository import ActionRepository
 from Action.models import *
@@ -6,6 +7,8 @@ from Object.repository import ObjectRepository
 from Workflow.repository import WorkflowRepository
 from app.common.enums import ActionType, TaskStatus
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
     
 class NotificationService:
     def __init__(self, db_str: str):
@@ -106,7 +109,7 @@ class NotificationService:
             else:
                 message = "Failed to upload file."
         notification["message"] = message
-        print("NOTIFICATION: ", notification)
+        logger.info("NOTIFICATION: ", notification)
         # from app.main import clients
         for client in clients:
             await client.send_json(notification)

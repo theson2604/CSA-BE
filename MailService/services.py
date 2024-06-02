@@ -1,5 +1,6 @@
 import asyncio
 from email.mime.multipart import MIMEMultipart
+import logging
 import re
 from FieldObject.repository import FieldObjectRepository
 from MailService.models import EmailModel, ReplyEmailModel, TemplateModel
@@ -28,6 +29,9 @@ from app.common.utils import get_current_hcm_date
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 class MailServices:
     def __init__(self, db, coll: str = None):
         self.repo = MailServiceRepository()
@@ -54,7 +58,7 @@ class MailServices:
             return key, iv, ciphertext
         
         except Exception as e:
-            print(f"Encryption error: {e}")
+            # print(f"Encryption error: {e}")
             raise Exception("error in encrypt")
     
     def decrypt_aes(self, key, iv, ciphertext):
@@ -65,7 +69,7 @@ class MailServices:
             aes = AES.new(key, AES.MODE_CTR, counter=ctr)
             return aes.decrypt(ciphertext).decode("utf-8")
         except Exception as e:
-            print(f"Decryption error: {e}")
+            # print(f"Decryption error: {e}")
             raise Exception("error in decrypt")
 
     def get_field_id(src):
@@ -90,7 +94,7 @@ class MailServices:
             try:
                 if "." in field_id:
                     try:
-                        print(field_id)
+                        # print(field_id)
                         fd_ref, _, fd_id = field_id.split(".")
                         content = record.get(fd_ref[1:]).get("ref_to").get(fd_id)
                     except:
@@ -190,7 +194,7 @@ class MailServices:
             if not body:
                 raise HTTPBadRequest("FAIL TO GET NEW BODY")
         else:
-            print(msg)
+            # print(msg)
             body = msg
             # raise HTTPBadRequest("NOT MATCH BODY")
         while body.endswith("\r\n"):
@@ -254,7 +258,7 @@ class MailServices:
         field_ids_subject, postions = MailServices.get_field_id(mail_subject)
         field_ids_body, postions = MailServices.get_field_id(mail_body)
         # raise HTTPBadRequest(f"field: {field_ids_body}, pos: {postions}")
-        print(field_ids_body)
+        # print(field_ids_body)
         if len(field_ids_subject) != 0:
             mail_subject = await self.field_id_to_field_value(mail_subject, field_ids_subject, record)
         mail_subject = f"[{obj_id.replace('obj_','').upper()}.{record.get(fd_id)}] " + mail_subject
@@ -318,7 +322,7 @@ class MailServices:
         return await self.template_repo.get_templates_by_object_id(object_id)
     
     async def scan_email(self, system_email: dict):
-        print("START SCAN")
+        logger.info("START SCAN")
         # mail = mail.model_dump()
         db_str = system_email.get("db_str")
         email = system_email.get("email")
@@ -366,12 +370,12 @@ class MailServices:
             mail_contents.append({"ref_obj_name": obj.get("obj_name"), "ref_obj_id": obj.get("_id"), "ref_obj_id_str": obj.get("obj_id")})
             task_ids = await self.check_condition(system_email.get("admin_id"), mail_contents)
             mail_contents.pop()
-            print("MAIL_CONTENTS ", mail_contents)
+            logger.info("MAIL_CONTENTS ", mail_contents)
             await self.scan_repo.insert_email_from_scan(
                 [ReplyEmailModel.model_validate({"id": str(ObjectId()), **content}).model_dump(by_alias=True) for content in mail_contents]
             )
         else:
-            print("EMPTYYYYYYYYY")
+            logger.info("EMPTY")
         
         return mail_contents
     

@@ -66,7 +66,6 @@ class InboundRule:
         field_details = {}
         ref_obj_records = {}
         list_details = await self.field_obj_repo.find_many_by_field_ids_str(object_id, list(mapping.values()))
-        print("LIST_DETAILS: ", list_details)
 
         for index, key in enumerate(mapping):
             if key not in df.columns:
@@ -111,7 +110,6 @@ class InboundRule:
         field_id_details = await self.field_obj_repo.get_all_by_field_types(object_id, [FieldObjectType.ID])
         field_id_detail = field_id_details[0]
         counter = await get_current_record_id(self.db_str, object_id)
-        # field_id_detail["counter"] = counter
 
         for fd_id in field_ids:
             new_field_value = {}
@@ -141,7 +139,7 @@ class InboundRule:
         
         # avoid inserting empty record to db
         if len(df) == 0:
-            return 0, len(init_df)
+            return object_id, 0, len(init_df)
         
         inserted_idx = df["idx"]
         removed_df = init_df.loc[lambda df_: (~df_["idx"].isin(inserted_idx))]
@@ -175,8 +173,8 @@ class InboundRule:
         await update_record_id(self.db_str, object_id, seq+len(results)-1)
         end_time = time.time()
         execution_time = end_time - start_time
-        print(f"Execution time: {execution_time} seconds")
-        return object_id, len(results), len(removed_df)
+        # print(f"Execution time: {execution_time} seconds")
+        return config.get("object"), len(results), len(removed_df)
     
     def check_text(field_value, field_detail):
         length = field_detail.get("length")

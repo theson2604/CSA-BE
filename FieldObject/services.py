@@ -146,7 +146,7 @@ class FieldObjectService:
         path = []
         for field_ref_detail in all_field_refs_source_obj:
             if field_ref_detail.get("_id") == target_ref_field_id:
-                print(field_ref_detail)
+                # print(field_ref_detail)
                 path.append(field_ref_detail.get("object_id"))
                 for linking_field in field_ref_detail.get("linking_fields", []):
                     path.append(linking_field.get("object_id"))

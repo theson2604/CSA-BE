@@ -19,7 +19,7 @@ async def read_file(file):
         if default == 'lines':
             df = pd.read_json(file.file, lines=True)
         else:
-            print(file.file, type(file.file))
+            # print(file.file, type(file.file))
             data = json.load(file.file)
             df = pd.DataFrame(data)
     else:

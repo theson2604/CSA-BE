@@ -169,7 +169,7 @@ class RecordObjectService:
         obj_id = record.get("object_id")
         record_id = record.get("_id")
         workflows = await self.workflow_repo.find_many({"object_id": obj_id}, {"_id": 1, "trigger": 1, "conditions": 1, "status": ActionWorkflowStatus.ACTIVE})
-        print("WORKFLOWS: ", workflows)
+        logger.info("WORKFLOWS: ", workflows)
         task_ids = []
         for workflow in workflows:
             if workflow.get("trigger") != trigger:
@@ -195,7 +195,6 @@ class RecordObjectService:
     async def create_record(
         self, record: RecordObjectSchema, current_user_id: str, access_token: str = "" 
     ) -> str:
-        print("RECORD: ", record)
         obj_id = record.pop("object_id")
         inserted_record = {"object_id": obj_id}
         

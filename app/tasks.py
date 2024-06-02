@@ -18,25 +18,22 @@ from RecordObject.repository import RecordObjectRepository
 from RecordObject.services import RecordObjectService
 from SentimentAnalysis.services import SentimentAnalysisServices
 from app.celery import celery as clr, redis_client
-import time
 import logging
 from app.common.db_connector import DBCollections
-from app.common.enums import ActionType, TaskStatus
-from app.common.utils import get_current_hcm_datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def monitor_tasks(clients: List[WebSocket]):
     while True:
-        old_ids = []
+        # old_ids = []
         tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
         await asyncio.sleep(0.1)
         try:
             task_ids = tasks_info[list(tasks_info.keys())[0]]
         except:
             task_ids = []
-        old_ids.extend(task_ids)
+        # old_ids.extend(task_ids)
         for task_id in task_ids:
             # if task_id in old_ids:
             #     continue
@@ -44,37 +41,14 @@ async def monitor_tasks(clients: List[WebSocket]):
             if result.ready():
                 await NotificationService.send_one(task_id["id"], result, clients)
             # else:
-                old_ids.append(task_id)
+                # old_ids.append(task_id)
             #     print("NOT READY")
-
-# @clr.task()
-# def monitor_tasks():
-#     tasks_info = clr.control.inspect().active() # {worker_name : [{task_info}]}
-#     asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.1))
-#     for task_id in tasks_info[list(tasks_info.keys())[0]]:
-#         result = AsyncResult(task_id["id"])
-#         if result.ready():
-#             asyncio.get_running_loop().run_until_complete(NotificationService.send_one(task_id["id"], result))
-#         else:
-#             print("NOT READY")
 
 def set_task_metadata(task_id: str, metadata: dict):
     return redis_client.set(task_id, json.dumps(metadata))
 
 def get_task_metadata(task_id: str):
     return redis_client.get(task_id)
-
-def print_info(self):
-    print(f"{self.name} has parent with task id {self.request.parent_id}")
-    print(f"chain of {self.name}: {self.request.chain}")
-    print(f"self.request.id: {self.request.id}")
-
-@clr.task(bind=True)
-def add(self, a, t):
-    # print_info(self)
-
-    # time.sleep(t)
-    return a+1
 
 @clr.task()
 def test_scan_mail(db: str, mail: dict, obj_id: str, admin_id: str):
@@ -94,28 +68,6 @@ def scan_email() -> List[dict]:
 
     return contents
 
-# @clr.task()
-# def scan_email():
-#     return asyncio.run(scan_email_async())
-
-async def scan_email_async():
-    mail_repo = MailServiceRepository()
-    system_emails = await mail_repo.find_many_email({}, {"email": 1, "db_str": 1})
-    
-    async def process_email(system_email):
-        db_str = system_email.get("email")
-        mail_service = MailServices(db_str)
-        scan_schema = {
-            "template": system_email.get("template_id"),
-            "email": system_email.get("email")
-        }
-        contents = await mail_service.scan_email(scan_schema, db_str, system_email.get("admin_id"))
-        return contents
-
-    tasks = [process_email(email) for email in system_emails]
-    results = await asyncio.gather(*tasks)
-    
-    return results
 
 # DONE
 @clr.task(name = "send_email")
@@ -194,7 +146,6 @@ def activate_create(
                 for field in action.get("field_contents"):
                     record[field] = content.get("body")
 
-            print("PARENT_FIELD_IDDDDD :" , parent_field_id, content.get("record_prefix"))
             parent_record = asyncio.get_event_loop().run_until_complete(
                 parent_record_repo.find_one({parent_field_id: content.get("record_prefix")})
             )
@@ -283,23 +234,4 @@ def activate_score_sentiment(db_str, config: dict, record_id: str, cur_user_id: 
     result = asyncio.get_event_loop().run_until_complete(sentiment_service.infer_sentiment_score(db_str, config, record_id, cur_user_id, access_token))
     return result
 
-def trigger_task(task_name):
-    periodic_task_id = f'{task_name}_periodic_task'
-    clr.conf.beat_schedule = {'print_num_periodic_task': {
-            'task': 'app.tasks.print_num',
-            'schedule': 5.0,  # Run every 5 seconds
-            },
-        }
 
-
-@clr.task()
-def test_asyncio_run(t):
-    result = asyncio.run(test(t))
-    print("RESULT: ", result)
-    return result
-
-async def test(t):
-    print("hello")
-    await asyncio.sleep(t)
-    print(f"AFTER {t} seconds")
-    return True

@@ -28,7 +28,7 @@ from app.tasks import monitor_tasks
 load_dotenv()
 
 if platform.system() == 'Windows':
-    print("TRUE")
+    # print("TRUE")
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
     # Run at startup
     asyncio.create_task(monitor_tasks(clients))
     yield
-    print('Shutting down...')
+    # print('Shutting down...')
 
 app = FastAPI(lifespan=lifespan)
 
