@@ -88,30 +88,6 @@ class FieldObjectRepository:
         return await self.field_object_coll.find_one(
             {"object_id": obj_id, "field_type": field_type}
         )
-
-    async def find_and_create_field_sentiment_score(self, obj_id: str):
-        sentiment_score_field = await self.field_object_coll.find_one(
-            {
-                "object_id": obj_id,
-                "field_name": DEFAULT_SENTIMENT_SCORE_FIELD,
-                "field_type": FieldObjectType.INTEGER,
-            }
-        )
-        if not sentiment_score_field:
-            field_id_str = generate_field_id(DEFAULT_SENTIMENT_SCORE_FIELD)
-            count = await self.field_object_coll.count_documents({"object_id": obj_id})
-            await self.field_object_coll.insert_one({
-                "_id": str(ObjectId()),
-                "field_name": DEFAULT_SENTIMENT_SCORE_FIELD,
-                "field_type": FieldObjectType.INTEGER,
-                "field_id": field_id_str,
-                "object_id": obj_id,
-                "sorting_id": count
-            })
-            
-            return False, field_id_str
-        
-        return True, sentiment_score_field
     
     async def find_one(self, query: dict, projection: dict = None):
         return await self.field_object_coll.find_one(query, projection)
