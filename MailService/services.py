@@ -2,11 +2,14 @@ import asyncio
 from email.mime.multipart import MIMEMultipart
 import logging
 import re
+
+import jwt
 from FieldObject.repository import FieldObjectRepository
 from MailService.models import EmailModel, ReplyEmailModel, TemplateModel
 from MailService.repository import MailServiceRepository
 from MailService.schemas import *
 from Workflow.repository import WorkflowRepository
+from app.common.constants import ROOT_CSA_DB
 from app.common.db_connector import DBCollections
 from app.common.enums import ActionWorkflowStatus, FieldObjectType
 from app.common.errors import HTTPBadRequest
@@ -368,7 +371,13 @@ class MailServices:
                 mail_contents.append(content)
         if len(mail_contents) != 0: # last dict in mail_contents is parent info of new records
             mail_contents.append({"ref_obj_name": obj.get("obj_name"), "ref_obj_id": obj.get("_id"), "ref_obj_id_str": obj.get("obj_id")})
-            task_ids = await self.check_condition(system_email.get("admin_id"), mail_contents)
+            # Fake admin access token
+            root_repo = RootAdministratorRepository(ROOT_CSA_DB)
+            admin_id = system_email.get("admin_id")
+            admin = await root_repo.find_one_by_id(admin_id, projection={"modified_at": 0, "created_at": 0, "pwd": 0})
+            access_token = jwt.encode(admin, os.environ.get("SECRET_SALT"), algorithm=os.environ.get("JWT_ALGORITHM"))      
+                  
+            task_ids = await self.check_condition(system_email.get("admin_id"), mail_contents, access_token)
             mail_contents.pop()
             logger.info("MAIL_CONTENTS ", mail_contents)
             await self.scan_repo.insert_email_from_scan(
@@ -380,14 +389,14 @@ class MailServices:
         return mail_contents
     
 
-    async def check_condition(self, current_user_id: str, mail_contents: List[str]):
+    async def check_condition(self, current_user_id: str, mail_contents: List[str], access_token: str):
         workflows = await self.workflow_repo.find_many({"trigger": "scan"}, {"_id": 1, "trigger": 1, "status": ActionWorkflowStatus.ACTIVE})
         task_ids = []
         for workflow in workflows:
             from Workflow.services import WorkflowService
             workflow_service = WorkflowService(self.db_str)
             # activate current workflow
-            task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, "", mail_contents=mail_contents)
+            task_id = await workflow_service.activate_workflow(workflow.get("_id"), current_user_id, access_token, mail_contents=mail_contents)
             task_ids.append(task_id)
 
         return task_ids

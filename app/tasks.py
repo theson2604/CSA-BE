@@ -195,7 +195,7 @@ def activate_update(
 
             #switch to record_service.update_one_record to trigger worfkflow
             # result += asyncio.get_event_loop().run_until_complete(record_repo.update_and_get_one({fd_id: record_prefix}, new_record))
-            results.append(asyncio.get_event_loop().run_until_complete(record_service.update_one_record(new_record, user_id)))
+            results.append(asyncio.get_event_loop().run_until_complete(record_service.update_one_record(new_record, user_id, access_token)))
 
     else:
         record = {
@@ -205,7 +205,7 @@ def activate_update(
         for field_config in action.get("field_configs"):
             record.update(field_config)
 
-        results.append(asyncio.get_event_loop().run_until_complete(record_service.update_one_record(record, user_id)))
+        results.append(asyncio.get_event_loop().run_until_complete(record_service.update_one_record(record, user_id, access_token)))
 
     return results, fd_id
 
