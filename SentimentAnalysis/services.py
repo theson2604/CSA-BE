@@ -33,6 +33,7 @@ class SentimentAnalysisServices:
         # Field to score sentiment
         text = record.get(config.get("field_score"), "")
         model_id = config.get("model_id_str", "") # SentimentModel model_<name>_<id>
+        field_update_score = config.get("field_update_score", "fd_dummy")
         
         if not text: 
             return -1
@@ -50,23 +51,28 @@ class SentimentAnalysisServices:
                 
                 score = await response.json()
                 
-        # Auto create, update SENTIMENT_SCORE field for record
-        is_existed, field_detail = await self.field_obj_repo.find_and_create_field_sentiment_score(object_id)
-        if is_existed and isinstance(field_detail, dict):
-            # Get field Sentiment Score of record
-            field_sentiment_score = field_detail.get("field_id")
-            record.update({
-            field_sentiment_score: score.get("score"),
+        # # Auto create, update SENTIMENT_SCORE field for record
+        # is_existed, field_detail = await self.field_obj_repo.find_and_create_field_sentiment_score(object_id)
+        # if is_existed and isinstance(field_detail, dict):
+        #     # Get field Sentiment Score of record
+        #     field_sentiment_score = field_detail.get("field_id")
+        #     record.update({
+        #     field_sentiment_score: score.get("score"),
+        #     "modified_by": cur_user_id,
+        #     "modified_at": get_current_hcm_datetime()
+        # })
+        # elif not is_existed and isinstance(field_detail, str):
+        #     field_score_id_str = field_detail
+        #     record.update({
+        #         field_score_id_str: score.get("score"),
+        #         "modified_by": cur_user_id,
+        #         "modified_at": get_current_hcm_datetime()
+        #     })
+        record.update({
+            field_update_score: score.get("score"),
             "modified_by": cur_user_id,
             "modified_at": get_current_hcm_datetime()
         })
-        elif not is_existed and isinstance(field_detail, str):
-            field_score_id_str = field_detail
-            record.update({
-                field_score_id_str: score.get("score"),
-                "modified_by": cur_user_id,
-                "modified_at": get_current_hcm_datetime()
-            })
         
         await record_repo.update_one_by_id(record.pop('_id'), record)
         
@@ -76,6 +82,6 @@ class SentimentAnalysisServices:
         if matching_keys:
             record_prefix_id = record.get(matching_keys[0], "")
     
-            return {"record_prefix": record_prefix_id, "score": score.get("score"), "object_id": record.get("object_id"), "new_field_score": not is_existed}
+            return {"record_prefix": record_prefix_id, "score": score.get("score"), "object_id": record.get("object_id")}
         
     

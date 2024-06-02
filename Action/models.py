@@ -42,6 +42,7 @@ class ActionCreate(ActionUpdate):
 class ActionScoreSentiment(ActionBase):
     field_score: str = Field(..., alias="field_score")
     model_id_str: str = Field(..., alias="model_id_str")
+    field_update_score: str = Field(..., alias="field_update_score")
     
     
 # class ActionUpdate(ActionBase):

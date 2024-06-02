@@ -99,7 +99,8 @@ class ActionService:
                 elif action_type is ActionType.SENTIMENT:
                     action_base.update({
                         "field_score": action.get("field_score"),
-                        "model_id_str": action.get("model_id_str")
+                        "model_id_str": action.get("model_id_str"),
+                        "field_update_score": action.get("field_update_score")
                     })
                     list_actions.append(ActionScoreSentiment.model_validate(action_base).model_dump(by_alias=True))
                 

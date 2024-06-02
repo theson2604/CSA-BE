@@ -17,6 +17,7 @@ class ActionSchema(BaseModel):
     # Scoring Sentiment
     field_score: Optional[str] = None
     model_id_str: Optional[str] = None
+    field_update_score: Optional[str] = None
     
     # Send
     to: Optional[List[str]] = None
@@ -71,13 +72,23 @@ class ActionSchema(BaseModel):
         elif type == ActionType.SENTIMENT:
             field_score = schema.get("field_score")
             model_id_str = schema.get("model_id_str")
+            field_update_score = schema.get("field_update_score")
+            
             if not field_score:
                 raise ValueError(f"missing required 'field_score' for type {type}.")
+            
+            if not field_update_score:
+                raise ValueError(f"missing required 'field_update_score' for type {type}.")
             
             regex_str = r"^fd_\w+_\d{6}$"
             match = re.search(regex_str, field_score)
             if not match:
                 raise ValueError(f"invalid 'field_score' {field_score}. It must be {regex_str}")
+            
+            regex_str = r"^fd_\w+_\d{6}$"
+            match = re.search(regex_str, field_update_score)
+            if not match:
+                raise ValueError(f"invalid 'field_update_score' {field_update_score}. It must be {regex_str}")
             
             regex_str = r"^model_\w+_\d{6}$"
             match = re.search(regex_str, model_id_str)
