@@ -28,8 +28,7 @@ class SentimentAnalysisServices:
         obj_id = obj.get("obj_id")
         record_repo = RecordObjectRepository(db_str, obj_id)
         
-        record = await record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id)
-        record = record[0]
+        record = await record_repo.find_one_by_id(record_id)
         # Field to score sentiment
         text = record.get(config.get("field_score"), "")
         model_id = config.get("model_id_str", "") # SentimentModel model_<name>_<id>
