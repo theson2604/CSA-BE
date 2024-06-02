@@ -101,7 +101,7 @@ class WorkflowService:
                 task = activate_update.delay(db, action, current_user_id, record_id, mail_contents)
                 set_task_metadata(task.id, {"type": ActionType.UPDATE})
             elif type == ActionType.SENTIMENT:
-                task = activate_score_sentiment(db, action, record_id, current_user_id, access_token)
+                task = activate_score_sentiment.delay(db, action, record_id, current_user_id, access_token)
                 set_task_metadata(task.id, {"type": ActionType.SENTIMENT})
                 
         return task.id if task != {} else task

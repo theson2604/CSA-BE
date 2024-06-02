@@ -81,6 +81,8 @@ class NotificationService:
                 notification.update({"result": {
                     "record_prefix": task_result.get("record_prefix"),
                     "score": task_result.get("score"),
+                    "new_field_insert": task_result.get("new_field_score"),
+                    "object_id": task_result.get("object_id")
                 }})
                 
             else:
