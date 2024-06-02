@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+import logging
 from typing import List
 import asyncio
 import re
@@ -19,6 +20,8 @@ from app.common.enums import ActionWorkflowStatus, FieldObjectType
 from app.common.errors import HTTPBadRequest
 from app.common.utils import generate_next_record_id, get_current_hcm_datetime
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class RecordException(Exception):
     pass
