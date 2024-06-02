@@ -1,3 +1,4 @@
+import asyncio
 from email.mime.multipart import MIMEMultipart
 import re
 from FieldObject.repository import FieldObjectRepository
@@ -180,11 +181,11 @@ class MailServices:
         return contents
     
     def get_new_body_gmail(msg):
-        re_body = r"On \w+, \d+ \w+ \d+ at"
-        matching_string_obj = re.search(r"\w+\s+\w+[,]\s+\w+\s+\d+[,]\s+\d+\s+\w+\s+\d+[:]\d+.*", msg)
-        if matching_string_obj:
-            body_list = msg.split(matching_string_obj.group())
-            # print("BODY: ", body_list)
+        match_body_eng = re.search(r"\w+\s+\w+[,]\s+\w+\s+\d+[,]\s+\d+\s+\w+\s+\d+[:]\d+.*", msg)
+        match_body_vie = re.search(r"Vào (CN|Th \d), \d{1,2} thg \d{1,2}, \d{4} vào lúc \d{1,2}:\d{2} <[^>]+> đã viết:", msg)
+        match_body = match_body_eng or match_body_vie
+        if match_body:
+            body_list = msg.split(match_body.group())
             body = body_list[0] # index 0 is new body, index 1 is old body
             if not body:
                 raise HTTPBadRequest("FAIL TO GET NEW BODY")
@@ -192,6 +193,8 @@ class MailServices:
             print(msg)
             body = msg
             # raise HTTPBadRequest("NOT MATCH BODY")
+        while body.endswith("\r\n"):
+            body = body[:-2]  # Remove the \r\n
         return body
 
     async def create_email(self, email: EmailSchema, admin_id: str):
@@ -339,34 +342,29 @@ class MailServices:
         prefix = field_id.get("prefix")
         mail_contents = [] # List[dict]
 
-        # bodies = MailServices.get_bodies(template.get("body"))
         with MailBox("imap.gmail.com").login(email, mail_pwd, 'INBOX') as mailbox:
             regex_subject = re.escape(f"{obj_id}") + r"." + re.escape(f"{prefix}") + r"\d+"
-            re_subject = r"Re: [" + re.escape(f"{obj_name}") + r"_" + re.escape(f"{seq}") + r"." + re.escape(f"{prefix}") + r"\*"
-            print("SUBJECT: ", re_subject)
             for msg in mailbox.fetch(AND(date_gte=get_current_hcm_date(), subject=r"Re\*", seen=False), mark_seen=True):
-                # print("GOT MESS", msg.text, msg.subject)
                 matches = re.finditer(regex_subject, msg.subject)
-                
+                record_prefix = None
                 for matche in matches:
                     record_prefix = matche.group()
                     break
-                # raise HTTPBadRequest(f"{msg.subject}, {regex_subject}")
+
+                if not record_prefix:
+                    raise KeyError("NOT MATCh")
                 splited_prefix = record_prefix.split(".")
                 content = {
-                    # "id": str(ObjectId()),
                     "from_": msg.from_,
                     "subject": msg.subject,
                     "body": MailServices.get_new_body_gmail(msg.text),
                     "sent_at": msg.date_str,
                     "record_prefix": splited_prefix[1]
                 }
-                # mail_contents.append(ReplyEmailModel.model_validate(content).model_dump(by_alias=True))\
                 mail_contents.append(content)
         if len(mail_contents) != 0: # last dict in mail_contents is parent info of new records
             mail_contents.append({"ref_obj_name": obj.get("obj_name"), "ref_obj_id": obj.get("_id"), "ref_obj_id_str": obj.get("obj_id")})
             task_ids = await self.check_condition(system_email.get("admin_id"), mail_contents)
-            # if len(task_ids) == 0:
             mail_contents.pop()
             print("MAIL_CONTENTS ", mail_contents)
             await self.scan_repo.insert_email_from_scan(
