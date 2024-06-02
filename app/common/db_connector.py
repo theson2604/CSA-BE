@@ -21,6 +21,7 @@ class DBCollections(str, Enum):
     WORKFLOW = "Workflow"
     ACTION = "Action"
     DATASET_AI = "DatasetAI"
+    TRAINING_EPOCH = "TrainingEpoch"
     CUSTOM_VIEW_RECORD = "ViewRecord"
     SENTIMENT_MODEL = "SentimentModel"
     REPLY_EMAIL = "ReplyEmail"

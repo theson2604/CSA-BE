@@ -10,9 +10,13 @@ class ActionSchema(BaseModel):
     description: str
     status: ActionWorkflowStatus
     object_id: str # target record to apply action to
-
+    
     workflow_id: Optional[str] = None # container workflow, no need to consider container object
     sorting_id: Optional[int] = None
+    
+    # Scoring Sentiment
+    field_score: Optional[str] = None
+    model_id_str: Optional[str] = None
     
     # Send
     to: Optional[List[str]] = None
@@ -63,6 +67,22 @@ class ActionSchema(BaseModel):
                 
                 if option not in ["yes", "no"]:
                     raise ValueError(f"invalid option {option}")
+        
+        elif type == ActionType.SENTIMENT:
+            field_score = schema.get("field_score")
+            model_id_str = schema.get("model_id_str")
+            if not field_score:
+                raise ValueError(f"missing required 'field_score' for type {type}.")
+            
+            regex_str = r"^fd_\w+_\d{6}$"
+            match = re.search(regex_str, field_score)
+            if not match:
+                raise ValueError(f"invalid 'field_score' {field_score}. It must be {regex_str}")
+            
+            regex_str = r"^model_\w+_\d{6}$"
+            match = re.search(regex_str, model_id_str)
+            if not match:
+                raise ValueError(f"invalid 'model_id_str' {model_id_str}. It must be {regex_str}")
             
         else:
             raise ValueError(f"invalid 'type' {type}.")

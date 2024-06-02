@@ -141,9 +141,6 @@ class DatasetAIServices:
                     raise HTTPException(status_code=response.status, detail=error_message)
                 
                 res = await response.json()
-                
-        # record_service = RecordObjectService(self.db_str, dataset_obj_id_str, dataset_obj_id)
-        # preprocessed_records = await record_service.get_all_records_with_detail(dataset_obj_id, page=1, page_size=5)
         
         dataset_model = DatasetAIModel(
             id=str(ObjectId()),

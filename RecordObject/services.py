@@ -228,7 +228,9 @@ class RecordObjectService:
             RecordObjectModel.model_validate(inserted_record).model_dump(by_alias=True)
         )
 
-        await self.check_conditions(inserted_record, "create", current_user_id, access_token)
+        # await self.check_conditions(inserted_record, "create", current_user_id, access_token)
+        asyncio.create_task(self.check_conditions(inserted_record, "create", current_user_id, access_token))
+        
         return result
 
     async def get_all_records_with_detail(
@@ -284,7 +286,8 @@ class RecordObjectService:
         })
 
         result = await self.record_repo.update_and_get_one({"_id": record_id}, updated_record)
-        await self.check_conditions(result, "update", current_user_id, access_token)
+        # await self.check_conditions(result, "update", current_user_id, access_token)
+        asyncio.create_task(self.check_conditions(result, "update", current_user_id, access_token))
 
         return result
 

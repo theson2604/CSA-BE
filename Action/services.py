@@ -95,6 +95,13 @@ class ActionService:
                             "field_contents": action.get("field_contents") if  action.get("field_contents") else []
                         })
                         list_actions.append(ActionCreate.model_validate(action_base).model_dump(by_alias=True))
+                        
+                elif action_type is ActionType.SENTIMENT:
+                    action_base.update({
+                        "field_score": action.get("field_score"),
+                        "model_id_str": action.get("model_id_str")
+                    })
+                    list_actions.append(ActionScoreSentiment.model_validate(action_base).model_dump(by_alias=True))
                 
             return list_actions
         

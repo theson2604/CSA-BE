@@ -28,7 +28,7 @@ class DatasetAIRepository:
         pipeline = [
             {
                 "$lookup": {
-                    "from": "DatasetAI",
+                    "from": DBCollections.DATASET_AI.value,
                     "localField": "dataset_obj_id",
                     "foreignField": "_id",
                     "as": "ref",
@@ -38,7 +38,7 @@ class DatasetAIRepository:
             {"$project": {"ref": 0}},
             {
                 "$lookup": {
-                    "from": "TrainingEpoch",
+                    "from": DBCollections.TRAINING_EPOCH.value,
                     "localField": "model_id",
                     "foreignField": "model_id_str",
                     "as": "epochs",

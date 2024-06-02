@@ -40,8 +40,8 @@ class ActionCreate(ActionUpdate):
     field_contents: List[str]
     
 class ActionScoreSentiment(ActionBase):
-    field_to_score: str = Field(..., alias="field_to_score")
-    sentiment_model: str = Field(..., alias="sentiment_model")
+    field_score: str = Field(..., alias="field_score")
+    model_id_str: str = Field(..., alias="model_id_str")
     
     
 # class ActionUpdate(ActionBase):
