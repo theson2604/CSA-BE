@@ -6,7 +6,11 @@ ops = {
     "in": lambda x,y: x in y, 
     "not in": lambda x,y: x not in y, 
     "or": operator.or_, 
-    "and": operator.and_ 
+    "and": operator.and_,
+    "gt": operator.gt,
+    "lt": operator.lt,
+    "ge": operator.ge,
+    "le": operator.le
 }
 
 def use_operator(cond1, cond2, op: str):
