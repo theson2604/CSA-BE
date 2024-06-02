@@ -92,7 +92,7 @@ def activate_send(db: str, action: dict, record_id: str) -> str:
 # DONE
 @clr.task(name = "create_record")
 def activate_create(
-    db: str, action: dict, user_id: str, contents: List[str]
+    db: str, action: dict, user_id: str, contents: List[str], access_token: str
 ) -> Tuple[List[RecordObjectModel], str]:
     object_id = action.get("object_id")
     obj_repo = ObjectRepository(db)
@@ -109,7 +109,7 @@ def activate_create(
 
     results = []
     if action.get("option") == "no":
-        results.append(asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id))) #inserted_id
+        results.append(asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id, access_token))) #inserted_id
     else:
         parent_info = contents.pop()
         field_repo = FieldObjectRepository(db)
@@ -152,7 +152,7 @@ def activate_create(
             if parent_record:
                 record[ref_parent_field.get("field_id")] = parent_record.get("_id")
             record["object_id"] = object_id
-            result = asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id)) #inserted_id
+            result = asyncio.get_event_loop().run_until_complete(record_service.create_record(record, user_id, access_token)) #inserted_id
             if result:
                 results.append(result)
     
@@ -169,7 +169,7 @@ def activate_create(
 # DONE
 @clr.task(name = "update_record")
 def activate_update(
-    db: str, action: dict, user_id: str, record_id: str, contents: List[str]
+    db: str, action: dict, user_id: str, record_id: str, contents: List[str], access_token: str
 ) -> Tuple[List[RecordObjectModel], str]:
     object_id = action.get("object_id")
     obj_repo = ObjectRepository(db)

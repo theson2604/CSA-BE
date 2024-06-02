@@ -95,10 +95,10 @@ class WorkflowService:
                 task = activate_send.delay(db, action, record_id)
                 set_task_metadata(task.id, {"type": ActionType.SEND})
             elif type == ActionType.CREATE:
-                task =  activate_create.delay(db, action, current_user_id, mail_contents)
+                task =  activate_create.delay(db, action, current_user_id, mail_contents, access_token)
                 set_task_metadata(task.id, {"type": ActionType.CREATE})
             elif type == ActionType.UPDATE:
-                task = activate_update.delay(db, action, current_user_id, record_id, mail_contents)
+                task = activate_update.delay(db, action, current_user_id, record_id, mail_contents, access_token)
                 set_task_metadata(task.id, {"type": ActionType.UPDATE})
             elif type == ActionType.SENTIMENT:
                 task = activate_score_sentiment.delay(db, action, record_id, current_user_id, access_token)
