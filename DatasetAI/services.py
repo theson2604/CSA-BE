@@ -37,9 +37,6 @@ class DatasetAIServices:
         self.group_obj_repo = GroupObjectRepository(db_str)
         self.db_str = db_str
         
-    async def get_all_models(self):
-        return await self.repo.get_all_models()
-        
     async def get_detail(self, dataset_obj_id: str = "", dataset_obj_id_str: str = ""):
         dataset_detail = {}
         if dataset_obj_id:
@@ -158,49 +155,4 @@ class DatasetAIServices:
             
         return {"dataset_id": dataset_id, "message": f"{dataset_name}({dataset_obj_id_str})"}
     
-    async def infer_sentiment_score(self, db_str: str, config: dict, record_id: str, cur_user_id: str, access_token: str):
-        object_id = config.get("object_id")
-        obj_repo = ObjectRepository(db_str)
-        obj = await obj_repo.find_one_by_id(object_id)
-        obj_id = obj.get("obj_id")
-        record_repo = RecordObjectRepository(db_str, obj_id)
-        
-        record = await record_repo.get_one_by_id_with_parsing_ref_detail(record_id, object_id)[0]
-        # Field to score sentiment
-        text = record.get(config.get("field_to_score"), "")
-        model_id = config.get("sentiment_model", "") # SentimentModel model_<name>_<id>
-        
-        if not text: 
-            return -1
-        body = {
-            "text": text,
-            "model_id": model_id
-        }
-        
-        headers = {'Authorization': f'Bearer {access_token}'}
-        async with aiohttp.ClientSession() as session:
-            async with session.post(f'{os.environ.get("AI_SERVER_URL")}/predict', json=body, headers=headers) as response:
-                if response.status != 200:
-                    error_message = await response.text()
-                    raise HTTPException(status_code=response.status, detail=error_message)
-                
-                score = await response.json()
-                
-        # Auto create, update SENTIMENT_SCORE field for record
-        field_score_id_str = await self.field_obj_repo.find_and_create_field_sentiment_score(obj_id)
-        record.update({
-            field_score_id_str: score.get("score"),
-            "modified_by": cur_user_id,
-            "modified_at": get_current_hcm_datetime()
-        })
-        record_repo.insert_one(record)
-        
-        # Get field_type id of record
-        pattern = r'^fd_id_\d{6}$'
-        matching_keys = [key for key in record.keys() if re.match(pattern, key)]
-        if matching_keys:
-            record_prefix_id = record.get(matching_keys[0], "")
-    
-            return {"record_prefix": record_prefix_id, "score": score}
-        
     

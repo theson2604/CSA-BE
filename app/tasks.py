@@ -1,11 +1,9 @@
 import asyncio
 import json
 from celery.result import AsyncResult
-from celery.schedules import crontab, schedule
 from typing import List, Tuple
 
 from fastapi import WebSocket
-from DatasetAI.schemas import DatasetConfigSchema
 from DatasetAI.services import DatasetAIServices
 from FieldObject.repository import FieldObjectRepository
 from FieldObject.schemas import FieldObjectSchema
@@ -18,6 +16,7 @@ from Object.repository import ObjectRepository
 from RecordObject.models import RecordObjectModel
 from RecordObject.repository import RecordObjectRepository
 from RecordObject.services import RecordObjectService
+from SentimentAnalysis.services import SentimentAnalysisServices
 from app.celery import celery as clr, redis_client
 import time
 import logging
@@ -277,8 +276,8 @@ def activate_preprocess_dataset(db_str: str, config: dict, cur_user_id: str, acc
 
 @clr.task(name = "activate_score_sentiment")
 def activate_score_sentiment(db_str, config: dict, record_id: str, cur_user_id: str, access_token: str):
-    dataset_service = DatasetAIServices(db_str)
-    result = asyncio.get_event_loop().run_until_complete(dataset_service.infer_sentiment_score(db_str, config, record_id, cur_user_id, access_token))
+    sentiment_service = SentimentAnalysisServices(db_str)
+    result = asyncio.get_event_loop().run_until_complete(sentiment_service.infer_sentiment_score(db_str, config, record_id, cur_user_id, access_token))
     return result
 
 def trigger_task(task_name):
