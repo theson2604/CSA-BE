@@ -76,6 +76,6 @@ class SentimentAnalysisServices:
         if matching_keys:
             record_prefix_id = record.get(matching_keys[0], "")
     
-            return {"record_prefix": record_prefix_id, "score": score.get("score"), "object_id":record_repo.get("object_id"), "new_field_score": not is_existed}
+            return {"record_prefix": record_prefix_id, "score": score.get("score"), "object_id": record.get("object_id"), "new_field_score": not is_existed}
         
     
