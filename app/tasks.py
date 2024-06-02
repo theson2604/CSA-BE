@@ -209,7 +209,10 @@ def activate_create(
     field_repo = FieldObjectRepository(db)
     fd_id = (asyncio.get_event_loop().run_until_complete(field_repo.find_one_by_field_type(object_id, "id"))).get("field_id")
     record_repo = RecordObjectRepository(db, obj_id)
-    results = asyncio.get_event_loop().run_until_complete(record_repo.find_all({"_id": {"$in": results}}, {"_id": 1, "object_id": 1, fd_id: 1}))
+    if len(results) > 1:
+        results = asyncio.get_event_loop().run_until_complete(record_repo.find_all({"_id": {"$in": results}}, {"_id": 1, "object_id": 1, fd_id: 1}))
+    else:
+        results = [asyncio.get_event_loop().run_until_complete(record_repo.find_one_by_id(results[0], {"_id": 1, "object_id": 1, fd_id: 1}))]
     return results, fd_id
 
 
